@@ -34,7 +34,7 @@ var rootCmd = &cobra.Command{ // FLOW 4
 	Long:  `esc`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello CLI") },
+	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello from omc CLI") },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -51,11 +51,10 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.omc.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "namespace")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "Config file to use (default is $HOME/.omc.json).")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "If present, list the requested object(s) for a specific namespace.")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 // initConfig reads in config file and ENV variables if set.

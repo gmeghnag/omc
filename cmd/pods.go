@@ -16,19 +16,15 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"omc/cmd/helpers"
-	"omc/models"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -38,25 +34,10 @@ type PodsItems struct {
 	Items      []*corev1.Pod `json:"items"`
 }
 
-func getPods(omcConfigFile string, aNamespacesFlag bool) {
-	headers := []string{"namespace", "name", "ready", "status", "restarts", "age"}
-	file, _ := ioutil.ReadFile(omcConfigFile)
-	omcConfigJson := models.Config{}
-	_ = json.Unmarshal([]byte(file), &omcConfigJson)
-	// get CurrentContext
-	var CurrentContext models.Context
-	var DefaultConfigNamespace string
-	var contexts []models.Context
-	contexts = omcConfigJson.Contexts
-	for _, context := range contexts {
-		if context.Current == "*" {
-			CurrentContext = context
-			DefaultConfigNamespace = context.Project
-			break
-		}
-	}
+func getPods(CurrentContextPath string, DefaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string) {
+	headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
 	// get quay-io-... string
-	files, err := ioutil.ReadDir(CurrentContext.Path)
+	files, err := ioutil.ReadDir(CurrentContextPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -68,20 +49,21 @@ func getPods(omcConfigFile string, aNamespacesFlag bool) {
 		}
 	}
 	if QuayString == "" {
-		log.Fatal("Some error occurred, wrong must-gather file composition")
+		fmt.Println("Some error occurred, wrong must-gather file composition")
+		os.Exit(1)
 	}
 	var namespaces []string
-	if aNamespacesFlag == true {
-		_namespaces, _ := ioutil.ReadDir(CurrentContext.Path + "/" + QuayString + "/namespaces/")
+	if allNamespacesFlag == true {
+		_namespaces, _ := ioutil.ReadDir(CurrentContextPath + "/" + QuayString + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())
 		}
 	}
-	if namespace != "" && !aNamespacesFlag {
+	if namespace != "" && !allNamespacesFlag {
 		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
-	if namespace == "" && !aNamespacesFlag {
+	if namespace == "" && !allNamespacesFlag {
 		var _namespace = DefaultConfigNamespace
 		namespaces = append(namespaces, _namespace)
 	}
@@ -90,9 +72,9 @@ func getPods(omcConfigFile string, aNamespacesFlag bool) {
 
 	for _, _namespace := range namespaces {
 		var _Items PodsItems
-		CurrentNamespacePath := CurrentContext.Path + "/" + QuayString + "/namespaces/" + _namespace
+		CurrentNamespacePath := CurrentContextPath + "/" + QuayString + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
-		if err != nil && !aNamespacesFlag {
+		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
@@ -102,7 +84,9 @@ func getPods(omcConfigFile string, aNamespacesFlag bool) {
 		}
 		for _, Pod := range _Items.Items {
 			// pod path
-
+			if resourceName != "" && resourceName != Pod.Name {
+				continue
+			}
 			var containers string
 			if len(Pod.Spec.Containers) != 0 {
 				containers = strconv.Itoa(len(Pod.Spec.Containers))
@@ -139,43 +123,63 @@ func getPods(omcConfigFile string, aNamespacesFlag bool) {
 			d, _ := time.ParseDuration(diffTime)
 			diffTimeString := helpers.FormatDiffTime(d)
 			//return
-			_list := []string{Pod.Namespace, Pod.Name, ContainersReady, string(Pod.Status.Phase), strconv.Itoa(ContainersRestarts), diffTimeString}
-			if aNamespacesFlag == true {
-				data = append(data, _list)
+			_list := []string{Pod.Namespace, Pod.Name, ContainersReady, string(Pod.Status.Phase), strconv.Itoa(ContainersRestarts), diffTimeString, string(Pod.Status.PodIP), Pod.Spec.NodeName}
+			if allNamespacesFlag == true {
+				if outputFlag == "" {
+					data = append(data, _list[0:6]) // -A
+				}
+				if outputFlag == "wide" {
+					data = append(data, _list) // -A -o wide
+				}
 			} else {
-				data = append(data, _list[1:])
+				if outputFlag == "" {
+					data = append(data, _list[1:6])
+				}
+				if outputFlag == "wide" {
+					data = append(data, _list[1:]) // -o wide
+				}
 			}
 		}
 	}
-	if aNamespacesFlag == true {
-		helpers.PrintTable(headers, data)
+	if allNamespacesFlag == true {
+		if outputFlag == "" {
+			helpers.PrintTable(headers[0:6], data) // -A
+		}
+		if outputFlag == "wide" {
+			helpers.PrintTable(headers, data) // -A -o wide
+		}
 	} else {
-		helpers.PrintTable(headers[1:], data)
+		if outputFlag == "" {
+			helpers.PrintTable(headers[1:6], data)
+		}
+		if outputFlag == "wide" {
+			helpers.PrintTable(headers[1:], data) // -o wide
+		}
 	}
 
 }
 
-// podsCmd represents the pods command
-var podsCmd = &cobra.Command{
-	Use:   "pods",
-	Short: "pod",
-	Run: func(cmd *cobra.Command, args []string) {
-		var aNamespacesFlag bool
-		aNamespacesFlag, _ = cmd.Flags().GetBool("all-namespaces")
-		getPods(viper.ConfigFileUsed(), aNamespacesFlag)
-	},
-}
-var podCmd = &cobra.Command{
-	Use:   "pod",
-	Short: "alias for pods",
-	Run: func(cmd *cobra.Command, args []string) {
-		podsCmd.Run(cmd, args)
-	},
-}
-
-func init() {
-	getCmd.AddCommand(podsCmd)
-	getCmd.AddCommand(podCmd)
-	podsCmd.Flags().BoolP("all-namespaces", "A", false, "all namespaces")
-	podCmd.Flags().BoolP("all-namespaces", "A", false, "all namespaces")
-}
+//// podsCmd represents the pods command
+//var podsCmd = &cobra.Command{
+//	Use:   "pods",
+//	Short: "pod",
+//	Run: func(cmd *cobra.Command, args []string) {
+//		var allNamespacesFlag bool
+//		var outputFlag string
+//		allNamespacesFlag, _ = cmd.Flags().GetBool("all-namespaces")
+//		outputFlag, _ = cmd.Flags().GetString("output")
+//		getPods(viper.ConfigFileUsed(), allNamespacesFlag, outputFlag)
+//	},
+//}
+//var podCmd = &cobra.Command{
+//	Use:   "pod",
+//	Short: "alias for pods",
+//	Run: func(cmd *cobra.Command, args []string) {
+//		podsCmd.Run(cmd, args)
+//	},
+//}
+//
+//func init() {
+//	getCmd.AddCommand(podsCmd)
+//	getCmd.AddCommand(podCmd)
+//}

@@ -16,21 +16,70 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"omc/models"
+	"strings"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+var output string
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "A brief description of your command",
 	Run: func(cmd *cobra.Command, args []string) {
+		allNamespacesFlag, _ := cmd.Flags().GetBool("all-namespaces")
+		outputFlag, _ := cmd.Flags().GetString("output")
+		namespace, _ := rootCmd.PersistentFlags().GetString("namespace")
+		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
 
+		omcConfigJson := models.Config{}
+		_ = json.Unmarshal([]byte(file), &omcConfigJson)
+		var CurrentContextPath string
+		var DefaultConfigNamespace string
+		var contexts []models.Context
+		contexts = omcConfigJson.Contexts
+		for _, context := range contexts {
+			if context.Current == "*" {
+				CurrentContextPath = context.Path
+				DefaultConfigNamespace = context.Project
+				break
+			}
+		}
+
+		if len(args) == 1 {
+			argument := args[0]
+			if argument == "pod" || argument == "pods" {
+				getPods(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag)
+			}
+			if strings.HasPrefix(argument, "pod/") || strings.HasPrefix(argument, "pods/") {
+				s := strings.Split(argument, "/")
+				getPods(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag)
+			}
+			if argument == "node" || argument == "nodes" {
+				getNodes(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag)
+			}
+			if strings.HasPrefix(argument, "node/") || strings.HasPrefix(argument, "nodes/") {
+				s := strings.Split(argument, "/")
+				getNodes(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag)
+			}
+		} else {
+			fmt.Println("No resources found in " + namespace + " namespace")
+		}
 	},
 }
 
 func init() {
 	//fmt.Println("inside get init")
+
 	rootCmd.AddCommand(getCmd)
+	getCmd.PersistentFlags().BoolP("all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces.")
+	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "Output format. Only accept: wide.")
 
 	// Here you will define your flags and configuration settings.
 
