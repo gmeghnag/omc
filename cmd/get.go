@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"omc/models"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -51,22 +52,31 @@ var getCmd = &cobra.Command{
 				break
 			}
 		}
+		jsonPathTemplate := ""
+		if strings.HasPrefix(outputFlag, "jsonpath=") {
+			s := strings.Split(outputFlag, "=")
+			if len(s) < 2 || s[1] == "" {
+				fmt.Println("error: template format specified but no template given")
+				os.Exit(1)
+			}
+			jsonPathTemplate = s[1]
+		}
 
 		if len(args) == 1 {
 			argument := args[0]
 			if argument == "pod" || argument == "pods" {
-				getPods(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag)
+				getPods(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate)
 			}
 			if strings.HasPrefix(argument, "pod/") || strings.HasPrefix(argument, "pods/") {
 				s := strings.Split(argument, "/")
-				getPods(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag)
+				getPods(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate)
 			}
 			if argument == "node" || argument == "nodes" {
-				getNodes(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag)
+				getNodes(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate)
 			}
 			if strings.HasPrefix(argument, "node/") || strings.HasPrefix(argument, "nodes/") {
 				s := strings.Split(argument, "/")
-				getNodes(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag)
+				getNodes(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate)
 			}
 		} else {
 			fmt.Println("No resources found in " + namespace + " namespace")
@@ -79,7 +89,7 @@ func init() {
 
 	rootCmd.AddCommand(getCmd)
 	getCmd.PersistentFlags().BoolP("all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces.")
-	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "Output format. Only accept: wide.")
+	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
 
 	// Here you will define your flags and configuration settings.
 

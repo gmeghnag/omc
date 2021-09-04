@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"bytes"
+	"fmt"
 	"math/rand"
 	"omc/models"
 	"os"
@@ -8,6 +10,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"k8s.io/client-go/util/jsonpath"
 )
 
 // TYPES
@@ -85,4 +88,19 @@ func FormatDiffTime(diff time.Duration) string {
 
 	}
 	return strconv.Itoa(int(diff.Seconds())) + "s"
+}
+
+func ExecuteJsonPath(data interface{}, jsonPathTemplate string) {
+	var err error
+	buf := new(bytes.Buffer)
+	jPath := jsonpath.New("out")
+	jPath.AllowMissingKeys(false)
+	jPath.EnableJSONOutput(false)
+	err = jPath.Parse(jsonPathTemplate)
+	if err != nil {
+		fmt.Println("error: error parsing jsonpath " + jsonPathTemplate + ", " + err.Error())
+		os.Exit(1)
+	}
+	jPath.Execute(buf, data)
+	fmt.Print(buf)
 }

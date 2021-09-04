@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -29,13 +30,11 @@ import (
 )
 
 type NodesItems struct {
-	ApiVersion string         `json:"apiVersion"`
-	Items      []*corev1.Node `json:"items"`
+	ApiVersion string        `json:"apiVersion"`
+	Items      []corev1.Node `json:"items"`
 }
 
-func getNodes(CurrentContextPath string, DefaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string) {
-	headers := []string{"name", "status", "roles", "age", "version", "internal-ip", "external-ip", "os-image", "kernel-version", "container-runtime"}
-	var data [][]string
+func getNodes(CurrentContextPath string, DefaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string) {
 	// get quay-io-... string
 	files, err := ioutil.ReadDir(CurrentContextPath)
 	if err != nil {
@@ -55,15 +54,36 @@ func getNodes(CurrentContextPath string, DefaultConfigNamespace string, resource
 
 	nodesFolderPath := CurrentContextPath + "/" + QuayString + "/cluster-scoped-resources/core/nodes/"
 	_nodes, _ := ioutil.ReadDir(nodesFolderPath)
+
+	headers := []string{"name", "status", "roles", "age", "version", "internal-ip", "external-ip", "os-image", "kernel-version", "container-runtime"}
+	var data [][]string
+
+	_NodesList := NodesItems{ApiVersion: "v1"}
 	for _, f := range _nodes {
 		nodeYamlPath := nodesFolderPath + f.Name()
 		_file, _ := ioutil.ReadFile(nodeYamlPath)
 		Node := corev1.Node{}
 		if err := yaml.Unmarshal([]byte(_file), &Node); err != nil {
 			fmt.Println("Error when trying to unmarshall file: " + nodeYamlPath)
-			//os.Exit(1)
+			os.Exit(1)
 		}
+
 		if resourceName != "" && resourceName != Node.Name {
+			continue
+		}
+
+		if outputFlag == "yaml" {
+			_NodesList.Items = append(_NodesList.Items, Node)
+			continue
+		}
+
+		if outputFlag == "json" {
+			_NodesList.Items = append(_NodesList.Items, Node)
+			continue
+		}
+
+		if strings.HasPrefix(outputFlag, "jsonpath=") {
+			_NodesList.Items = append(_NodesList.Items, Node)
 			continue
 		}
 		// STATUS
@@ -128,6 +148,17 @@ func getNodes(CurrentContextPath string, DefaultConfigNamespace string, resource
 	}
 	if outputFlag == "wide" {
 		helpers.PrintTable(headers, data) // -A -o wide
+	}
+	if outputFlag == "yaml" {
+		y, _ := yaml.Marshal(_NodesList)
+		fmt.Println(string(y))
+	}
+	if outputFlag == "json" {
+		j, _ := json.MarshalIndent(_NodesList, "", "  ")
+		fmt.Println(string(j))
+	}
+	if strings.HasPrefix(outputFlag, "jsonpath=") {
+		helpers.ExecuteJsonPath(_NodesList, jsonPathTemplate)
 	}
 
 }

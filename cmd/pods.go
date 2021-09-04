@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -34,7 +35,7 @@ type PodsItems struct {
 	Items      []*corev1.Pod `json:"items"`
 }
 
-func getPods(CurrentContextPath string, DefaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string) {
+func getPods(CurrentContextPath string, DefaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string) {
 	headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
 	// get quay-io-... string
 	files, err := ioutil.ReadDir(CurrentContextPath)
@@ -69,7 +70,7 @@ func getPods(CurrentContextPath string, DefaultConfigNamespace string, resourceN
 	}
 
 	var data [][]string
-
+	var _PodsList = PodsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
 		var _Items PodsItems
 		CurrentNamespacePath := CurrentContextPath + "/" + QuayString + "/namespaces/" + _namespace
@@ -82,11 +83,28 @@ func getPods(CurrentContextPath string, DefaultConfigNamespace string, resourceN
 			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/pods.yaml")
 			os.Exit(1)
 		}
+
 		for _, Pod := range _Items.Items {
 			// pod path
 			if resourceName != "" && resourceName != Pod.Name {
 				continue
 			}
+
+			if outputFlag == "yaml" {
+				_PodsList.Items = append(_PodsList.Items, Pod)
+				continue
+			}
+
+			if outputFlag == "json" {
+				_PodsList.Items = append(_PodsList.Items, Pod)
+				continue
+			}
+
+			if strings.HasPrefix(outputFlag, "jsonpath=") {
+				_PodsList.Items = append(_PodsList.Items, Pod)
+				continue
+			}
+
 			var containers string
 			if len(Pod.Spec.Containers) != 0 {
 				containers = strconv.Itoa(len(Pod.Spec.Containers))
@@ -141,45 +159,29 @@ func getPods(CurrentContextPath string, DefaultConfigNamespace string, resourceN
 			}
 		}
 	}
-	if allNamespacesFlag == true {
-		if outputFlag == "" {
+	if outputFlag == "" {
+		if allNamespacesFlag == true {
 			helpers.PrintTable(headers[0:6], data) // -A
-		}
-		if outputFlag == "wide" {
-			helpers.PrintTable(headers, data) // -A -o wide
-		}
-	} else {
-		if outputFlag == "" {
+		} else {
 			helpers.PrintTable(headers[1:6], data)
 		}
-		if outputFlag == "wide" {
+	}
+	if outputFlag == "wide" {
+		if allNamespacesFlag == true {
+			helpers.PrintTable(headers, data) // -A -o wide
+		} else {
 			helpers.PrintTable(headers[1:], data) // -o wide
 		}
 	}
-
+	if outputFlag == "yaml" {
+		y, _ := yaml.Marshal(_PodsList)
+		fmt.Println(string(y))
+	}
+	if outputFlag == "json" {
+		j, _ := json.MarshalIndent(_PodsList, "", "  ")
+		fmt.Println(string(j))
+	}
+	if strings.HasPrefix(outputFlag, "jsonpath=") {
+		helpers.ExecuteJsonPath(_PodsList, jsonPathTemplate)
+	}
 }
-
-//// podsCmd represents the pods command
-//var podsCmd = &cobra.Command{
-//	Use:   "pods",
-//	Short: "pod",
-//	Run: func(cmd *cobra.Command, args []string) {
-//		var allNamespacesFlag bool
-//		var outputFlag string
-//		allNamespacesFlag, _ = cmd.Flags().GetBool("all-namespaces")
-//		outputFlag, _ = cmd.Flags().GetString("output")
-//		getPods(viper.ConfigFileUsed(), allNamespacesFlag, outputFlag)
-//	},
-//}
-//var podCmd = &cobra.Command{
-//	Use:   "pod",
-//	Short: "alias for pods",
-//	Run: func(cmd *cobra.Command, args []string) {
-//		podsCmd.Run(cmd, args)
-//	},
-//}
-//
-//func init() {
-//	getCmd.AddCommand(podsCmd)
-//	getCmd.AddCommand(podCmd)
-//}
