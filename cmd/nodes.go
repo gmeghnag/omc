@@ -31,12 +31,12 @@ import (
 
 type NodesItems struct {
 	ApiVersion string        `json:"apiVersion"`
-	Items      []corev1.Node `json:"items"`
+	Items      []interface{} `json:"items"`
 }
 
-func getNodes(CurrentContextPath string, DefaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string) {
+func getNodes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string) {
 	// get quay-io-... string
-	files, err := ioutil.ReadDir(CurrentContextPath)
+	files, err := ioutil.ReadDir(currentContextPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func getNodes(CurrentContextPath string, DefaultConfigNamespace string, resource
 		os.Exit(1)
 	}
 
-	nodesFolderPath := CurrentContextPath + "/" + QuayString + "/cluster-scoped-resources/core/nodes/"
+	nodesFolderPath := currentContextPath + "/" + QuayString + "/cluster-scoped-resources/core/nodes/"
 	_nodes, _ := ioutil.ReadDir(nodesFolderPath)
 
 	headers := []string{"name", "status", "roles", "age", "version", "internal-ip", "external-ip", "os-image", "kernel-version", "container-runtime"}

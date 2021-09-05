@@ -17,40 +17,37 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
-	"omc/cmd/helpers"
 	"omc/models"
-	"path/filepath"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func addContext(path string, omcConfigFile string) {
-	if !filepath.IsAbs(path) {
-		log.Fatal(": '", path, "' is not an absolute path.")
-	}
+func deleteContext(path string, omcConfigFile string, idFlag string) {
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := models.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
-	// create new context id
-	ctxId := helpers.RandString(8)
 	config := models.Config{}
 
 	var contexts []models.Context
 	var NewContexts []models.Context
 	contexts = omcConfigJson.Contexts
 	for _, c := range contexts {
-		c.Current = ""
-		NewContexts = append(NewContexts, c)
+		if c.Id == idFlag || c.Path == path {
+			continue
+		} else {
+			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
+		}
 	}
-	NewContexts = append(NewContexts, models.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
 
 	config.Contexts = NewContexts
-	config.Id = ctxId
 	file, err := json.MarshalIndent(config, "", " ")
 	if err != nil {
 		log.Fatal("Json Marshal failed")
@@ -60,8 +57,8 @@ func addContext(path string, omcConfigFile string) {
 }
 
 // useCmd represents the use command
-var addCmd = &cobra.Command{
-	Use:   "add",
+var deleteCmd = &cobra.Command{
+	Use:   "delete",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -70,24 +67,24 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			log.Fatal("Expect one arguemnt, found: ", len(args))
+		idFlag, _ := cmd.Flags().GetString("id")
+		path := ""
+		if len(args) > 1 {
+			fmt.Println("Expect one arguemnt, found: ", len(args))
+			os.Exit(1)
 		}
-		path := args[0]
-		addContext(path, viper.ConfigFileUsed())
+		if len(args) == 1 {
+			path = args[0]
+			if strings.HasSuffix(path, "/") {
+				path = strings.TrimRight(path, "/")
+			}
+		}
+
+		deleteContext(path, viper.ConfigFileUsed(), idFlag)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(addCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// useCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// useCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.AddCommand(deleteCmd)
+	deleteCmd.Flags().StringVarP(&id, "id", "i", "", "Id string for the must-gather. If two must-gather has the same id the first one will be used.")
 }

@@ -22,7 +22,6 @@ import (
 	"log"
 	"omc/cmd/helpers"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,13 +29,13 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type PodsItems struct {
-	ApiVersion string        `json:"apiVersion"`
-	Items      []*corev1.Pod `json:"items"`
+type ServicesItems struct {
+	ApiVersion string            `json:"apiVersion"`
+	Items      []*corev1.Service `json:"items"`
 }
 
-func getPods(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string, allResources bool) bool {
-	headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
+func getServices(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string, allResources bool) {
+	headers := []string{"namespace", "name", "type", "cluster-ip", "external-ip", "port(s)", "age", "selector"}
 	// get quay-io-... string
 	files, err := ioutil.ReadDir(currentContextPath)
 	if err != nil {
@@ -70,91 +69,71 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 	}
 
 	var data [][]string
-	var _PodsList = PodsItems{ApiVersion: "v1"}
+	var _ServicesList = ServicesItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items PodsItems
+		var _Items ServicesItems
 		CurrentNamespacePath := currentContextPath + "/" + QuayString + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/services.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/pods.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/services.yaml")
 			os.Exit(1)
 		}
 
-		for _, Pod := range _Items.Items {
-			// pod path
-			if resourceName != "" && resourceName != Pod.Name {
+		for _, Service := range _Items.Items {
+			if resourceName != "" && resourceName != Service.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_PodsList.Items = append(_PodsList.Items, Pod)
+				_ServicesList.Items = append(_ServicesList.Items, Service)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_PodsList.Items = append(_PodsList.Items, Pod)
+				_ServicesList.Items = append(_ServicesList.Items, Service)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_PodsList.Items = append(_PodsList.Items, Pod)
+				_ServicesList.Items = append(_ServicesList.Items, Service)
 				continue
 			}
 
 			//name
-			PodName := Pod.Name
+			ServiceName := Service.Name
 			if allResources {
-				PodName = "pod/" + PodName
+				ServiceName = "service/" + ServiceName
 			}
-			//
-			var containers string
-			if len(Pod.Spec.Containers) != 0 {
-				containers = strconv.Itoa(len(Pod.Spec.Containers))
-			} else {
-				containers = "0"
-			}
-			var containerStatuses = Pod.Status.ContainerStatuses // DA VALIDARE L'ESISTENZA
-			// ready
-			containers_ready := 0
-			for _, i := range containerStatuses {
-				if i.Ready == true {
-					containers_ready = containers_ready + 1
-				}
-			}
-			// restarts
-			ContainersRestarts := 0
-			for _, i := range containerStatuses {
-				if int(i.RestartCount) > ContainersRestarts {
-					ContainersRestarts = int(i.RestartCount)
-				}
-			}
-			ContainersReady := strconv.Itoa(containers_ready) + "/" + containers
-			//age
-			PodsFile, _ := os.Stat(CurrentNamespacePath + "/core/pods.yaml")
 
-			// check podfile last time modification as t2
-			t2 := PodsFile.ModTime()
+			//age
+			ServicesFile, _ := os.Stat(CurrentNamespacePath + "/core/services.yaml")
+
+			t2 := ServicesFile.ModTime()
 			layout := "2006-01-02 15:04:05 -0700 MST"
-			t1, _ := time.Parse(layout, Pod.ObjectMeta.CreationTimestamp.String())
+			t1, _ := time.Parse(layout, Service.ObjectMeta.CreationTimestamp.String())
 			diffTime := t2.Sub(t1).String()
 			d, _ := time.ParseDuration(diffTime)
 			diffTimeString := helpers.FormatDiffTime(d)
-			//return
-			_list := []string{Pod.Namespace, PodName, ContainersReady, string(Pod.Status.Phase), strconv.Itoa(ContainersRestarts), diffTimeString, string(Pod.Status.PodIP), Pod.Spec.NodeName}
+			//cluster-ip
+			ClusterIp := "<none>"
+			if Service.Spec.ClusterIP != "" {
+				ClusterIp = Service.Spec.ClusterIP
+			}
+			_list := []string{Service.Namespace, ServiceName, string(Service.Spec.Type), ClusterIp, "??", "??", diffTimeString, "??"}
 			if allNamespacesFlag == true {
 				if outputFlag == "" {
-					data = append(data, _list[0:6]) // -A
+					data = append(data, _list[0:7]) // -A
 				}
 				if outputFlag == "wide" {
 					data = append(data, _list) // -A -o wide
 				}
 			} else {
 				if outputFlag == "" {
-					data = append(data, _list[1:6])
+					data = append(data, _list[1:7])
 				}
 				if outputFlag == "wide" {
 					data = append(data, _list[1:]) // -o wide
@@ -162,20 +141,11 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 			}
 		}
 	}
-
-	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
-		if allResources {
-			return true
-		} else {
-			fmt.Println("No resources found in " + namespace + " namespace.")
-			return true
-		}
-	}
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			helpers.PrintTable(headers[0:6], data) // -A
+			helpers.PrintTable(headers[0:7], data) // -A
 		} else {
-			helpers.PrintTable(headers[1:6], data)
+			helpers.PrintTable(headers[1:7], data)
 		}
 	}
 	if outputFlag == "wide" {
@@ -186,16 +156,14 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 		}
 	}
 	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(_PodsList)
+		y, _ := yaml.Marshal(_ServicesList)
 		fmt.Println(string(y))
 	}
 	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(_PodsList, "", "  ")
+		j, _ := json.MarshalIndent(_ServicesList, "", "  ")
 		fmt.Println(string(j))
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(_PodsList, jsonPathTemplate)
+		helpers.ExecuteJsonPath(_ServicesList, jsonPathTemplate)
 	}
-
-	return false
 }

@@ -41,11 +41,11 @@ to quickly create a Cobra application.`,
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
 		var data [][]string
-		headers := []string{"current", "id", "path"}
+		headers := []string{"current", "id", "path", "namespace"}
 		var mg []models.Context
 		mg = omcConfigJson.Contexts
 		for _, context := range mg {
-			_list := []string{context.Current, context.Id, context.Path}
+			_list := []string{context.Current, context.Id, context.Path, context.Project}
 			data = append(data, _list)
 		}
 		helpers.PrintTable(headers, data)

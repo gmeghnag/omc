@@ -2,7 +2,9 @@ package helpers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"omc/models"
 	"os"
@@ -91,16 +93,22 @@ func FormatDiffTime(diff time.Duration) string {
 }
 
 func ExecuteJsonPath(data interface{}, jsonPathTemplate string) {
-	var err error
 	buf := new(bytes.Buffer)
 	jPath := jsonpath.New("out")
 	jPath.AllowMissingKeys(false)
 	jPath.EnableJSONOutput(false)
-	err = jPath.Parse(jsonPathTemplate)
+	err := jPath.Parse(jsonPathTemplate)
 	if err != nil {
 		fmt.Println("error: error parsing jsonpath " + jsonPathTemplate + ", " + err.Error())
 		os.Exit(1)
 	}
 	jPath.Execute(buf, data)
 	fmt.Print(buf)
+}
+
+func CreateConfigFile(homePath string) {
+	config := models.Config{}
+	file, _ := json.MarshalIndent(config, "", " ")
+	cfgFilePath := homePath + "/.omc.json"
+	_ = ioutil.WriteFile(cfgFilePath, file, 0644)
 }

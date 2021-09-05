@@ -16,18 +16,12 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"omc/models"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
-
-var output string
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
@@ -36,51 +30,79 @@ var getCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		allNamespacesFlag, _ := cmd.Flags().GetBool("all-namespaces")
 		outputFlag, _ := cmd.Flags().GetString("output")
-		namespace, _ := rootCmd.PersistentFlags().GetString("namespace")
-		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
-
-		omcConfigJson := models.Config{}
-		_ = json.Unmarshal([]byte(file), &omcConfigJson)
-		var CurrentContextPath string
-		var DefaultConfigNamespace string
-		var contexts []models.Context
-		contexts = omcConfigJson.Contexts
-		for _, context := range contexts {
-			if context.Current == "*" {
-				CurrentContextPath = context.Path
-				DefaultConfigNamespace = context.Project
-				break
-			}
-		}
+		//namespace, _ := rootCmd.PersistentFlags().GetString("namespace")
+		allResources := false
 		jsonPathTemplate := ""
 		if strings.HasPrefix(outputFlag, "jsonpath=") {
-			s := strings.Split(outputFlag, "=")
-			if len(s) < 2 || s[1] == "" {
+			s := outputFlag[9:]
+			if len(s) < 1 {
 				fmt.Println("error: template format specified but no template given")
 				os.Exit(1)
 			}
-			jsonPathTemplate = s[1]
+			jsonPathTemplate = s
+		}
+		if len(args) == 0 {
+			fmt.Println("Expected one argument, found: 0.")
+			os.Exit(1)
 		}
 
-		if len(args) == 1 {
-			argument := args[0]
-			if argument == "pod" || argument == "pods" {
-				getPods(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate)
+		//PODS
+		if strings.HasPrefix(args[0], "pod") || strings.HasPrefix(args[0], "pods") || strings.HasPrefix(args[0], "po") {
+			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
+				getPods(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (args[0] == "po" || args[0] == "pod" || args[0] == "pods") {
+					getPods(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (args[0] == "po" || args[0] == "pod" || args[0] == "pods") {
+						getPods(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+					}
+
+				}
 			}
-			if strings.HasPrefix(argument, "pod/") || strings.HasPrefix(argument, "pods/") {
-				s := strings.Split(argument, "/")
-				getPods(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate)
-			}
-			if argument == "node" || argument == "nodes" {
-				getNodes(CurrentContextPath, DefaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate)
-			}
-			if strings.HasPrefix(argument, "node/") || strings.HasPrefix(argument, "nodes/") {
-				s := strings.Split(argument, "/")
-				getNodes(CurrentContextPath, DefaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate)
-			}
-		} else {
-			fmt.Println("No resources found in " + namespace + " namespace")
 		}
+		//SERVICES
+		if strings.HasPrefix(args[0], "svc") || strings.HasPrefix(args[0], "service") || strings.HasPrefix(args[0], "services") {
+			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "svc" || s[0] == "service" || s[0] == "services") {
+				getServices(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (args[0] == "svc" || args[0] == "service" || args[0] == "services") {
+					getServices(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (args[0] == "svc" || args[0] == "service" || args[0] == "services") {
+						getServices(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
+
+		//NODES
+		if strings.HasPrefix(args[0], "node") || strings.HasPrefix(args[0], "nodes") {
+			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "node" || s[0] == "nodes") {
+				getNodes(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (args[0] == "node" || args[0] == "nodes") {
+					getNodes(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (args[0] == "node" || args[0] == "nodes") {
+						getNodes(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
+		if len(args) == 1 && args[0] == "all" {
+			allResources = true
+			empty := getPods(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			getServices(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, jsonPathTemplate, allResources)
+		}
+		//else {
+		//	fmt.Println("No resources found in " + namespace + " namespace")
+		//}
 	},
 }
 

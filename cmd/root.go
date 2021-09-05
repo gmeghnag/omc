@@ -16,7 +16,11 @@ limitations under the License.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"omc/cmd/helpers"
+	"omc/models"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -26,15 +30,15 @@ import (
 
 var cfgFile string
 var namespace string
+var id string
+var output string
+var currentContextPath string
+var defaultConfigNamespace string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{ // FLOW 4
-	Use:   "omc",
-	Short: "A brief description of your application",
-	Long:  `esc`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello from omc CLI") },
+	Use: "omc",
+	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello from omc CLI. :]") },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -78,7 +82,21 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		omcConfigJson := models.Config{}
+		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
+		_ = json.Unmarshal([]byte(file), &omcConfigJson)
+		var contexts []models.Context
+		contexts = omcConfigJson.Contexts
+		for _, context := range contexts {
+			if context.Current == "*" {
+				currentContextPath = context.Path
+				defaultConfigNamespace = context.Project
+				break
+			}
+		}
 	} else {
+		homePath, _ := os.UserHomeDir()
+		helpers.CreateConfigFile(homePath)
 		// TODO create the config file
 	}
 }
