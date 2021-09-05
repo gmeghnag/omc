@@ -123,7 +123,38 @@ func getServices(currentContextPath string, defaultConfigNamespace string, resou
 			if Service.Spec.ClusterIP != "" {
 				ClusterIp = Service.Spec.ClusterIP
 			}
-			_list := []string{Service.Namespace, ServiceName, string(Service.Spec.Type), ClusterIp, "??", "??", diffTimeString, "??"}
+			//external-ip
+			externalIp := "<none>"
+			if string(Service.Spec.Type) == "ExternalName" {
+				externalIp = Service.Spec.ExternalName
+			}
+			if string(Service.Spec.Type) == "ClusterIp" {
+				externalIp = Service.Spec.ClusterIP
+			}
+			if string(Service.Spec.Type) == "LoadBalancer" {
+				externalIp = Service.Spec.LoadBalancerIP
+			}
+			//ports
+			ports := ""
+			for _, p := range Service.Spec.Ports {
+				ports += fmt.Sprint(p.Port) + "/" + string(p.Protocol) + ","
+			}
+			if ports == "" {
+				ports = "<none>"
+			} else {
+				ports = strings.TrimRight(ports, ",")
+			}
+			//selector
+			selector := ""
+			for k, v := range Service.Spec.Selector {
+				selector += k + "=" + v + ","
+			}
+			if selector == "" {
+				selector = "<none>"
+			} else {
+				selector = strings.TrimRight(selector, ",")
+			}
+			_list := []string{Service.Namespace, ServiceName, string(Service.Spec.Type), ClusterIp, externalIp, ports, diffTimeString, selector}
 			if allNamespacesFlag == true {
 				if outputFlag == "" {
 					data = append(data, _list[0:7]) // -A
