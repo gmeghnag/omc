@@ -20,23 +20,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"omc/cmd/helpers"
 	"omc/models"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-func useContext(path string, omcConfigFile string, idFlag string) {
-	if path != "" {
-		if !filepath.IsAbs(path) {
-			fmt.Println("error: \"" + path + "\" is not an absolute path.")
-			os.Exit(1)
-		}
-	}
+func projectDefault(omcConfigFile string, projDefault string) {
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := models.Config{}
@@ -47,35 +38,16 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	var contexts []models.Context
 	var NewContexts []models.Context
 	contexts = omcConfigJson.Contexts
-	var found bool
-	var ctxId string
 	for _, c := range contexts {
-		if c.Id == idFlag || c.Path == path {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project})
-			found = true
+		if c.Current == "*" {
+			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
+			fmt.Println("Now using project \"" + projDefault + "\" on must-gather \"" + c.Path + "\".")
 		} else {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project})
+			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
 		}
-	}
-	if !found {
-		if idFlag != "" {
-			NewContexts = append(NewContexts, models.Context{Id: idFlag, Path: path, Current: "*", Project: "default"})
-		} else {
-			ctxId = helpers.RandString(8)
-			NewContexts = append(NewContexts, models.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
-		}
-
 	}
 
 	config.Contexts = NewContexts
-	config.Id = idFlag
-	if !found {
-		if idFlag != "" {
-			config.Id = idFlag
-		} else {
-			config.Id = ctxId
-		}
-	}
 	file, err := json.MarshalIndent(config, "", " ")
 	if err != nil {
 		log.Fatal("Json Marshal failed")
@@ -85,8 +57,8 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 }
 
 // useCmd represents the use command
-var useCmd = &cobra.Command{
-	Use:   "use",
+var projectCmd = &cobra.Command{
+	Use:   "project",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -95,24 +67,19 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		idFlag, _ := cmd.Flags().GetString("id")
-		path := ""
+		projDefault := "default"
 		if len(args) > 1 {
 			fmt.Println("Expect one arguemnt, found: ", len(args))
 			os.Exit(1)
 		}
 		if len(args) == 1 {
-			path = args[0]
-			if strings.HasSuffix(path, "/") {
-				path = strings.TrimRight(path, "/")
-			}
+			projDefault = args[0]
 		}
 
-		useContext(path, viper.ConfigFileUsed(), idFlag)
+		projectDefault(viper.ConfigFileUsed(), projDefault)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(useCmd)
-	useCmd.Flags().StringVarP(&id, "id", "i", "", "Id string for the must-gather. If two must-gather has the same id the first one will be used.")
+	rootCmd.AddCommand(projectCmd)
 }
