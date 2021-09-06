@@ -9,6 +9,7 @@ import (
 	"omc/models"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/olekukonko/tablewriter"
@@ -39,14 +40,6 @@ func RandString(length int) string {
 	return StringWithCharset(length, charset)
 }
 
-func (c Contexts) ContenxtArrayForm() []string {
-	var list []string
-	for _, context := range c {
-		list = append(list, context.Id)
-	}
-	return list
-}
-
 func PrintTable(headers []string, data [][]string) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader(headers)
@@ -61,12 +54,15 @@ func PrintTable(headers []string, data [][]string) {
 	table.SetBorder(false)
 	table.SetTablePadding("   ")
 	table.SetNoWhiteSpace(true)
-	table.AppendBulk(data) // Add Bulk Data
+	table.AppendBulk(data)
 	table.Render()
 }
 
 func FormatDiffTime(diff time.Duration) string {
 	if diff.Hours() > 24 {
+		if diff.Hours() > 2160000 {
+			return "Unknown"
+		}
 		return strconv.Itoa(int(diff.Hours()/24)) + "d"
 	}
 	if diff.Minutes() > 60 {
@@ -111,4 +107,42 @@ func CreateConfigFile(homePath string) {
 	file, _ := json.MarshalIndent(config, "", " ")
 	cfgFilePath := homePath + "/.omc.json"
 	_ = ioutil.WriteFile(cfgFilePath, file, 0644)
+}
+
+func GetData(data [][]string, allNamespacesFlag bool, showLabels bool, labels string, outputFlag string, column int32, _list []string) [][]string {
+	var toAppend []string
+	if allNamespacesFlag == true {
+		if outputFlag == "" {
+			toAppend = _list[0:column] // -A
+		}
+		if outputFlag == "wide" {
+			toAppend = _list // -A -o wide
+		}
+	} else {
+		if outputFlag == "" {
+			toAppend = _list[1:column]
+		}
+		if outputFlag == "wide" {
+			toAppend = _list[1:] // -o wide
+		}
+	}
+
+	if showLabels {
+		toAppend = append(toAppend, labels)
+	}
+	data = append(data, toAppend)
+	return data
+}
+
+func ExtractLabels(_labels map[string]string) string {
+	labels := ""
+	for k, v := range _labels {
+		labels += k + "=" + v + ","
+	}
+	if labels == "" {
+		labels = "<none>"
+	} else {
+		labels = strings.TrimRight(labels, ",")
+	}
+	return labels
 }

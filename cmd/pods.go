@@ -35,8 +35,8 @@ type PodsItems struct {
 	Items      []*corev1.Pod `json:"items"`
 }
 
-func getPods(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string, allResources bool) bool {
-	headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
+func getPods(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
 	// get quay-io-... string
 	files, err := ioutil.ReadDir(currentContextPath)
 	if err != nil {
@@ -110,21 +110,22 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 			if allResources {
 				PodName = "pod/" + PodName
 			}
-			//
+			//ContainersReady
 			var containers string
 			if len(Pod.Spec.Containers) != 0 {
 				containers = strconv.Itoa(len(Pod.Spec.Containers))
 			} else {
 				containers = "0"
 			}
-			var containerStatuses = Pod.Status.ContainerStatuses // DA VALIDARE L'ESISTENZA
-			// ready
+			var containerStatuses = Pod.Status.ContainerStatuses
+
 			containers_ready := 0
 			for _, i := range containerStatuses {
 				if i.Ready == true {
 					containers_ready = containers_ready + 1
 				}
 			}
+			ContainersReady := strconv.Itoa(containers_ready) + "/" + containers
 			// restarts
 			ContainersRestarts := 0
 			for _, i := range containerStatuses {
@@ -132,34 +133,24 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 					ContainersRestarts = int(i.RestartCount)
 				}
 			}
-			ContainersReady := strconv.Itoa(containers_ready) + "/" + containers
 			//age
-			PodsFile, _ := os.Stat(CurrentNamespacePath + "/core/pods.yaml")
-
-			// check podfile last time modification as t2
-			t2 := PodsFile.ModTime()
-			layout := "2006-01-02 15:04:05 -0700 MST"
-			t1, _ := time.Parse(layout, Pod.ObjectMeta.CreationTimestamp.String())
-			diffTime := t2.Sub(t1).String()
+			ResourceFile, _ := os.Stat(CurrentNamespacePath + "/core/pods.yaml")
+			t2 := ResourceFile.ModTime()
+			t1 := Pod.GetCreationTimestamp()
+			diffTime := t2.Sub(t1.Time).String()
 			d, _ := time.ParseDuration(diffTime)
 			diffTimeString := helpers.FormatDiffTime(d)
-			//return
+			//labels
+			labels := helpers.ExtractLabels(Pod.GetLabels())
 			_list := []string{Pod.Namespace, PodName, ContainersReady, string(Pod.Status.Phase), strconv.Itoa(ContainersRestarts), diffTimeString, string(Pod.Status.PodIP), Pod.Spec.NodeName}
-			if allNamespacesFlag == true {
-				if outputFlag == "" {
-					data = append(data, _list[0:6]) // -A
-				}
-				if outputFlag == "wide" {
-					data = append(data, _list) // -A -o wide
-				}
-			} else {
-				if outputFlag == "" {
-					data = append(data, _list[1:6])
-				}
-				if outputFlag == "wide" {
-					data = append(data, _list[1:]) // -o wide
-				}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
+
+			if resourceName != "" && resourceName == PodName {
+				break
 			}
+		}
+		if namespace != "" && _namespace == namespace {
+			break
 		}
 	}
 
@@ -171,30 +162,46 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 			return true
 		}
 	}
+	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			helpers.PrintTable(headers[0:6], data) // -A
+			headers = _headers[0:6]
 		} else {
-			helpers.PrintTable(headers[1:6], data)
+			headers = _headers[1:6]
 		}
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
 	}
 	if outputFlag == "wide" {
 		if allNamespacesFlag == true {
-			helpers.PrintTable(headers, data) // -A -o wide
+			headers = _headers
 		} else {
-			helpers.PrintTable(headers[1:], data) // -o wide
+			headers = _headers[1:]
 		}
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
+	}
+
+	var resource interface{}
+	if resourceName != "" {
+		resource = _PodsList.Items[0]
+	} else {
+		resource = _PodsList
 	}
 	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(_PodsList)
+		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
 	}
 	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(_PodsList, "", "  ")
+		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(_PodsList, jsonPathTemplate)
+		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 
 	return false

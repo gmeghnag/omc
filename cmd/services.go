@@ -34,8 +34,8 @@ type ServicesItems struct {
 	Items      []*corev1.Service `json:"items"`
 }
 
-func getServices(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string, allResources bool) {
-	headers := []string{"namespace", "name", "type", "cluster-ip", "external-ip", "port(s)", "age", "selector"}
+func getServices(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "type", "cluster-ip", "external-ip", "port(s)", "age", "selector"}
 	// get quay-io-... string
 	files, err := ioutil.ReadDir(currentContextPath)
 	if err != nil {
@@ -110,12 +110,10 @@ func getServices(currentContextPath string, defaultConfigNamespace string, resou
 			}
 
 			//age
-			ServicesFile, _ := os.Stat(CurrentNamespacePath + "/core/services.yaml")
-
-			t2 := ServicesFile.ModTime()
-			layout := "2006-01-02 15:04:05 -0700 MST"
-			t1, _ := time.Parse(layout, Service.ObjectMeta.CreationTimestamp.String())
-			diffTime := t2.Sub(t1).String()
+			ResourceFile, _ := os.Stat(CurrentNamespacePath + "/core/services.yaml")
+			t2 := ResourceFile.ModTime()
+			t1 := Service.GetCreationTimestamp()
+			diffTime := t2.Sub(t1.Time).String()
 			d, _ := time.ParseDuration(diffTime)
 			diffTimeString := helpers.FormatDiffTime(d)
 			//cluster-ip
@@ -154,47 +152,70 @@ func getServices(currentContextPath string, defaultConfigNamespace string, resou
 			} else {
 				selector = strings.TrimRight(selector, ",")
 			}
+			//labels
+			labels := helpers.ExtractLabels(Service.GetLabels())
 			_list := []string{Service.Namespace, ServiceName, string(Service.Spec.Type), ClusterIp, externalIp, ports, diffTimeString, selector}
-			if allNamespacesFlag == true {
-				if outputFlag == "" {
-					data = append(data, _list[0:7]) // -A
-				}
-				if outputFlag == "wide" {
-					data = append(data, _list) // -A -o wide
-				}
-			} else {
-				if outputFlag == "" {
-					data = append(data, _list[1:7])
-				}
-				if outputFlag == "wide" {
-					data = append(data, _list[1:]) // -o wide
-				}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
+
+			if resourceName != "" && resourceName == ServiceName {
+				break
 			}
 		}
+		if namespace != "" && _namespace == namespace {
+			break
+		}
 	}
+
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
+		if allResources {
+			return true
+		} else {
+			fmt.Println("No resources found in " + namespace + " namespace.")
+			return true
+		}
+	}
+
+	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			helpers.PrintTable(headers[0:7], data) // -A
+			headers = _headers[0:7]
 		} else {
-			helpers.PrintTable(headers[1:7], data)
+			headers = _headers[1:7]
 		}
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
 	}
 	if outputFlag == "wide" {
 		if allNamespacesFlag == true {
-			helpers.PrintTable(headers, data) // -A -o wide
+			headers = _headers
 		} else {
-			helpers.PrintTable(headers[1:], data) // -o wide
+			headers = _headers[1:]
 		}
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
 	}
+
+	var resource interface{}
+	if resourceName != "" {
+		resource = _ServicesList.Items[0]
+	} else {
+		resource = _ServicesList
+	}
+
 	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(_ServicesList)
+		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
 	}
 	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(_ServicesList, "", "  ")
+		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(_ServicesList, jsonPathTemplate)
+		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
+	return false
 }

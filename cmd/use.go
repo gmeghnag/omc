@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"omc/cmd/helpers"
 	"omc/models"
 	"os"
@@ -76,10 +75,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 			config.Id = ctxId
 		}
 	}
-	file, err := json.MarshalIndent(config, "", " ")
-	if err != nil {
-		log.Fatal("Json Marshal failed")
-	}
+	file, _ = json.MarshalIndent(config, "", " ")
 	_ = ioutil.WriteFile(omcConfigFile, file, 0644)
 
 }
@@ -105,6 +101,9 @@ to quickly create a Cobra application.`,
 			path = args[0]
 			if strings.HasSuffix(path, "/") {
 				path = strings.TrimRight(path, "/")
+			}
+			if strings.HasSuffix(path, "\\") {
+				path = strings.TrimRight(path, "\\")
 			}
 		}
 

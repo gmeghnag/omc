@@ -31,10 +31,10 @@ import (
 
 type NodesItems struct {
 	ApiVersion string        `json:"apiVersion"`
-	Items      []interface{} `json:"items"`
+	Items      []corev1.Node `json:"items"`
 }
 
-func getNodes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, jsonPathTemplate string) {
+func getNodes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) {
 	// get quay-io-... string
 	files, err := ioutil.ReadDir(currentContextPath)
 	if err != nil {
@@ -55,7 +55,7 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 	nodesFolderPath := currentContextPath + "/" + QuayString + "/cluster-scoped-resources/core/nodes/"
 	_nodes, _ := ioutil.ReadDir(nodesFolderPath)
 
-	headers := []string{"name", "status", "roles", "age", "version", "internal-ip", "external-ip", "os-image", "kernel-version", "container-runtime"}
+	_headers := []string{"name", "status", "roles", "age", "version", "internal-ip", "external-ip", "os-image", "kernel-version", "container-runtime"}
 	var data [][]string
 
 	_NodesList := NodesItems{ApiVersion: "v1"}
@@ -110,13 +110,10 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 		}
 
 		//AGE
-		NodeFile, _ := os.Stat(nodeYamlPath)
-
-		// check podfile last time modification as t2
-		t2 := NodeFile.ModTime()
-		layout := "2006-01-02 15:04:05 -0700 MST"
-		t1, _ := time.Parse(layout, Node.ObjectMeta.CreationTimestamp.String())
-		diffTime := t2.Sub(t1).String()
+		ResourceFile, _ := os.Stat(nodeYamlPath)
+		t2 := ResourceFile.ModTime()
+		t1 := Node.GetCreationTimestamp()
+		diffTime := t2.Sub(t1.Time).String()
 		d, _ := time.ParseDuration(diffTime)
 		diffTimeString := helpers.FormatDiffTime(d)
 
@@ -133,32 +130,43 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 				externalAddress = add.Address
 			}
 		}
-		//fmt.Println(Node.Name, NodeStatus, NodeRole, diffTimeString, Node.Status.NodeInfo.KubeletVersion, Node.Status.NodeInfo.OSImage, Node.Status.NodeInfo.KernelVersion)
+		labels := helpers.ExtractLabels(Node.GetLabels())
 		_list := []string{Node.Name, NodeStatus, NodeRole, diffTimeString, Node.Status.NodeInfo.KubeletVersion, internalAddress, externalAddress, Node.Status.NodeInfo.OSImage, Node.Status.NodeInfo.KernelVersion, Node.Status.NodeInfo.ContainerRuntimeVersion}
-		if outputFlag == "" {
-			data = append(data, _list[0:5]) // -A
-		}
-		if outputFlag == "wide" {
-			data = append(data, _list) // -A -o wide
-		}
+		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 5, _list)
 	}
 
+	var headers []string
 	if outputFlag == "" {
-		helpers.PrintTable(headers[0:5], data) // -A
+		headers = _headers[0:5] // -A
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
+
 	}
 	if outputFlag == "wide" {
-		helpers.PrintTable(headers, data) // -A -o wide
+		headers = _headers // -A -o wide
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
+	}
+	var resource interface{}
+	if resourceName != "" {
+		resource = _NodesList.Items[0]
+	} else {
+		resource = _NodesList
 	}
 	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(_NodesList)
+		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
 	}
 	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(_NodesList, "", "  ")
+		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(_NodesList, jsonPathTemplate)
+		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 
 }
