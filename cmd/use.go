@@ -30,12 +30,12 @@ import (
 )
 
 func useContext(path string, omcConfigFile string, idFlag string) {
-	if path != "" {
-		if !filepath.IsAbs(path) {
-			fmt.Println("error: \"" + path + "\" is not an absolute path.")
-			os.Exit(1)
-		}
-	}
+	//if path != "" {
+	//	if !filepath.IsAbs(path) {
+	//		fmt.Println("error: \"" + path + "\" is not an absolute path.")
+	//		os.Exit(1)
+	//	}
+	//}
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := models.Config{}
@@ -83,13 +83,11 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 // useCmd represents the use command
 var useCmd = &cobra.Command{
 	Use:   "use",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Select the must-gather to use",
+	Long: `
+	Select the must-gather to use.
+	If the must-gather does not exists it will be added as default to the managed must-gahters.
+	Use the command 'omc get mg' to see them all.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
@@ -105,6 +103,12 @@ to quickly create a Cobra application.`,
 			if strings.HasSuffix(path, "\\") {
 				path = strings.TrimRight(path, "\\")
 			}
+			path, _ = filepath.Abs(path)
+			isDir, _ := helpers.IsDirectory(path)
+			if !isDir {
+				fmt.Println("Error: " + path + " is not a direcotry.")
+				os.Exit(1)
+			}
 		}
 
 		useContext(path, viper.ConfigFileUsed(), idFlag)
@@ -113,5 +117,5 @@ to quickly create a Cobra application.`,
 
 func init() {
 	rootCmd.AddCommand(useCmd)
-	useCmd.Flags().StringVarP(&id, "id", "i", "", "Id string for the must-gather. If two must-gather has the same id the first one will be used.")
+	useCmd.Flags().StringVarP(&id, "id", "i", "", "Id string for the must-gather to use. If two must-gather has the same id the first one will be used.")
 }

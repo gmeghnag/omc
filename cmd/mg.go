@@ -17,9 +17,12 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
 	"omc/models"
+	"os"
+	"reflect"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -27,20 +30,14 @@ import (
 
 // contextsCmd represents the mg command
 var contextsCmd = &cobra.Command{
-	Use:   "mg",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use: "mg",
 	Run: func(cmd *cobra.Command, args []string) {
 		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
 		omcConfigJson := models.Config{}
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
 		var data [][]string
+		var emptyData [][]string
 		headers := []string{"current", "id", "path", "namespace"}
 		var mg []models.Context
 		mg = omcConfigJson.Contexts
@@ -48,8 +45,12 @@ to quickly create a Cobra application.`,
 			_list := []string{context.Current, context.Id, context.Path, context.Project}
 			data = append(data, _list)
 		}
-		helpers.PrintTable(headers, data)
-
+		if reflect.DeepEqual(data, emptyData) {
+			fmt.Println("There are no must-gather resources defined.")
+			os.Exit(1)
+		} else {
+			helpers.PrintTable(headers, data)
+		}
 	},
 }
 

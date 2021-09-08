@@ -8,6 +8,6 @@ type Context struct {
 }
 
 type Config struct {
-	Id       string    `json:"id"`
-	Contexts []Context `json:"contexts"` // <== contexts è la chiave json per accedere a []Context
+	Id       string    `json:"id,omitempty"`
+	Contexts []Context `json:"contexts,omitempty"`
 }

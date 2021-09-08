@@ -1,10 +1,12 @@
 package helpers
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"omc/models"
 	"os"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/jsonpath"
 )
 
@@ -59,11 +62,16 @@ func PrintTable(headers []string, data [][]string) {
 }
 
 func FormatDiffTime(diff time.Duration) string {
-	if diff.Hours() > 24 {
-		if diff.Hours() > 2160000 {
+	if diff.Hours() > 48 {
+		if diff.Hours() > 200000 {
 			return "Unknown"
 		}
 		return strconv.Itoa(int(diff.Hours()/24)) + "d"
+	}
+	if diff.Hours() < 48 && diff.Hours() > 10 {
+		var h float64
+		h = diff.Minutes() / 60
+		return strconv.Itoa(int(h)) + "h"
 	}
 	if diff.Minutes() > 60 {
 		var hours float64
@@ -145,4 +153,44 @@ func ExtractLabels(_labels map[string]string) string {
 		labels = strings.TrimRight(labels, ",")
 	}
 	return labels
+}
+
+// doing this because of a bug who append three characthers to the first node yaml file
+func ReadNodeYaml(nodeYamlPath string) []byte {
+	var __file []byte
+	_file, err := os.Open(nodeYamlPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer _file.Close()
+
+	scanner := bufio.NewScanner(_file)
+	for scanner.Scan() {
+		line := scanner.Text() + "\n"
+		if len(line) != 4 {
+			__file = append(__file, []byte(line)...)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return __file
+}
+
+func GetAge(resourcefilePath string, resourceCreationTimeStamp v1.Time) string {
+	ResourceFile, _ := os.Stat(resourcefilePath)
+	t2 := ResourceFile.ModTime()
+	diffTime := t2.Sub(resourceCreationTimeStamp.Time).String()
+	d, _ := time.ParseDuration(diffTime)
+	return FormatDiffTime(d)
+
+}
+
+func IsDirectory(path string) (bool, error) {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+
+	return fileInfo.IsDir(), err
 }

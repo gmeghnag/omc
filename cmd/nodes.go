@@ -19,11 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"omc/cmd/helpers"
 	"os"
+	"sort"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -34,25 +33,8 @@ type NodesItems struct {
 	Items      []corev1.Node `json:"items"`
 }
 
-func getNodes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) {
-	// get quay-io-... string
-	files, err := ioutil.ReadDir(currentContextPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var QuayString string
-	for _, f := range files {
-		if strings.HasPrefix(f.Name(), "quay") {
-			QuayString = f.Name()
-			break
-		}
-	}
-	if QuayString == "" {
-		fmt.Println("Some error occurred, wrong must-gather file composition")
-		os.Exit(1)
-	}
-
-	nodesFolderPath := currentContextPath + "/" + QuayString + "/cluster-scoped-resources/core/nodes/"
+func getNodes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+	nodesFolderPath := currentContextPath + "/cluster-scoped-resources/core/nodes/"
 	_nodes, _ := ioutil.ReadDir(nodesFolderPath)
 
 	_headers := []string{"name", "status", "roles", "age", "version", "internal-ip", "external-ip", "os-image", "kernel-version", "container-runtime"}
@@ -61,7 +43,7 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 	_NodesList := NodesItems{ApiVersion: "v1"}
 	for _, f := range _nodes {
 		nodeYamlPath := nodesFolderPath + f.Name()
-		_file, _ := ioutil.ReadFile(nodeYamlPath)
+		_file := helpers.ReadNodeYaml(nodeYamlPath)
 		Node := corev1.Node{}
 		if err := yaml.Unmarshal([]byte(_file), &Node); err != nil {
 			fmt.Println("Error when trying to unmarshall file: " + nodeYamlPath)
@@ -101,22 +83,23 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 		}
 
 		//ROLE
-		NodeRole := "??"
+		var NodeRoles []string
+		NodeRole := ""
 		for i := range Node.ObjectMeta.Labels {
 			if strings.HasPrefix(i, "node-role.kubernetes.io/") {
 				s := strings.Split(i, "/")
-				NodeRole = s[1]
+				NodeRoles = append(NodeRoles, s[1])
 			}
+		}
+		sort.Strings(NodeRoles)
+		if len(NodeRoles) == 0 {
+			NodeRole = ""
+		} else {
+			NodeRole = strings.Join(NodeRoles, ",")
 		}
 
 		//AGE
-		ResourceFile, _ := os.Stat(nodeYamlPath)
-		t2 := ResourceFile.ModTime()
-		t1 := Node.GetCreationTimestamp()
-		diffTime := t2.Sub(t1.Time).String()
-		d, _ := time.ParseDuration(diffTime)
-		diffTimeString := helpers.FormatDiffTime(d)
-
+		age := helpers.GetAge(nodeYamlPath, Node.GetCreationTimestamp())
 		//ADDRESSES
 		internalAddress := "<none>"
 		externalAddress := "<none>"
@@ -131,7 +114,7 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 			}
 		}
 		labels := helpers.ExtractLabels(Node.GetLabels())
-		_list := []string{Node.Name, NodeStatus, NodeRole, diffTimeString, Node.Status.NodeInfo.KubeletVersion, internalAddress, externalAddress, Node.Status.NodeInfo.OSImage, Node.Status.NodeInfo.KernelVersion, Node.Status.NodeInfo.ContainerRuntimeVersion}
+		_list := []string{Node.Name, NodeStatus, NodeRole, age, Node.Status.NodeInfo.KubeletVersion, internalAddress, externalAddress, Node.Status.NodeInfo.OSImage, Node.Status.NodeInfo.KernelVersion, Node.Status.NodeInfo.ContainerRuntimeVersion}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 5, _list)
 	}
 
@@ -142,7 +125,7 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
-
+		return false
 	}
 	if outputFlag == "wide" {
 		headers = _headers // -A -o wide
@@ -150,6 +133,7 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
+		return false
 	}
 	var resource interface{}
 	if resourceName != "" {
@@ -168,5 +152,5 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
-
+	return false
 }

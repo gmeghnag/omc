@@ -19,12 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"omc/cmd/helpers"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -37,25 +35,9 @@ type PodsItems struct {
 
 func getPods(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
-	// get quay-io-... string
-	files, err := ioutil.ReadDir(currentContextPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var QuayString string
-	for _, f := range files {
-		if strings.HasPrefix(f.Name(), "quay") {
-			QuayString = f.Name()
-			break
-		}
-	}
-	if QuayString == "" {
-		fmt.Println("Some error occurred, wrong must-gather file composition")
-		os.Exit(1)
-	}
 	var namespaces []string
 	if allNamespacesFlag == true {
-		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/" + QuayString + "/namespaces/")
+		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())
 		}
@@ -73,7 +55,7 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 	var _PodsList = PodsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
 		var _Items PodsItems
-		CurrentNamespacePath := currentContextPath + "/" + QuayString + "/namespaces/" + _namespace
+		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
@@ -126,6 +108,11 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 				}
 			}
 			ContainersReady := strconv.Itoa(containers_ready) + "/" + containers
+			//status
+			status := string(Pod.Status.Phase)
+			if status == "Succeeded" {
+				status = "Completed"
+			}
 			// restarts
 			ContainersRestarts := 0
 			for _, i := range containerStatuses {
@@ -134,15 +121,10 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 				}
 			}
 			//age
-			ResourceFile, _ := os.Stat(CurrentNamespacePath + "/core/pods.yaml")
-			t2 := ResourceFile.ModTime()
-			t1 := Pod.GetCreationTimestamp()
-			diffTime := t2.Sub(t1.Time).String()
-			d, _ := time.ParseDuration(diffTime)
-			diffTimeString := helpers.FormatDiffTime(d)
+			age := helpers.GetAge(CurrentNamespacePath+"/core/pods.yaml", Pod.GetCreationTimestamp())
 			//labels
 			labels := helpers.ExtractLabels(Pod.GetLabels())
-			_list := []string{Pod.Namespace, PodName, ContainersReady, string(Pod.Status.Phase), strconv.Itoa(ContainersRestarts), diffTimeString, string(Pod.Status.PodIP), Pod.Spec.NodeName}
+			_list := []string{Pod.Namespace, PodName, ContainersReady, status, strconv.Itoa(ContainersRestarts), age, string(Pod.Status.PodIP), Pod.Spec.NodeName}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
 			if resourceName != "" && resourceName == PodName {
@@ -155,12 +137,10 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 	}
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
-		if allResources {
-			return true
-		} else {
-			fmt.Println("No resources found in " + namespace + " namespace.")
-			return true
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
+		return true
 	}
 	var headers []string
 	if outputFlag == "" {
@@ -173,6 +153,7 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
+		return false
 	}
 	if outputFlag == "wide" {
 		if allNamespacesFlag == true {
@@ -184,8 +165,9 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
+		return false
 	}
-
+	fmt.Println(_PodsList.Items)
 	var resource interface{}
 	if resourceName != "" {
 		resource = _PodsList.Items[0]

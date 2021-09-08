@@ -19,11 +19,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"omc/cmd/helpers"
 	"os"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -36,26 +34,9 @@ type EventsItems struct {
 
 func getEvents(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "last seen", "type", "reason", "object", "message"}
-
-	// get quay-io-... string
-	files, err := ioutil.ReadDir(currentContextPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	var QuayString string
-	for _, f := range files {
-		if strings.HasPrefix(f.Name(), "quay") {
-			QuayString = f.Name()
-			break
-		}
-	}
-	if QuayString == "" {
-		fmt.Println("Some error occurred, wrong must-gather file composition")
-		os.Exit(1)
-	}
 	var namespaces []string
 	if allNamespacesFlag == true {
-		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/" + QuayString + "/namespaces/")
+		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())
 		}
@@ -73,7 +54,7 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 	var _EventsList = EventsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
 		var _Items EventsItems
-		CurrentNamespacePath := currentContextPath + "/" + QuayString + "/namespaces/" + _namespace
+		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/events.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
@@ -104,14 +85,8 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 				continue
 			}
 
-			//name
 			//last seen
-			ResourceFile, _ := os.Stat(CurrentNamespacePath + "/core/events.yaml")
-			t2 := ResourceFile.ModTime()
-			lastSeen := Event.LastTimestamp
-			lastSeenDiffTime := t2.Sub(lastSeen.Time).String()
-			_d, _ := time.ParseDuration(lastSeenDiffTime)
-			lastSeenDiffTimeString := helpers.FormatDiffTime(_d)
+			lastSeenDiffTimeString := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.LastTimestamp)
 
 			//type
 			eventType := Event.Type
@@ -122,15 +97,12 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 			//message
 			message := Event.Message
 			//age
-			t1 := Event.GetCreationTimestamp()
-			diffTime := t2.Sub(t1.Time).String()
-			d, _ := time.ParseDuration(diffTime)
-			diffTimeString := helpers.FormatDiffTime(d)
+			age := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.GetCreationTimestamp())
 			//containers
 
 			//labels
 			labels := helpers.ExtractLabels(Event.GetLabels())
-			_list := []string{Event.Namespace, lastSeenDiffTimeString, eventType, reason, object, message, diffTimeString}
+			_list := []string{Event.Namespace, lastSeenDiffTimeString, eventType, reason, object, message, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
 			if resourceName != "" && resourceName == Event.Name {
@@ -143,12 +115,10 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 	}
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
-		if allResources {
-			return true
-		} else {
-			fmt.Println("No resources found in " + namespace + " namespace.")
-			return true
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
+		return true
 	}
 
 	var headers []string
@@ -162,6 +132,7 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
+		return false
 	}
 	if outputFlag == "wide" {
 		if allNamespacesFlag == true {
@@ -173,6 +144,7 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
+		return false
 	}
 	var resource interface{}
 	if resourceName != "" {

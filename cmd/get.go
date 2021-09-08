@@ -17,6 +17,8 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -24,15 +26,41 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var validArgs []string
+
 // getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
-	Short: "A brief description of your command",
+	Short: "Get related subcommand",
 	Run: func(cmd *cobra.Command, args []string) {
+		if currentContextPath == "" {
+			fmt.Println("There are no must-gather resources defined.")
+			os.Exit(1)
+		}
+		files, err := ioutil.ReadDir(currentContextPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var QuayString string
+		for _, f := range files {
+			if strings.HasPrefix(f.Name(), "quay") {
+				QuayString = f.Name()
+				currentContextPath = currentContextPath + "/" + QuayString
+				break
+			}
+		}
+		if QuayString == "" {
+			fmt.Println("Some error occurred, wrong must-gather file composition")
+			os.Exit(1)
+		}
 		allNamespacesFlag, _ := cmd.Flags().GetBool("all-namespaces")
 		showLabels, _ := cmd.Flags().GetBool("show-labels")
 		outputFlag, _ := cmd.Flags().GetString("output")
-		//namespace, _ := rootCmd.PersistentFlags().GetString("namespace")
+		namespaceFlag, _ := cmd.Flags().GetString("namespace")
+		if namespaceFlag != "" && !allNamespacesFlag {
+			defaultConfigNamespace, _ = rootCmd.PersistentFlags().GetString("namespace")
+		}
+
 		allResources := false
 		jsonPathTemplate := ""
 		if strings.HasPrefix(outputFlag, "jsonpath=") {
@@ -47,15 +75,31 @@ var getCmd = &cobra.Command{
 			fmt.Println("Expected one or two arguments, found: " + strconv.Itoa(len(args)) + ".")
 			os.Exit(1)
 		}
+		typedResource := strings.ToLower(args[0])
+		//CLUSTERVERSION
+		if strings.HasPrefix(typedResource, "clusterversion") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "clusterversion" || s[0] == "clusterversions") {
+				getClusterVersion(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (typedResource == "clusterversion" || typedResource == "clusterversions") {
+					getClusterVersion(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (typedResource == "clusterversion" || typedResource == "clusterversions") {
+						getClusterVersion(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
 		//CLUSTEROPERATORS
-		if strings.HasPrefix(args[0], "co") || strings.HasPrefix(args[0], "clusteroperator") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "co" || s[0] == "clusteroperator") {
+		if strings.HasPrefix(typedResource, "co") || strings.HasPrefix(typedResource, "clusteroperator") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "co" || s[0] == "clusteroperator" || s[0] == "clusteroperators") {
 				getClusterOperators(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
 			} else {
-				if len(args) == 2 && (args[0] == "co" || args[0] == "clusteroperator") {
+				if len(args) == 2 && (typedResource == "co" || typedResource == "clusteroperator" || typedResource == "clusteroperators") {
 					getClusterOperators(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
 				} else {
-					if len(args) == 1 && (args[0] == "co" || args[0] == "clusteroperator") {
+					if len(args) == 1 && (typedResource == "co" || typedResource == "clusteroperator" || typedResource == "clusteroperators") {
 						getClusterOperators(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
 					}
 
@@ -63,14 +107,14 @@ var getCmd = &cobra.Command{
 			}
 		}
 		//EVENTS
-		if strings.HasPrefix(args[0], "event") || strings.HasPrefix(args[0], "events") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "event" || s[0] == "events") {
+		if strings.HasPrefix(typedResource, "event") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "event" || s[0] == "events") {
 				getEvents(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			} else {
-				if len(args) == 2 && (args[0] == "event" || args[0] == "events") {
+				if len(args) == 2 && (typedResource == "event" || typedResource == "events") {
 					getEvents(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 				} else {
-					if len(args) == 1 && (args[0] == "event" || args[0] == "events") {
+					if len(args) == 1 && (typedResource == "event" || typedResource == "events") {
 						getEvents(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
@@ -78,14 +122,14 @@ var getCmd = &cobra.Command{
 			}
 		}
 		//DEPLOYMENTS
-		if strings.HasPrefix(args[0], "deployment") || strings.HasPrefix(args[0], "deployments") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "deployment" || s[0] == "deployments") {
+		if strings.HasPrefix(typedResource, "deployment") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "deployment" || s[0] == "deployment.apps" || s[0] == "deployments") {
 				getDeployments(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			} else {
-				if len(args) == 2 && (args[0] == "deployment" || args[0] == "deployments") {
+				if len(args) == 2 && (typedResource == "deployment" || typedResource == "deployment.apps" || typedResource == "deployments") {
 					getDeployments(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 				} else {
-					if len(args) == 1 && (args[0] == "deployment" || args[0] == "deployments") {
+					if len(args) == 1 && (typedResource == "deployment" || typedResource == "deployment.apps" || typedResource == "deployments") {
 						getDeployments(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
@@ -93,14 +137,14 @@ var getCmd = &cobra.Command{
 			}
 		}
 		//REPLICASETS
-		if strings.HasPrefix(args[0], "rs") || strings.HasPrefix(args[0], "replicaset") || strings.HasPrefix(args[0], "replicasets") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "rs" || s[0] == "replicaset" || s[0] == "replicasets") {
+		if strings.HasPrefix(typedResource, "rs") || strings.HasPrefix(typedResource, "replicaset") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "rs" || s[0] == "replicaset" || s[0] == "replicaset.apps" || s[0] == "replicasets") {
 				getReplicaSets(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			} else {
-				if len(args) == 2 && (args[0] == "rs" || args[0] == "replicaset" || args[0] == "replicasets") {
+				if len(args) == 2 && (typedResource == "rs" || typedResource == "replicaset" || typedResource == "replicaset.apps" || typedResource == "replicasets") {
 					getReplicaSets(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 				} else {
-					if len(args) == 1 && (args[0] == "rs" || args[0] == "replicaset" || args[0] == "replicasets") {
+					if len(args) == 1 && (typedResource == "rs" || typedResource == "replicaset" || typedResource == "replicaset.apps" || typedResource == "replicasets") {
 						getReplicaSets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
@@ -108,14 +152,14 @@ var getCmd = &cobra.Command{
 			}
 		}
 		//PODS
-		if strings.HasPrefix(args[0], "pod") || strings.HasPrefix(args[0], "pods") || strings.HasPrefix(args[0], "po") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
+		if strings.HasPrefix(typedResource, "po") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
 				getPods(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			} else {
-				if len(args) == 2 && (args[0] == "po" || args[0] == "pod" || args[0] == "pods") {
+				if len(args) == 2 && (typedResource == "po" || typedResource == "pod" || typedResource == "pods") {
 					getPods(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 				} else {
-					if len(args) == 1 && (args[0] == "po" || args[0] == "pod" || args[0] == "pods") {
+					if len(args) == 1 && (typedResource == "po" || typedResource == "pod" || typedResource == "pods") {
 						getPods(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
@@ -123,37 +167,36 @@ var getCmd = &cobra.Command{
 			}
 		}
 		//SERVICES
-		if strings.HasPrefix(args[0], "svc") || strings.HasPrefix(args[0], "service") || strings.HasPrefix(args[0], "services") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "svc" || s[0] == "service" || s[0] == "services") {
+		if strings.HasPrefix(typedResource, "svc") || strings.HasPrefix(typedResource, "service") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "svc" || s[0] == "service" || s[0] == "services") {
 				getServices(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			} else {
-				if len(args) == 2 && (args[0] == "svc" || args[0] == "service" || args[0] == "services") {
+				if len(args) == 2 && (typedResource == "svc" || typedResource == "service" || typedResource == "services") {
 					getServices(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 				} else {
-					if len(args) == 1 && (args[0] == "svc" || args[0] == "service" || args[0] == "services") {
+					if len(args) == 1 && (typedResource == "svc" || typedResource == "service" || typedResource == "services") {
 						getServices(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
 				}
 			}
 		}
-
 		//NODES
-		if strings.HasPrefix(args[0], "node") || strings.HasPrefix(args[0], "nodes") {
-			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "node" || s[0] == "nodes") {
+		if strings.HasPrefix(typedResource, "node") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "node" || s[0] == "nodes") {
 				getNodes(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
 			} else {
-				if len(args) == 2 && (args[0] == "node" || args[0] == "nodes") {
+				if len(args) == 2 && (typedResource == "node" || typedResource == "nodes") {
 					getNodes(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
 				} else {
-					if len(args) == 1 && (args[0] == "node" || args[0] == "nodes") {
+					if len(args) == 1 && (typedResource == "node" || typedResource == "nodes") {
 						getNodes(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
 					}
 
 				}
 			}
 		}
-		if len(args) == 1 && args[0] == "all" {
+		if len(args) == 1 && typedResource == "all" {
 			allResources = true
 			empty := getPods(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			if !empty {
@@ -167,6 +210,10 @@ var getCmd = &cobra.Command{
 			if !empty {
 				fmt.Println("")
 			}
+			empty = getReplicaSets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
 		}
 		//else {
 		//	fmt.Println("No resources found in " + namespace + " namespace")
@@ -175,20 +222,9 @@ var getCmd = &cobra.Command{
 }
 
 func init() {
-	//fmt.Println("inside get init")
-
 	rootCmd.AddCommand(getCmd)
 	getCmd.PersistentFlags().BoolP("all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces.")
 	getCmd.PersistentFlags().BoolP("show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
 	getCmd.PersistentFlags().StringVarP(&output, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// getCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// getCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	//getCmd.PersistentFlags().StringVarP(&selector, "selector", "l", "", "elector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 }

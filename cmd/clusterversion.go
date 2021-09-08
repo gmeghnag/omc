@@ -23,7 +23,6 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,61 +30,61 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type ClusterOperatorsItems struct {
-	ApiVersion string                     `json:"apiVersion"`
-	Items      []configv1.ClusterOperator `json:"items"`
+type ClusterVersionsItems struct {
+	ApiVersion string                    `json:"apiVersion"`
+	Items      []configv1.ClusterVersion `json:"items"`
 }
 
-func getClusterOperators(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+func getClusterVersion(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 
-	clusteroperatorsFolderPath := currentContextPath + "/cluster-scoped-resources/config.openshift.io/clusteroperators/"
-	_clusteroperators, _ := ioutil.ReadDir(clusteroperatorsFolderPath)
+	clusterversionsFolderPath := currentContextPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/"
+	_clusterversions, _ := ioutil.ReadDir(clusterversionsFolderPath)
 
-	_headers := []string{"name", "version", "available", "progressing", "degraded", "since"}
+	_headers := []string{"name", "version", "available", "progressing", "since", "status"}
 	var data [][]string
 
-	_ClusterOperatorsList := ClusterOperatorsItems{ApiVersion: "v1"}
-	for _, f := range _clusteroperators {
-		clusteroperatorYamlPath := clusteroperatorsFolderPath + f.Name()
-		_file, _ := ioutil.ReadFile(clusteroperatorYamlPath)
-		ClusterOperator := configv1.ClusterOperator{}
-		if err := yaml.Unmarshal([]byte(_file), &ClusterOperator); err != nil {
-			fmt.Println("Error when trying to unmarshall file: " + clusteroperatorYamlPath)
+	_ClusterVersionsList := ClusterVersionsItems{ApiVersion: "v1"}
+	for _, f := range _clusterversions {
+		clusterversionYamlPath := clusterversionsFolderPath + f.Name()
+		_file, _ := ioutil.ReadFile(clusterversionYamlPath)
+		ClusterVersion := configv1.ClusterVersion{}
+		if err := yaml.Unmarshal([]byte(_file), &ClusterVersion); err != nil {
+			fmt.Println("Error when trying to unmarshall file: " + clusterversionYamlPath)
 			os.Exit(1)
 		}
 
-		if resourceName != "" && resourceName != ClusterOperator.Name {
+		if resourceName != "" && resourceName != ClusterVersion.Name {
 			continue
 		}
 
 		if outputFlag == "yaml" {
-			_ClusterOperatorsList.Items = append(_ClusterOperatorsList.Items, ClusterOperator)
+			_ClusterVersionsList.Items = append(_ClusterVersionsList.Items, ClusterVersion)
 			continue
 		}
 
 		if outputFlag == "json" {
-			_ClusterOperatorsList.Items = append(_ClusterOperatorsList.Items, ClusterOperator)
+			_ClusterVersionsList.Items = append(_ClusterVersionsList.Items, ClusterVersion)
 			continue
 		}
 
 		if strings.HasPrefix(outputFlag, "jsonpath=") {
-			_ClusterOperatorsList.Items = append(_ClusterOperatorsList.Items, ClusterOperator)
+			_ClusterVersionsList.Items = append(_ClusterVersionsList.Items, ClusterVersion)
 			continue
 		}
 		//Name
-		clusterOperatorName := ClusterOperator.Name
+		clusterOperatorName := ClusterVersion.Name
 		//version
 		version := ""
-		for _, v := range ClusterOperator.Status.Versions {
-			if v.Name == "operator" {
-				version = v.Version
+		for _, h := range ClusterVersion.Status.History {
+			if h.State == "Completed" {
+				version = h.Version
 			}
 		}
 		// conditions
-		conditions := ClusterOperator.Status.Conditions
+		conditions := ClusterVersion.Status.Conditions
 		available := ""
 		progressing := ""
-		degraded := ""
+		status := ""
 		var lastsTransitionTime []v1.Time
 		var lastTransitionTime v1.Time
 		var zeroTime v1.Time
@@ -98,11 +97,11 @@ func getClusterOperators(currentContextPath string, defaultConfigNamespace strin
 			//progressing
 			if c.Type == "Progressing" {
 				progressing = string(c.Status)
+				status = string(c.Message)
 				lastsTransitionTime = append(lastsTransitionTime, c.LastTransitionTime)
 			}
-			//degraded
-			if c.Type == "Degraded" {
-				degraded = string(c.Status)
+			//status
+			if c.Type == "Failing" {
 				lastsTransitionTime = append(lastsTransitionTime, c.LastTransitionTime)
 			}
 		}
@@ -116,14 +115,9 @@ func getClusterOperators(currentContextPath string, defaultConfigNamespace strin
 				}
 			}
 		}
-		since := "??"
-		ResourceFile, _ := os.Stat(clusteroperatorYamlPath)
-		t2 := ResourceFile.ModTime()
-		diffTime := t2.Sub(lastTransitionTime.Time).String()
-		d, _ := time.ParseDuration(diffTime)
-		since = helpers.FormatDiffTime(d)
-		labels := helpers.ExtractLabels(ClusterOperator.GetLabels())
-		_list := []string{clusterOperatorName, version, available, progressing, degraded, since}
+		since := helpers.GetAge(clusterversionYamlPath, lastTransitionTime)
+		labels := helpers.ExtractLabels(ClusterVersion.GetLabels())
+		_list := []string{clusterOperatorName, version, available, progressing, since, status}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 6, _list)
 	}
 
@@ -134,7 +128,6 @@ func getClusterOperators(currentContextPath string, defaultConfigNamespace strin
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
-		return false
 
 	}
 	if outputFlag == "wide" {
@@ -143,13 +136,12 @@ func getClusterOperators(currentContextPath string, defaultConfigNamespace strin
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
-		return false
 	}
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ClusterOperatorsList.Items[0]
+		resource = _ClusterVersionsList.Items[0]
 	} else {
-		resource = _ClusterOperatorsList
+		resource = _ClusterVersionsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
