@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"gopkg.in/yaml.v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/jsonpath"
 )
@@ -193,4 +194,44 @@ func IsDirectory(path string) (bool, error) {
 	}
 
 	return fileInfo.IsDir(), err
+}
+
+func PrintOutput(resource interface{}, columns int16, outputFlag string, resourceName string, allNamespacesFlag bool, showLabels bool, _headers []string, data [][]string, jsonPathTemplate string) bool {
+	var headers []string
+	if outputFlag == "" {
+		if allNamespacesFlag == true {
+			headers = _headers[0:columns]
+		} else {
+			headers = _headers[1:columns]
+		}
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		PrintTable(headers, data)
+		return false
+	}
+	if outputFlag == "wide" {
+		if allNamespacesFlag == true {
+			headers = _headers
+		} else {
+			headers = _headers[1:]
+		}
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		PrintTable(headers, data)
+		return false
+	}
+	if outputFlag == "yaml" {
+		y, _ := yaml.Marshal(resource)
+		fmt.Println(string(y))
+	}
+	if outputFlag == "json" {
+		j, _ := json.MarshalIndent(resource, "", "  ")
+		fmt.Println(string(j))
+	}
+	if strings.HasPrefix(outputFlag, "jsonpath=") {
+		ExecuteJsonPath(resource, jsonPathTemplate)
+	}
+	return false
 }

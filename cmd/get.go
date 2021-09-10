@@ -181,6 +181,21 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//ROUTE
+		if strings.HasPrefix(typedResource, "route") || strings.HasPrefix(typedResource, "routes") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "route" || s[0] == "routes") {
+				getRoutes(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "route" || typedResource == "routes") {
+					getRoutes(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "route" || typedResource == "routes") {
+						getRoutes(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//NODES
 		if strings.HasPrefix(typedResource, "node") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "node" || s[0] == "nodes") {
@@ -211,6 +226,10 @@ var getCmd = &cobra.Command{
 				fmt.Println("")
 			}
 			empty = getReplicaSets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getRoutes(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			if !empty {
 				fmt.Println("")
 			}

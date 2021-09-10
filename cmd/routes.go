@@ -21,20 +21,19 @@ import (
 	"io/ioutil"
 	"omc/cmd/helpers"
 	"os"
-	"strconv"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type PodsItems struct {
-	ApiVersion string        `json:"apiVersion"`
-	Items      []*corev1.Pod `json:"items"`
+type RoutesItems struct {
+	ApiVersion string           `json:"apiVersion"`
+	Items      []*routev1.Route `json:"items"`
 }
 
-func getPods(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "ready", "status", "restarts", "age", "ip", "node"}
+func getRoutes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "host/port", "path", "services", "port", "termination", "wildcard"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -52,82 +51,72 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 	}
 
 	var data [][]string
-	var _PodsList = PodsItems{ApiVersion: "v1"}
+	var _RoutesList = RoutesItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items PodsItems
+		var _Items RoutesItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/route.openshift.io/routes.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/pods.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/route.openshift.io/routes.yaml")
 			os.Exit(1)
 		}
 
-		for _, Pod := range _Items.Items {
-			// pod path
-			if resourceName != "" && resourceName != Pod.Name {
+		for _, Route := range _Items.Items {
+			if resourceName != "" && resourceName != Route.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_PodsList.Items = append(_PodsList.Items, Pod)
+				_RoutesList.Items = append(_RoutesList.Items, Route)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_PodsList.Items = append(_PodsList.Items, Pod)
+				_RoutesList.Items = append(_RoutesList.Items, Route)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_PodsList.Items = append(_PodsList.Items, Pod)
+				_RoutesList.Items = append(_RoutesList.Items, Route)
 				continue
 			}
 
 			//name
-			PodName := Pod.Name
+			RouteName := Route.Name
 			if allResources {
-				PodName = "pod/" + PodName
+				RouteName = "route/" + RouteName
 			}
-			//ContainersReady
-			var containers string
-			if len(Pod.Spec.Containers) != 0 {
-				containers = strconv.Itoa(len(Pod.Spec.Containers))
-			} else {
-				containers = "0"
-			}
-			var containerStatuses = Pod.Status.ContainerStatuses
 
-			containers_ready := 0
-			for _, i := range containerStatuses {
-				if i.Ready == true {
-					containers_ready = containers_ready + 1
-				}
+			//host/port
+			hostPort := Route.Spec.Host
+
+			//path
+			path := Route.Spec.Path
+
+			//services
+			services := Route.Spec.To.Name
+
+			//ports
+			port := Route.Spec.Port.TargetPort.String()
+
+			//termination
+			termination := ""
+			termination = string(Route.Spec.TLS.Termination)
+			if Route.Spec.TLS.InsecureEdgeTerminationPolicy != "" {
+				termination += "/" + string(Route.Spec.TLS.InsecureEdgeTerminationPolicy)
 			}
-			ContainersReady := strconv.Itoa(containers_ready) + "/" + containers
-			//status
-			status := string(Pod.Status.Phase)
-			if status == "Succeeded" {
-				status = "Completed"
-			}
-			// restarts
-			ContainersRestarts := 0
-			for _, i := range containerStatuses {
-				if int(i.RestartCount) > ContainersRestarts {
-					ContainersRestarts = int(i.RestartCount)
-				}
-			}
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/core/pods.yaml", Pod.GetCreationTimestamp())
+			//wildcard
+			wildcard := string(Route.Spec.WildcardPolicy)
 			//labels
-			labels := helpers.ExtractLabels(Pod.GetLabels())
-			_list := []string{Pod.Namespace, PodName, ContainersReady, status, strconv.Itoa(ContainersRestarts), age, string(Pod.Status.PodIP), Pod.Spec.NodeName}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
+			labels := helpers.ExtractLabels(Route.GetLabels())
+			_list := []string{Route.Namespace, RouteName, hostPort, path, services, port, termination, wildcard}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 8, _list)
 
-			if resourceName != "" && resourceName == PodName {
+			if resourceName != "" && resourceName == RouteName {
 				break
 			}
 		}
@@ -142,12 +131,13 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 		}
 		return true
 	}
+
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:6]
+			headers = _headers[0:8]
 		} else {
-			headers = _headers[1:6]
+			headers = _headers[1:8]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -167,12 +157,14 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 		helpers.PrintTable(headers, data)
 		return false
 	}
+
 	var resource interface{}
 	if resourceName != "" {
-		resource = _PodsList.Items[0]
+		resource = _RoutesList.Items[0]
 	} else {
-		resource = _PodsList
+		resource = _RoutesList
 	}
+
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
@@ -184,16 +176,5 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
-
-	/* var resource interface{}
-	if outputFlag == "yaml" || outputFlag == "json" || outputFlag == "jsonpath" {
-		if resourceName != "" {
-			fmt.Println(_PodsList.Items[0].Name)
-			resource = _PodsList.Items[0]
-		} else {
-			resource = _PodsList
-		}
-	}
-	helpers.PrintOutput(resource, outputFlag, resourceName, allNamespacesFlag, showLabels, _headers, data, jsonPathTemplate)
-	*/return false
+	return false
 }
