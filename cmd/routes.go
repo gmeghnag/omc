@@ -88,7 +88,7 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 			//name
 			RouteName := Route.Name
 			if allResources {
-				RouteName = "route/" + RouteName
+				RouteName = "route.route.openshift.io/" + RouteName
 			}
 
 			//host/port
