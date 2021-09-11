@@ -121,6 +121,21 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//DAEMONSET
+		if strings.HasPrefix(typedResource, "daemonset") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "daemonset" || s[0] == "daemonset.apps" || s[0] == "daemonsts") {
+				getDaemonsets(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "daemonset" || typedResource == "daemonset.apps" || typedResource == "daemonsets") {
+					getDaemonsets(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "daemonset" || typedResource == "daemonset.apps" || typedResource == "daemonsets") {
+						getDaemonsets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//DEPLOYMENTS
 		if strings.HasPrefix(typedResource, "deployment") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "deployment" || s[0] == "deployment.apps" || s[0] == "deployments") {
@@ -211,6 +226,36 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//PV
+		if strings.HasPrefix(typedResource, "pv") || strings.HasPrefix(typedResource, "persistentvolume") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "pv" || s[0] == "persistentvolume" || s[0] == "persistentvolumes") {
+				getPersistentVolumes(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (typedResource == "pv" || typedResource == "persistentvolume" || typedResource == "persistentvolumes") {
+					getPersistentVolumes(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (typedResource == "pv" || typedResource == "persistentvolume" || typedResource == "persistentvolumes") {
+						getPersistentVolumes(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
+		//SC
+		if strings.HasPrefix(typedResource, "sc") || strings.HasPrefix(typedResource, "storageclass") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "sc" || s[0] == "storageclass" || s[0] == "storageclasses") {
+				getStorageClasses(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (typedResource == "sc" || typedResource == "storageclass" || typedResource == "storageclasses") {
+					getStorageClasses(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (typedResource == "sc" || typedResource == "storageclass" || typedResource == "storageclasses") {
+						getStorageClasses(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
 		if len(args) == 1 && typedResource == "all" {
 			allResources = true
 			empty := getPods(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
@@ -218,6 +263,10 @@ var getCmd = &cobra.Command{
 				fmt.Println("")
 			}
 			empty = getServices(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getDaemonsets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			if !empty {
 				fmt.Println("")
 			}

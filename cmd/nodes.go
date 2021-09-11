@@ -43,7 +43,7 @@ func getNodes(currentContextPath string, defaultConfigNamespace string, resource
 	_NodesList := NodesItems{ApiVersion: "v1"}
 	for _, f := range _nodes {
 		nodeYamlPath := nodesFolderPath + f.Name()
-		_file := helpers.ReadNodeYaml(nodeYamlPath)
+		_file := helpers.ReadYaml(nodeYamlPath)
 		Node := corev1.Node{}
 		if err := yaml.Unmarshal([]byte(_file), &Node); err != nil {
 			fmt.Println("Error when trying to unmarshall file: " + nodeYamlPath)

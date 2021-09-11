@@ -17,8 +17,9 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -29,17 +30,83 @@ var logsCmd = &cobra.Command{
 	Use:   "logs",
 	Short: "Get related subcommand",
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 || len(args) > 2 {
-			fmt.Println("Expected one or two arguments, found: " + strconv.Itoa(len(args)) + ".")
+		if currentContextPath == "" {
+			fmt.Println("There are no must-gather resources defined.")
 			os.Exit(1)
 		}
-		typedResource := strings.ToLower(args[0])
-		fmt.Println(typedResource)
-		//CLUSTERVERSION
+		files, err := ioutil.ReadDir(currentContextPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var QuayString string
+		for _, f := range files {
+			if strings.HasPrefix(f.Name(), "quay") {
+				QuayString = f.Name()
+				currentContextPath = currentContextPath + "/" + QuayString
+				break
+			}
+		}
+		if QuayString == "" {
+			fmt.Println("Some error occurred, wrong must-gather file composition")
+			os.Exit(1)
+		}
+		namespaceFlag, _ := cmd.Flags().GetString("namespace")
+		if namespaceFlag != "" {
+			defaultConfigNamespace = namespaceFlag
+		}
+		podName := ""
+		containerName, _ := cmd.Flags().GetString("container")
+		previousFlag, _ := cmd.Flags().GetBool("previous")
 
+		if len(args) == 0 || len(args) > 2 {
+			fmt.Println("error: expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'.")
+			fmt.Println("POD or TYPE/NAME is a required argument for the logs command")
+			fmt.Println("See 'omc logs -h' for help and examples")
+			os.Exit(1)
+		}
+		if len(args) == 1 {
+			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
+				podName = s[1]
+				if podName == "" {
+					fmt.Println("error: arguments in resource/name form must have a single resource and name")
+					os.Exit(1)
+				}
+				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+			} else {
+				podName = s[0]
+				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+			}
+		}
+		if len(args) == 2 {
+			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
+				if containerName != "" {
+					fmt.Println("error: only one of -c or an inline [CONTAINER] arg is allowed")
+					os.Exit(1)
+				} else {
+					podName = s[1]
+					if podName == "" {
+						fmt.Println("error: arguments in resource/name form must have a single resource and name")
+						os.Exit(1)
+					}
+					containerName = args[1]
+					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+				}
+			} else {
+				if containerName != "" {
+					fmt.Println("error: only one of -c or an inline [CONTAINER] arg is allowed")
+					os.Exit(1)
+				} else {
+					podName = args[0]
+					containerName = args[1]
+					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+				}
+			}
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(logsCmd)
+	logsCmd.PersistentFlags().StringVarP(&output, "container", "c", "", "Print the logs of this container")
+	logsCmd.PersistentFlags().BoolP("previous", "p", false, "Print the logs for the previous instance of the container in a pod if it exists.")
 }

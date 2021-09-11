@@ -157,9 +157,9 @@ func ExtractLabels(_labels map[string]string) string {
 }
 
 // doing this because of a bug who append three characthers to the first node yaml file
-func ReadNodeYaml(nodeYamlPath string) []byte {
+func ReadYaml(YamlPath string) []byte {
 	var __file []byte
-	_file, err := os.Open(nodeYamlPath)
+	_file, err := os.Open(YamlPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -234,4 +234,24 @@ func PrintOutput(resource interface{}, columns int16, outputFlag string, resourc
 		ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+func Cat(filePath string) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Println("error: file " + filePath + " does not exist")
+		os.Exit(1)
+	}
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("error: can't open file " + filePath)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+
+	}
 }
