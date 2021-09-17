@@ -101,9 +101,12 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 			services := Route.Spec.To.Name
 
 			//ports
-			port := Route.Spec.Port.TargetPort.String()
-
-			//termination
+			port := ""
+			if Route.Spec.Port == nil {
+				port = "<all>"
+			} else {
+				port = Route.Spec.Port.TargetPort.String()
+			}
 			termination := ""
 			termination = string(Route.Spec.TLS.Termination)
 			if Route.Spec.TLS.InsecureEdgeTerminationPolicy != "" {
@@ -125,7 +128,7 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 		}
 	}
 
-	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
+	if len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}

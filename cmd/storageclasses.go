@@ -83,7 +83,13 @@ func getStorageClasses(currentContextPath string, defaultConfigNamespace string,
 		//VOLUMEBINDINGMODE
 		volumeBindingMode := string(*StorageClass.VolumeBindingMode)
 		//ALLOWVOLUMEEXPANSION
-		allowVolumeExpansion := strconv.FormatBool(*StorageClass.AllowVolumeExpansion)
+		allowVolumeExpansion := "true"
+		if StorageClass.AllowVolumeExpansion == nil {
+			allowVolumeExpansion = "false"
+		} else {
+			allowVolumeExpansion = strconv.FormatBool(*StorageClass.AllowVolumeExpansion)
+		}
+
 		//AGE
 		age := helpers.GetAge(storageclassYamlPath, StorageClass.GetCreationTimestamp())
 		labels := helpers.ExtractLabels(StorageClass.GetLabels())

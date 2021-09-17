@@ -139,7 +139,7 @@ func getDeployments(currentContextPath string, defaultConfigNamespace string, re
 		}
 	}
 
-	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
+	if len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}

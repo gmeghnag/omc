@@ -89,7 +89,12 @@ func getPersistentVolumes(currentContextPath string, defaultConfigNamespace stri
 		status := string(PersistentVolume.Status.Phase)
 
 		//CLAIM
-		claim := string(PersistentVolume.Spec.ClaimRef.Namespace) + "/" + string(PersistentVolume.Spec.ClaimRef.Name)
+		claim := ""
+		if PersistentVolume.Spec.ClaimRef == nil {
+			claim = ""
+		} else {
+			claim = string(PersistentVolume.Spec.ClaimRef.Namespace) + "/" + string(PersistentVolume.Spec.ClaimRef.Name)
+		}
 
 		//SC
 		sc := PersistentVolume.Spec.StorageClassName

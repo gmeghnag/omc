@@ -8,23 +8,32 @@ The `omc` tool does not simply parse the yaml file, it uses the official Kuberne
 ---
 ### Supported resources and flags
 
-To date, the `omc` tool supports the following resources:
+To date, the `omc get` command supports the following resources:
 
 - ClusterOperators
 - ClusterVersion
+- DaemonSets
 - Deployments
+- Events
 - Nodes
+- PersistentVolumes
 - Pods
 - ReplicaSets
 - Services
 - Routes
 
-
-Supported Flags (for get command):
+and the following flags:
 - -A, --all-namespaces
 - -n, --namespace
 - -o, --output [ json | yaml | wide | jsonpath=... ]
 - --show-labels
+
+To date, the `omc logs` command supports the following resources:
+
+- Pods
+
+and the following flags:
+- -p, --previous
 
 ### Usage
 Point it to an extracted must-gather:

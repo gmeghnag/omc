@@ -136,7 +136,7 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 		}
 	}
 
-	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
+	if len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
