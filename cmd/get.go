@@ -320,6 +320,21 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//PVC
+		if strings.HasPrefix(typedResource, "pvc") || strings.HasPrefix(typedResource, "persistentvolumeclaim") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "pvc" || s[0] == "persistentvolumeclaim" || s[0] == "persistentvolumeclaims") {
+				getPersistentVolumeClaims(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "pvc" || typedResource == "persistentvolumeclaim" || typedResource == "persistentvolumeclaims") {
+					getPersistentVolumeClaims(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "pvc" || typedResource == "persistentvolumeclaim" || typedResource == "persistentvolumeclaims") {
+						getPersistentVolumeClaims(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//SC
 		if strings.HasPrefix(typedResource, "sc") || strings.HasPrefix(typedResource, "storageclass") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "sc" || s[0] == "storageclass" || s[0] == "storageclasses") {
