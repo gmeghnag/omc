@@ -10,16 +10,21 @@ The `omc` tool does not simply parse the yaml file, it uses the official Kuberne
 
 To date, the `omc get` command supports the following resources:
 
+- Builds
+- BuildConfigs
 - ClusterOperators
 - ClusterVersion
 - DaemonSets
 - Deployments
+- DeploymentConfigs
 - Events
 - Nodes
 - PersistentVolumes
 - Pods
+- ReplicationControllers
 - ReplicaSets
 - Services
+- StorageClasses
 - Routes
 
 and the following flags:
