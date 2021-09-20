@@ -23,7 +23,7 @@ import (
 )
 
 func versionOmc() {
-	fmt.Println("omc version 1.0 (https://github.com/gmeghnag/omc)")
+	fmt.Println("omc version 1.1 (https://github.com/gmeghnag/omc)")
 }
 
 // useCmd represents the use command
