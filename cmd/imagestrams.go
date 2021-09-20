@@ -21,20 +21,20 @@ import (
 	"io/ioutil"
 	"omc/cmd/helpers"
 	"os"
-	"strconv"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
+	v1 "github.com/openshift/api/image/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type ReplicaSetsItems struct {
-	ApiVersion string               `json:"apiVersion"`
-	Items      []*appsv1.ReplicaSet `json:"items"`
+type ImageStreamsItems struct {
+	ApiVersion string            `json:"apiVersion"`
+	Items      []*v1.ImageStream `json:"items"`
 }
 
-func getReplicaSets(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images", "selector"}
+func getImageStreams(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "image repository", "tags", "updated"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -52,88 +52,61 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	}
 
 	var data [][]string
-	var _ReplicaSetsList = ReplicaSetsItems{ApiVersion: "v1"}
+	var _ImageStreamsList = ImageStreamsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items ReplicaSetsItems
-		CurrentNamespacePath := currentContextPath + "/" + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/replicasets.yaml")
+		var _Items ImageStreamsItems
+		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 			os.Exit(1)
 		}
 
-		for _, ReplicaSet := range _Items.Items {
-			if resourceName != "" && resourceName != ReplicaSet.Name {
+		for _, ImageStream := range _Items.Items {
+			if resourceName != "" && resourceName != ImageStream.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			//name
-			ReplicaSetName := ReplicaSet.Name
+			ImageStreamName := ImageStream.Name
 			if allResources {
-				ReplicaSetName = "replicaset.apps/" + ReplicaSetName
+				ImageStreamName = "imagestream.image.openshift.io/" + ImageStreamName
 			}
-			//desired
-			desired := strconv.Itoa(int(ReplicaSet.Status.Replicas))
-			//current
-			current := strconv.Itoa(int(ReplicaSet.Status.AvailableReplicas))
-			//ready
-			ready := strconv.Itoa(int(ReplicaSet.Status.ReadyReplicas))
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/replicasets.yaml", ReplicaSet.GetCreationTimestamp())
-			//containers
-			containers := ""
-			for _, c := range ReplicaSet.Spec.Template.Spec.Containers {
-				containers += fmt.Sprint(c.Name) + ","
+			//image repository
+			imageRepository := ImageStream.Status.DockerImageRepository
+			//tags
+			tags := ""
+			for _, tag := range ImageStream.Status.Tags {
+				tags += tag.Tag + ","
 			}
-			if containers == "" {
-				containers = "??"
-			} else {
-				containers = strings.TrimRight(containers, ",")
-			}
-			//images
-			images := ""
-			for _, i := range ReplicaSet.Spec.Template.Spec.Containers {
-				images += fmt.Sprint(i.Image) + ","
-			}
-			if images == "" {
-				images = "??"
-			} else {
-				images = strings.TrimRight(images, ",")
-			}
-			selector := ""
-			for k, v := range ReplicaSet.Spec.Selector.MatchLabels {
-				selector += k + "=" + v + ","
-			}
-			if selector == "" {
-				selector = "<none>"
-			} else {
-				selector = strings.TrimRight(selector, ",")
-			}
+			tags = strings.TrimRight(tags, ",")
+			//updated
+			updated := helpers.GetAge(CurrentNamespacePath+"/image.openshift.io/imagestreams.yaml", ImageStream.GetCreationTimestamp())
 			//labels
-			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
-			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
+			labels := helpers.ExtractLabels(ImageStream.GetLabels())
+			_list := []string{ImageStream.Namespace, ImageStreamName, imageRepository, tags, updated}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == ReplicaSetName {
+			if resourceName != "" && resourceName == ImageStreamName {
 				break
 			}
 		}
@@ -152,9 +125,9 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:6]
+			headers = _headers[0:5]
 		} else {
-			headers = _headers[1:6]
+			headers = _headers[1:5]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -175,7 +148,7 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		return false
 	}
 
-	if len(_ReplicaSetsList.Items) == 0 {
+	if len(_ImageStreamsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -184,9 +157,9 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ReplicaSetsList.Items[0]
+		resource = _ImageStreamsList.Items[0]
 	} else {
-		resource = _ReplicaSetsList
+		resource = _ImageStreamsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)

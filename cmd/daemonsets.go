@@ -147,7 +147,7 @@ func getDaemonsets(currentContextPath string, defaultConfigNamespace string, res
 		}
 	}
 
-	if len(data) == 0 {
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -179,6 +179,14 @@ func getDaemonsets(currentContextPath string, defaultConfigNamespace string, res
 		helpers.PrintTable(headers, data)
 		return false
 	}
+
+	if len(_DaemonsetsList.Items) == 0 {
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+		}
+		return true
+	}
+
 	var resource interface{}
 	if resourceName != "" {
 		resource = _DaemonsetsList.Items[0]

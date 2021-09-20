@@ -24,17 +24,18 @@ import (
 	"strconv"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
+	v1 "github.com/openshift/api/build/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type ReplicaSetsItems struct {
-	ApiVersion string               `json:"apiVersion"`
-	Items      []*appsv1.ReplicaSet `json:"items"`
+type BuildConfigsItems struct {
+	ApiVersion string            `json:"apiVersion"`
+	Items      []*v1.BuildConfig `json:"items"`
 }
 
-func getReplicaSets(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images", "selector"}
+func getBuildConfigs(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "type", "from", "latest"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -52,88 +53,57 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	}
 
 	var data [][]string
-	var _ReplicaSetsList = ReplicaSetsItems{ApiVersion: "v1"}
+	var _BuildConfigsList = BuildConfigsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items ReplicaSetsItems
-		CurrentNamespacePath := currentContextPath + "/" + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/replicasets.yaml")
+		var _Items BuildConfigsItems
+		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
 			os.Exit(1)
 		}
 
-		for _, ReplicaSet := range _Items.Items {
-			if resourceName != "" && resourceName != ReplicaSet.Name {
+		for _, BuildConfig := range _Items.Items {
+			if resourceName != "" && resourceName != BuildConfig.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
 			}
 
 			//name
-			ReplicaSetName := ReplicaSet.Name
+			BuildConfigName := BuildConfig.Name
 			if allResources {
-				ReplicaSetName = "replicaset.apps/" + ReplicaSetName
+				BuildConfigName = "buildconfig.build.openshift.io/" + BuildConfigName
 			}
-			//desired
-			desired := strconv.Itoa(int(ReplicaSet.Status.Replicas))
-			//current
-			current := strconv.Itoa(int(ReplicaSet.Status.AvailableReplicas))
-			//ready
-			ready := strconv.Itoa(int(ReplicaSet.Status.ReadyReplicas))
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/replicasets.yaml", ReplicaSet.GetCreationTimestamp())
-			//containers
-			containers := ""
-			for _, c := range ReplicaSet.Spec.Template.Spec.Containers {
-				containers += fmt.Sprint(c.Name) + ","
-			}
-			if containers == "" {
-				containers = "??"
-			} else {
-				containers = strings.TrimRight(containers, ",")
-			}
-			//images
-			images := ""
-			for _, i := range ReplicaSet.Spec.Template.Spec.Containers {
-				images += fmt.Sprint(i.Image) + ","
-			}
-			if images == "" {
-				images = "??"
-			} else {
-				images = strings.TrimRight(images, ",")
-			}
-			selector := ""
-			for k, v := range ReplicaSet.Spec.Selector.MatchLabels {
-				selector += k + "=" + v + ","
-			}
-			if selector == "" {
-				selector = "<none>"
-			} else {
-				selector = strings.TrimRight(selector, ",")
-			}
+			//type
+			bcType := string(BuildConfig.Spec.Strategy.Type)
+			//from
+			from := string(BuildConfig.Spec.Source.Type)
+			//latest
+			latest := strconv.Itoa(int(BuildConfig.Status.LastVersion))
 			//labels
-			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
-			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
+			labels := helpers.ExtractLabels(BuildConfig.GetLabels())
+			_list := []string{BuildConfig.Namespace, BuildConfigName, bcType, from, latest}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == ReplicaSetName {
+			if resourceName != "" && resourceName == BuildConfigName {
 				break
 			}
 		}
@@ -152,9 +122,9 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:6]
+			headers = _headers[0:5]
 		} else {
-			headers = _headers[1:6]
+			headers = _headers[1:5]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -175,18 +145,17 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		return false
 	}
 
-	if len(_ReplicaSetsList.Items) == 0 {
+	if len(_BuildConfigsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
 		return true
 	}
-
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ReplicaSetsList.Items[0]
+		resource = _BuildConfigsList.Items[0]
 	} else {
-		resource = _ReplicaSetsList
+		resource = _BuildConfigsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)

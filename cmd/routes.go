@@ -108,10 +108,13 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 				port = Route.Spec.Port.TargetPort.String()
 			}
 			termination := ""
-			termination = string(Route.Spec.TLS.Termination)
-			if Route.Spec.TLS.InsecureEdgeTerminationPolicy != "" {
-				termination += "/" + string(Route.Spec.TLS.InsecureEdgeTerminationPolicy)
+			if Route.Spec.TLS != nil {
+				termination = string(Route.Spec.TLS.Termination)
+				if Route.Spec.TLS.InsecureEdgeTerminationPolicy != "" {
+					termination += "/" + string(Route.Spec.TLS.InsecureEdgeTerminationPolicy)
+				}
 			}
+
 			//wildcard
 			wildcard := string(Route.Spec.WildcardPolicy)
 			//labels
@@ -128,7 +131,7 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 		}
 	}
 
-	if len(data) == 0 {
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -159,6 +162,13 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 		}
 		helpers.PrintTable(headers, data)
 		return false
+	}
+
+	if len(_RoutesList.Items) == 0 {
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+		}
+		return true
 	}
 
 	var resource interface{}

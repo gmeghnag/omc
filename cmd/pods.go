@@ -136,12 +136,13 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 		}
 	}
 
-	if len(data) == 0 {
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
 		return true
 	}
+
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
@@ -167,6 +168,14 @@ func getPods(currentContextPath string, defaultConfigNamespace string, resourceN
 		helpers.PrintTable(headers, data)
 		return false
 	}
+
+	if len(_PodsList.Items) == 0 {
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+		}
+		return true
+	}
+
 	var resource interface{}
 	if resourceName != "" {
 		resource = _PodsList.Items[0]

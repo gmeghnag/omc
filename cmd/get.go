@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"omc/cmd/helpers"
 	"os"
 	"strconv"
 	"strings"
@@ -37,21 +38,24 @@ var getCmd = &cobra.Command{
 			fmt.Println("There are no must-gather resources defined.")
 			os.Exit(1)
 		}
-		files, err := ioutil.ReadDir(currentContextPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		var QuayString string
-		for _, f := range files {
-			if strings.HasPrefix(f.Name(), "quay") {
-				QuayString = f.Name()
-				currentContextPath = currentContextPath + "/" + QuayString
-				break
+		exist, _ := helpers.Exists(currentContextPath + "/namespaces")
+		if !exist {
+			files, err := ioutil.ReadDir(currentContextPath)
+			if err != nil {
+				log.Fatal(err)
 			}
-		}
-		if QuayString == "" {
-			fmt.Println("Some error occurred, wrong must-gather file composition")
-			os.Exit(1)
+			var QuayString string
+			for _, f := range files {
+				if strings.HasPrefix(f.Name(), "quay") {
+					QuayString = f.Name()
+					currentContextPath = currentContextPath + "/" + QuayString
+					break
+				}
+			}
+			if QuayString == "" {
+				fmt.Println("Some error occurred, wrong must-gather file composition")
+				os.Exit(1)
+			}
 		}
 		allNamespacesFlag, _ := cmd.Flags().GetBool("all-namespaces")
 		showLabels, _ := cmd.Flags().GetBool("show-labels")
@@ -76,6 +80,36 @@ var getCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		typedResource := strings.ToLower(args[0])
+		//BUILDS
+		if strings.HasPrefix(typedResource, "build") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "build" || s[0] == "build.build.openshift.io" || s[0] == "builds") {
+				getBuilds(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "build" || typedResource == "build.build.openshift.io" || typedResource == "builds") {
+					getBuilds(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "build" || typedResource == "build.build.openshift.io" || typedResource == "builds") {
+						getBuilds(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
+		//BUILDCONFIGS
+		if strings.HasPrefix(typedResource, "bc") || strings.HasPrefix(typedResource, "buildconfig") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "bc" || s[0] == "buildconfig" || s[0] == "buildconfig.build.openshift.io" || s[0] == "buildconfigs") {
+				getBuildConfigs(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "bc" || typedResource == "buildconfig" || typedResource == "buildconfig.build.openshift.io" || typedResource == "buildconfigs") {
+					getBuildConfigs(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "bc" || typedResource == "buildconfig" || typedResource == "buildconfig.build.openshift.io" || typedResource == "buildconfigs") {
+						getBuildConfigs(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//CLUSTERVERSION
 		if strings.HasPrefix(typedResource, "clusterversion") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "clusterversion" || s[0] == "clusterversions") {
@@ -151,6 +185,36 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//DEPLOYMENTCONFIGS
+		if strings.HasPrefix(typedResource, "dc") || strings.HasPrefix(typedResource, "deploymentconfig") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "dc" || s[0] == "deploymentconfig" || s[0] == "deploymentconfig.apps.openshift.io" || s[0] == "deploymentconfigs") {
+				getDeploymentConfigs(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "dc" || typedResource == "deploymentconfig" || typedResource == "deploymentconfig.apps.openshift.io" || typedResource == "deploymentconfigs") {
+					getDeploymentConfigs(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "dc" || typedResource == "deploymentconfig" || typedResource == "deploymentconfig.apps.openshift.io" || typedResource == "deploymentconfigs") {
+						getDeploymentConfigs(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
+		//IMAGESTREAMS
+		if strings.HasPrefix(typedResource, "is") || strings.HasPrefix(typedResource, "imagestream") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "dc" || s[0] == "imagestream" || s[0] == "imagestream.imagestream.openshift.io" || s[0] == "imagestreams") {
+				getImageStreams(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "is" || typedResource == "imagestream" || typedResource == "imagestream.imagestream.openshift.io" || typedResource == "imagestreams") {
+					getImageStreams(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "is" || typedResource == "imagestream" || typedResource == "imagestream.imagestream.openshift.io" || typedResource == "imagestreams") {
+						getImageStreams(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//REPLICASETS
 		if strings.HasPrefix(typedResource, "rs") || strings.HasPrefix(typedResource, "replicaset") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "rs" || s[0] == "replicaset" || s[0] == "replicaset.apps" || s[0] == "replicasets") {
@@ -161,6 +225,21 @@ var getCmd = &cobra.Command{
 				} else {
 					if len(args) == 1 && (typedResource == "rs" || typedResource == "replicaset" || typedResource == "replicaset.apps" || typedResource == "replicasets") {
 						getReplicaSets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
+		//REPLICATIONCONTROLLERS
+		if strings.HasPrefix(typedResource, "rc") || strings.HasPrefix(typedResource, "replicationcontroller") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "rc" || s[0] == "replicationcontroller" || s[0] == "replicationcontrollers") {
+				getReplicationControllers(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "rc" || typedResource == "replicationcontroller" || typedResource == "replicationcontrollers") {
+					getReplicationControllers(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "rc" || typedResource == "replicationcontroller" || typedResource == "replicationcontrollers") {
+						getReplicationControllers(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
 				}

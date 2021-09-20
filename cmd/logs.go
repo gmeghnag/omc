@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"omc/cmd/helpers"
 	"os"
 	"strings"
 
@@ -34,21 +35,24 @@ var logsCmd = &cobra.Command{
 			fmt.Println("There are no must-gather resources defined.")
 			os.Exit(1)
 		}
-		files, err := ioutil.ReadDir(currentContextPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		var QuayString string
-		for _, f := range files {
-			if strings.HasPrefix(f.Name(), "quay") {
-				QuayString = f.Name()
-				currentContextPath = currentContextPath + "/" + QuayString
-				break
+		exist, _ := helpers.Exists(currentContextPath + "/namespaces")
+		if !exist {
+			files, err := ioutil.ReadDir(currentContextPath)
+			if err != nil {
+				log.Fatal(err)
 			}
-		}
-		if QuayString == "" {
-			fmt.Println("Some error occurred, wrong must-gather file composition")
-			os.Exit(1)
+			var QuayString string
+			for _, f := range files {
+				if strings.HasPrefix(f.Name(), "quay") {
+					QuayString = f.Name()
+					currentContextPath = currentContextPath + "/" + QuayString
+					break
+				}
+			}
+			if QuayString == "" {
+				fmt.Println("Some error occurred, wrong must-gather file composition")
+				os.Exit(1)
+			}
 		}
 		namespaceFlag, _ := cmd.Flags().GetString("namespace")
 		if namespaceFlag != "" {

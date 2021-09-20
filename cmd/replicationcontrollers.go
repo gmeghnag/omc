@@ -24,17 +24,17 @@ import (
 	"strconv"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type ReplicaSetsItems struct {
-	ApiVersion string               `json:"apiVersion"`
-	Items      []*appsv1.ReplicaSet `json:"items"`
+type ReplicationControllersItems struct {
+	ApiVersion string                          `json:"apiVersion"`
+	Items      []*corev1.ReplicationController `json:"items"`
 }
 
-func getReplicaSets(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images", "selector"}
+func getReplicationControllers(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -52,56 +52,56 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	}
 
 	var data [][]string
-	var _ReplicaSetsList = ReplicaSetsItems{ApiVersion: "v1"}
+	var _ReplicationControllersList = ReplicationControllersItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items ReplicaSetsItems
+		var _Items ReplicationControllersItems
 		CurrentNamespacePath := currentContextPath + "/" + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/replicasets.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/replicationcontrollers.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/replicationcontrollers.yaml")
 			os.Exit(1)
 		}
 
-		for _, ReplicaSet := range _Items.Items {
-			if resourceName != "" && resourceName != ReplicaSet.Name {
+		for _, ReplicationController := range _Items.Items {
+			if resourceName != "" && resourceName != ReplicationController.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_ReplicationControllersList.Items = append(_ReplicationControllersList.Items, ReplicationController)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_ReplicationControllersList.Items = append(_ReplicationControllersList.Items, ReplicationController)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_ReplicationControllersList.Items = append(_ReplicationControllersList.Items, ReplicationController)
 				continue
 			}
 
 			//name
-			ReplicaSetName := ReplicaSet.Name
+			ReplicationControllerName := ReplicationController.Name
 			if allResources {
-				ReplicaSetName = "replicaset.apps/" + ReplicaSetName
+				ReplicationControllerName = "replicationcontroller/" + ReplicationControllerName
 			}
 			//desired
-			desired := strconv.Itoa(int(ReplicaSet.Status.Replicas))
+			desired := strconv.Itoa(int(ReplicationController.Status.Replicas))
 			//current
-			current := strconv.Itoa(int(ReplicaSet.Status.AvailableReplicas))
+			current := strconv.Itoa(int(ReplicationController.Status.AvailableReplicas))
 			//ready
-			ready := strconv.Itoa(int(ReplicaSet.Status.ReadyReplicas))
+			ready := strconv.Itoa(int(ReplicationController.Status.ReadyReplicas))
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/replicasets.yaml", ReplicaSet.GetCreationTimestamp())
+			age := helpers.GetAge(CurrentNamespacePath+"/core/replicationcontrollers.yaml", ReplicationController.GetCreationTimestamp())
 			//containers
 			containers := ""
-			for _, c := range ReplicaSet.Spec.Template.Spec.Containers {
+			for _, c := range ReplicationController.Spec.Template.Spec.Containers {
 				containers += fmt.Sprint(c.Name) + ","
 			}
 			if containers == "" {
@@ -111,7 +111,7 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 			}
 			//images
 			images := ""
-			for _, i := range ReplicaSet.Spec.Template.Spec.Containers {
+			for _, i := range ReplicationController.Spec.Template.Spec.Containers {
 				images += fmt.Sprint(i.Image) + ","
 			}
 			if images == "" {
@@ -119,21 +119,13 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 			} else {
 				images = strings.TrimRight(images, ",")
 			}
-			selector := ""
-			for k, v := range ReplicaSet.Spec.Selector.MatchLabels {
-				selector += k + "=" + v + ","
-			}
-			if selector == "" {
-				selector = "<none>"
-			} else {
-				selector = strings.TrimRight(selector, ",")
-			}
+
 			//labels
-			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
-			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
+			labels := helpers.ExtractLabels(ReplicationController.GetLabels())
+			_list := []string{ReplicationController.Namespace, ReplicationControllerName, desired, current, ready, age, containers, images}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
-			if resourceName != "" && resourceName == ReplicaSetName {
+			if resourceName != "" && resourceName == ReplicationControllerName {
 				break
 			}
 		}
@@ -175,7 +167,7 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		return false
 	}
 
-	if len(_ReplicaSetsList.Items) == 0 {
+	if len(_ReplicationControllersList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -184,9 +176,9 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ReplicaSetsList.Items[0]
+		resource = _ReplicationControllersList.Items[0]
 	} else {
-		resource = _ReplicaSetsList
+		resource = _ReplicationControllersList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)

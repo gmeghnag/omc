@@ -148,7 +148,7 @@ func getServices(currentContextPath string, defaultConfigNamespace string, resou
 		}
 	}
 
-	if len(data) == 0 {
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -179,6 +179,13 @@ func getServices(currentContextPath string, defaultConfigNamespace string, resou
 		}
 		helpers.PrintTable(headers, data)
 		return false
+	}
+
+	if len(_ServicesList.Items) == 0 {
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+		}
+		return true
 	}
 
 	var resource interface{}

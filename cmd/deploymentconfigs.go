@@ -24,17 +24,18 @@ import (
 	"strconv"
 	"strings"
 
-	appsv1 "k8s.io/api/apps/v1"
+	v1 "github.com/openshift/api/apps/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type ReplicaSetsItems struct {
-	ApiVersion string               `json:"apiVersion"`
-	Items      []*appsv1.ReplicaSet `json:"items"`
+type DeploymentConfigsItems struct {
+	ApiVersion string                 `json:"apiVersion"`
+	Items      []*v1.DeploymentConfig `json:"items"`
 }
 
-func getReplicaSets(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images", "selector"}
+func getDeploymentConfigs(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "revision", "desired", "current", "triggered by"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -52,88 +53,69 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	}
 
 	var data [][]string
-	var _ReplicaSetsList = ReplicaSetsItems{ApiVersion: "v1"}
+	var _DeploymentConfigsList = DeploymentConfigsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items ReplicaSetsItems
-		CurrentNamespacePath := currentContextPath + "/" + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/replicasets.yaml")
+		var _Items DeploymentConfigsItems
+		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
 			os.Exit(1)
 		}
 
-		for _, ReplicaSet := range _Items.Items {
-			if resourceName != "" && resourceName != ReplicaSet.Name {
+		for _, DeploymentConfig := range _Items.Items {
+			if resourceName != "" && resourceName != DeploymentConfig.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
 				continue
 			}
 
 			//name
-			ReplicaSetName := ReplicaSet.Name
+			DeploymentConfigName := DeploymentConfig.Name
 			if allResources {
-				ReplicaSetName = "replicaset.apps/" + ReplicaSetName
+				DeploymentConfigName = "deploymentconfig.apps.openshift.io/" + DeploymentConfigName
 			}
-			//desired
-			desired := strconv.Itoa(int(ReplicaSet.Status.Replicas))
+			//revision
+			revision := strconv.Itoa(int(DeploymentConfig.Status.LatestVersion))
+			//desiredReplicas
+			desiredReplicas := strconv.Itoa(int(DeploymentConfig.Spec.Replicas))
 			//current
-			current := strconv.Itoa(int(ReplicaSet.Status.AvailableReplicas))
-			//ready
-			ready := strconv.Itoa(int(ReplicaSet.Status.ReadyReplicas))
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/replicasets.yaml", ReplicaSet.GetCreationTimestamp())
-			//containers
-			containers := ""
-			for _, c := range ReplicaSet.Spec.Template.Spec.Containers {
-				containers += fmt.Sprint(c.Name) + ","
+			currentReplicas := strconv.Itoa(int(DeploymentConfig.Status.ReadyReplicas))
+			//triggered by
+			triggeredBy := ""
+			triggers := DeploymentConfig.Spec.Triggers
+			for _, k := range triggers {
+				if k.Type == "ConfigChange" {
+					triggeredBy += "config,"
+				}
+				if k.Type == "ImageChange" {
+					triggeredBy += "image" + "(" + k.ImageChangeParams.From.Name + "),"
+				}
 			}
-			if containers == "" {
-				containers = "??"
-			} else {
-				containers = strings.TrimRight(containers, ",")
-			}
-			//images
-			images := ""
-			for _, i := range ReplicaSet.Spec.Template.Spec.Containers {
-				images += fmt.Sprint(i.Image) + ","
-			}
-			if images == "" {
-				images = "??"
-			} else {
-				images = strings.TrimRight(images, ",")
-			}
-			selector := ""
-			for k, v := range ReplicaSet.Spec.Selector.MatchLabels {
-				selector += k + "=" + v + ","
-			}
-			if selector == "" {
-				selector = "<none>"
-			} else {
-				selector = strings.TrimRight(selector, ",")
-			}
+			triggeredBy = strings.TrimRight(triggeredBy, ",")
 			//labels
-			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
-			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
+			labels := helpers.ExtractLabels(DeploymentConfig.GetLabels())
+			_list := []string{DeploymentConfig.Namespace, DeploymentConfigName, revision, desiredReplicas, currentReplicas, triggeredBy}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
-			if resourceName != "" && resourceName == ReplicaSetName {
+			if resourceName != "" && resourceName == DeploymentConfigName {
 				break
 			}
 		}
@@ -175,7 +157,7 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		return false
 	}
 
-	if len(_ReplicaSetsList.Items) == 0 {
+	if len(_DeploymentConfigsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -184,9 +166,9 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ReplicaSetsList.Items[0]
+		resource = _DeploymentConfigsList.Items[0]
 	} else {
-		resource = _ReplicaSetsList
+		resource = _DeploymentConfigsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)

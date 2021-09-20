@@ -139,7 +139,7 @@ func getDeployments(currentContextPath string, defaultConfigNamespace string, re
 		}
 	}
 
-	if len(data) == 0 {
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -171,6 +171,14 @@ func getDeployments(currentContextPath string, defaultConfigNamespace string, re
 		helpers.PrintTable(headers, data)
 		return false
 	}
+
+	if len(_DeploymentsList.Items) == 0 {
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+		}
+		return true
+	}
+
 	var resource interface{}
 	if resourceName != "" {
 		resource = _DeploymentsList.Items[0]

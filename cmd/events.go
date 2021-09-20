@@ -114,7 +114,7 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 		}
 	}
 
-	if len(data) == 0 {
+	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
 		}
@@ -146,6 +146,14 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 		helpers.PrintTable(headers, data)
 		return false
 	}
+
+	if len(_EventsList.Items) == 0 {
+		if !allResources {
+			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+		}
+		return true
+	}
+
 	var resource interface{}
 	if resourceName != "" {
 		resource = _EventsList.Items[0]
