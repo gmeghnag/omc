@@ -12,18 +12,24 @@ To date, the `omc get` command supports the following resources:
 
 - Builds
 - BuildConfigs
+- ConfigMaps
 - ClusterOperators
 - ClusterVersion
 - DaemonSets
 - Deployments
 - DeploymentConfigs
 - Events
+- Jobs
+- MachineConfigs
+- MachineConfigPools
 - Nodes
 - PersistentVolumes
 - PersistentVolumeClaims
 - Pods
+- Projects
 - ReplicationControllers
 - ReplicaSets
+- Secrets
 - Services
 - StorageClasses
 - Routes
@@ -54,22 +60,13 @@ $ omc project openshift-ingress
 $ omc get pods -o wide
 ```
 #### Example
-```
-$ omc use TEST/inspect.local.2739145582179482937 
-$ omc get mg                                    
-CURRENT   ID         PATH                                                                          NAMESPACE 
-*         fH43h9Ei   /Users/gmeghnag/Documents/GOLANG/omc/TEST/inspect.local.2739145582179482937   default    
+```  
 $ omc use TEST/must-gather.local.1861325122907966446 -i 00000017
-$ omc get mg                                                    
-CURRENT   ID         PATH                                                                              NAMESPACE 
-          fH43h9Ei   /Users/gmeghnag/Documents/GOLANG/omc/TEST/inspect.local.2739145582179482937       default     
-*         00000017   /Users/gmeghnag/Documents/GOLANG/omc/TEST/must-gather.local.1861325122907966446   default 
-$ omc get nodes -o jsonpath="{range .items[*]}{'\n'}{'Node: '}{.metadata.name}{end}{'\n'}"
 
-Node: ip-10-0-130-107.eu-central-1.compute.internal
-Node: ip-10-0-138-105.eu-central-1.compute.internal
-Node: ip-10-0-170-202.eu-central-1.compute.internal
-Node: ip-10-0-191-105.eu-central-1.compute.internal
-Node: ip-10-0-192-202.eu-central-1.compute.internal
-Node: ip-10-0-216-17.eu-central-1.compute.internal
+$ omc get mg                                                    
+CURRENT   ID         PATH                                                                              NAMESPACE   
+*         00000017   /Users/gmeghnag/Documents/GOLANG/omc/TEST/must-gather.local.1861325122907966446   default 
+
+$ omc get nodes -o jsonpath="{range .items[*]}{.metadata.name}{'   '}{end}{'\n'}"
+ip-10-0-130-107.eu-central-1.compute.internal   ip-10-0-138-105.eu-central-1.compute.internal   ip-10-0-170-202.eu-central-1.compute.internal   ip-10-0-191-105.eu-central-1.compute.internal   ip-10-0-192-202.eu-central-1.compute.internal   ip-10-0-216-17.eu-central-1.compute.internal
 ```
