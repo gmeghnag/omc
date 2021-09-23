@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/openshift/api v0.0.0-20210906075240-3611f00b94fd
+	github.com/openshift/machine-config-operator v0.0.1-0.20210917223957-ff7e847c56ac
 	github.com/spf13/cast v1.4.0 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1

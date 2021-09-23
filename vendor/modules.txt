@@ -5,14 +5,15 @@ github.com/go-logr/logr
 # github.com/gogo/protobuf v1.3.2
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/google/go-cmp v0.5.5
+# github.com/google/go-cmp v0.5.6
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/gofuzz v1.1.0
+# github.com/google/gofuzz v1.2.0
 github.com/google/gofuzz
+github.com/google/gofuzz/bytesource
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -30,7 +31,7 @@ github.com/inconshreveable/mousetrap
 github.com/json-iterator/go
 # github.com/magiconair/properties v1.8.5
 github.com/magiconair/properties
-# github.com/mattn/go-runewidth v0.0.9
+# github.com/mattn/go-runewidth v0.0.13
 github.com/mattn/go-runewidth
 # github.com/mitchellh/mapstructure v1.4.1
 github.com/mitchellh/mapstructure
@@ -50,8 +51,13 @@ github.com/openshift/api/image/docker10
 github.com/openshift/api/image/dockerpre012
 github.com/openshift/api/image/v1
 github.com/openshift/api/route/v1
+# github.com/openshift/machine-config-operator v0.0.1-0.20210917223957-ff7e847c56ac
+## explicit
+github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
 # github.com/pelletier/go-toml v1.9.3
 github.com/pelletier/go-toml
+# github.com/rivo/uniseg v0.2.0
+github.com/rivo/uniseg
 # github.com/spf13/afero v1.6.0
 github.com/spf13/afero
 github.com/spf13/afero/mem
@@ -70,7 +76,7 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
+# golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
@@ -95,6 +101,7 @@ gopkg.in/yaml.v2
 ## explicit
 k8s.io/api/apps/v1
 k8s.io/api/apps/v1beta1
+k8s.io/api/batch/v1
 k8s.io/api/core/v1
 k8s.io/api/extensions/v1beta1
 k8s.io/api/storage/v1
@@ -125,7 +132,7 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 ## explicit
 k8s.io/client-go/third_party/forked/golang/template
 k8s.io/client-go/util/jsonpath
-# k8s.io/klog/v2 v2.9.0
+# k8s.io/klog/v2 v2.10.0
 k8s.io/klog/v2
 # sigs.k8s.io/structured-merge-diff/v4 v4.1.2
 sigs.k8s.io/structured-merge-diff/v4/value

@@ -27,8 +27,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var validArgs []string
-
 // getCmd represents the get command
 var getCmd = &cobra.Command{
 	Use:   "get",
@@ -44,15 +42,15 @@ var getCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			var QuayString string
+			quayDir := ""
 			for _, f := range files {
 				if strings.HasPrefix(f.Name(), "quay") {
-					QuayString = f.Name()
-					currentContextPath = currentContextPath + "/" + QuayString
+					quayDir = f.Name()
+					currentContextPath = currentContextPath + "/" + quayDir
 					break
 				}
 			}
-			if QuayString == "" {
+			if quayDir == "" {
 				fmt.Println("Some error occurred, wrong must-gather file composition")
 				os.Exit(1)
 			}
@@ -125,6 +123,36 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//MC
+		if strings.HasPrefix(typedResource, "mc") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "mc") {
+				getMachineConfig(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (typedResource == "mc") {
+					getMachineConfig(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (typedResource == "mc") {
+						getMachineConfig(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
+		//MCP
+		if strings.HasPrefix(typedResource, "mcp") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "mcp") {
+				getMachineConfigPool(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (typedResource == "mcp") {
+					getMachineConfigPool(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (typedResource == "mcp") {
+						getMachineConfigPool(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
 		//CLUSTEROPERATORS
 		if strings.HasPrefix(typedResource, "co") || strings.HasPrefix(typedResource, "clusteroperator") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "co" || s[0] == "clusteroperator" || s[0] == "clusteroperators") {
@@ -135,6 +163,21 @@ var getCmd = &cobra.Command{
 				} else {
 					if len(args) == 1 && (typedResource == "co" || typedResource == "clusteroperator" || typedResource == "clusteroperators") {
 						getClusterOperators(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
+		//CONFIGMAP
+		if strings.HasPrefix(typedResource, "cm") || strings.HasPrefix(typedResource, "configmap") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "cm" || s[0] == "configmap" || s[0] == "configmaps") {
+				getConfigMaps(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "cm" || typedResource == "configmap" || typedResource == "configmaps") {
+					getConfigMaps(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "cm" || typedResource == "configmap" || typedResource == "configmaps") {
+						getConfigMaps(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
 				}
@@ -215,6 +258,21 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//JOBS
+		if strings.HasPrefix(typedResource, "job") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "job" || s[0] == "jobs" || s[0] == "job.batch") {
+				getJobs(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "job" || typedResource == "jobs" || typedResource == "job.batch") {
+					getJobs(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "job" || typedResource == "jobs" || typedResource == "job.batch") {
+						getJobs(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//REPLICASETS
 		if strings.HasPrefix(typedResource, "rs") || strings.HasPrefix(typedResource, "replicaset") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "rs" || s[0] == "replicaset" || s[0] == "replicaset.apps" || s[0] == "replicasets") {
@@ -255,6 +313,36 @@ var getCmd = &cobra.Command{
 				} else {
 					if len(args) == 1 && (typedResource == "po" || typedResource == "pod" || typedResource == "pods") {
 						getPods(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
+		//PROJECTS
+		if strings.HasPrefix(typedResource, "project") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "project" || s[0] == "projects") {
+				getProjects(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+			} else {
+				if len(args) == 2 && (typedResource == "project" || typedResource == "projects") {
+					getProjects(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+				} else {
+					if len(args) == 1 && (typedResource == "project" || typedResource == "projects") {
+						getProjects(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate)
+					}
+
+				}
+			}
+		}
+		//SECRETS
+		if strings.HasPrefix(typedResource, "secret") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "secret" || s[0] == "secrets") {
+				getSecrets(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "secret" || typedResource == "secrets") {
+					getSecrets(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "secret" || typedResource == "secrets") {
+						getSecrets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 					}
 
 				}
@@ -356,6 +444,10 @@ var getCmd = &cobra.Command{
 			if !empty {
 				fmt.Println("")
 			}
+			empty = getReplicationControllers(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
 			empty = getServices(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			if !empty {
 				fmt.Println("")
@@ -369,6 +461,26 @@ var getCmd = &cobra.Command{
 				fmt.Println("")
 			}
 			empty = getReplicaSets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getJobs(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getDeploymentConfigs(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getBuildConfigs(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getBuilds(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			if !empty {
+				fmt.Println("")
+			}
+			empty = getImageStreams(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
 			if !empty {
 				fmt.Println("")
 			}
