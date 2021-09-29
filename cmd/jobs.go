@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"omc/cmd/helpers"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -94,7 +93,11 @@ func getJobs(currentContextPath string, defaultConfigNamespace string, resourceN
 				JobName = "job.batch/" + JobName
 			}
 			//completions
-			completions := strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
+			//fmt.Println(strconv.Itoa(int(*Job.Spec.Completions)))
+			completions := "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
+			if Job.Spec.Completions != nil {
+				completions = "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
+			}
 			//duration
 			duration := "Unknown"
 			if Job.Status.CompletionTime != nil {

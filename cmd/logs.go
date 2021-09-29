@@ -29,7 +29,7 @@ import (
 // logsCmd represents the logs command
 var logsCmd = &cobra.Command{
 	Use:   "logs",
-	Short: "Get related subcommand",
+	Short: "Print the logs for a container in a pod",
 	Run: func(cmd *cobra.Command, args []string) {
 		if currentContextPath == "" {
 			fmt.Println("There are no must-gather resources defined.")
