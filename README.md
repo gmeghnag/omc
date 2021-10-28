@@ -20,8 +20,10 @@ To date, the `omc get` command supports the following resources:
 - DeploymentConfigs
 - Events
 - Jobs
+- Machines
 - MachineConfigs
 - MachineConfigPools
+- MachineSets
 - Nodes
 - PersistentVolumes
 - PersistentVolumeClaims

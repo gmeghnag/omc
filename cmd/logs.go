@@ -61,6 +61,7 @@ var logsCmd = &cobra.Command{
 		podName := ""
 		containerName, _ := cmd.Flags().GetString("container")
 		previousFlag, _ := cmd.Flags().GetBool("previous")
+		allContainersFlag, _ := cmd.Flags().GetBool("all-containers")
 
 		if len(args) == 0 || len(args) > 2 {
 			fmt.Println("error: expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'.")
@@ -75,10 +76,10 @@ var logsCmd = &cobra.Command{
 					fmt.Println("error: arguments in resource/name form must have a single resource and name")
 					os.Exit(1)
 				}
-				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
 			} else {
 				podName = s[0]
-				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
 			}
 		}
 		if len(args) == 2 {
@@ -93,7 +94,7 @@ var logsCmd = &cobra.Command{
 						os.Exit(1)
 					}
 					containerName = args[1]
-					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
 				}
 			} else {
 				if containerName != "" {
@@ -102,7 +103,7 @@ var logsCmd = &cobra.Command{
 				} else {
 					podName = args[0]
 					containerName = args[1]
-					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag)
+					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
 				}
 			}
 		}
@@ -113,4 +114,5 @@ func init() {
 	rootCmd.AddCommand(logsCmd)
 	logsCmd.PersistentFlags().StringVarP(&output, "container", "c", "", "Print the logs of this container")
 	logsCmd.PersistentFlags().BoolP("previous", "p", false, "Print the logs for the previous instance of the container in a pod if it exists.")
+	logsCmd.PersistentFlags().BoolP("all-containers", "", false, "Get all containers' logs in the pod(s).")
 }

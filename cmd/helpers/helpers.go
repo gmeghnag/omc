@@ -156,6 +156,16 @@ func ExtractLabels(_labels map[string]string) string {
 	return labels
 }
 
+func ExtractLabel(_labels map[string]string, _label string) string {
+	label := ""
+	for k, v := range _labels {
+		if k == _label {
+			return v
+		}
+	}
+	return label
+}
+
 // doing this because of a bug who append three characthers to the first node yaml file
 func ReadYaml(YamlPath string) []byte {
 	var __file []byte

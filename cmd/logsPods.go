@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool) {
+func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, allContainersFlag bool) {
 	var logFile string
 	if previousFlag {
 		logFile = "previous.log"
@@ -54,12 +54,19 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		if len(Pod.Spec.Containers) == 1 && containerName == "" {
 			containerMatch = Pod.Spec.Containers[0].Name
 		} else {
-			for _, c := range Pod.Spec.Containers {
-				if containerName == c.Name {
-					containerMatch = containerName
-					break
+			if allContainersFlag {
+				for _, c := range Pod.Spec.Containers {
+					helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs/" + logFile)
 				}
-				containers = append(containers, c.Name)
+				return
+			} else {
+				for _, c := range Pod.Spec.Containers {
+					if containerName == c.Name {
+						containerMatch = containerName
+						break
+					}
+					containers = append(containers, c.Name)
+				}
 			}
 		}
 		if containerMatch == "" {

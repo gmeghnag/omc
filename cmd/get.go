@@ -273,6 +273,36 @@ var getCmd = &cobra.Command{
 				}
 			}
 		}
+		//MACHINE
+		if strings.HasPrefix(typedResource, "machine") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "machine" || s[0] == "machines" || s[0] == "machine.machine.openshift.io") {
+				getMachines(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "machine" || typedResource == "machines" || typedResource == "machine.machine.openshift.io") {
+					getMachines(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "machine" || typedResource == "machines" || typedResource == "machine.machine.openshift.io") {
+						getMachines(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
+		//MACHINESETS
+		if strings.HasPrefix(typedResource, "machineset") {
+			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "machineset" || s[0] == "machinesets" || s[0] == "machineset.machine.openshift.io") {
+				getMachineSets(currentContextPath, defaultConfigNamespace, s[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+			} else {
+				if len(args) == 2 && (typedResource == "machineset" || typedResource == "machinesets" || typedResource == "machineset.machine.openshift.io") {
+					getMachineSets(currentContextPath, defaultConfigNamespace, args[1], allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+				} else {
+					if len(args) == 1 && (typedResource == "machineset" || typedResource == "machinesets" || typedResource == "machineset.machine.openshift.io") {
+						getMachineSets(currentContextPath, defaultConfigNamespace, "", allNamespacesFlag, outputFlag, showLabels, jsonPathTemplate, allResources)
+					}
+
+				}
+			}
+		}
 		//REPLICASETS
 		if strings.HasPrefix(typedResource, "rs") || strings.HasPrefix(typedResource, "replicaset") {
 			if s := strings.Split(typedResource, "/"); len(s) == 2 && (s[0] == "rs" || s[0] == "replicaset" || s[0] == "replicaset.apps" || s[0] == "replicasets") {

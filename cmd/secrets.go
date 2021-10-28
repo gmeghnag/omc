@@ -171,15 +171,5 @@ func getSecrets(currentContextPath string, defaultConfigNamespace string, resour
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 
-	/* var resource interface{}
-	if outputFlag == "yaml" || outputFlag == "json" || outputFlag == "jsonpath" {
-		if resourceName != "" {
-			fmt.Println(_SecretsList.Items[0].Name)
-			resource = _SecretsList.Items[0]
-		} else {
-			resource = _SecretsList
-		}
-	}
-	helpers.PrintOutput(resource, outputFlag, resourceName, allNamespacesFlag, showLabels, _headers, data, jsonPathTemplate)
-	*/return false
+	return false
 }
