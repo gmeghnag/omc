@@ -48,6 +48,7 @@ To date, the `omc logs` command supports the following resources:
 
 and the following flags:
 - -p, --previous
+- --all-containers
 
 ### Usage
 Point it to an extracted must-gather:
