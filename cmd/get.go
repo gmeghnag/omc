@@ -17,9 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"omc/cmd/helpers"
 	"os"
 	"strconv"
 	"strings"
@@ -32,29 +29,6 @@ var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Get related subcommand",
 	Run: func(cmd *cobra.Command, args []string) {
-		if currentContextPath == "" {
-			fmt.Println("There are no must-gather resources defined.")
-			os.Exit(1)
-		}
-		exist, _ := helpers.Exists(currentContextPath + "/namespaces")
-		if !exist {
-			files, err := ioutil.ReadDir(currentContextPath)
-			if err != nil {
-				log.Fatal(err)
-			}
-			quayDir := ""
-			for _, f := range files {
-				if strings.HasPrefix(f.Name(), "quay") {
-					quayDir = f.Name()
-					currentContextPath = currentContextPath + "/" + quayDir
-					break
-				}
-			}
-			if quayDir == "" {
-				fmt.Println("Some error occurred, wrong must-gather file composition")
-				os.Exit(1)
-			}
-		}
 		allNamespacesFlag, _ := cmd.Flags().GetBool("all-namespaces")
 		showLabels, _ := cmd.Flags().GetBool("show-labels")
 		outputFlag, _ := cmd.Flags().GetString("output")

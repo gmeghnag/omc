@@ -1,5 +1,7 @@
 package models
 
+import "k8s.io/client-go/kubernetes"
+
 type Context struct {
 	Id      string `json:"id"`
 	Path    string `json:"path"`
@@ -10,4 +12,9 @@ type Context struct {
 type Config struct {
 	Id       string    `json:"id,omitempty"`
 	Contexts []Context `json:"contexts,omitempty"`
+}
+
+type DescribeClient struct {
+	Namespace string
+	kubernetes.Interface
 }

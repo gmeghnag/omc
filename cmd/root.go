@@ -19,9 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"omc/cmd/helpers"
 	"omc/models"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -92,6 +94,29 @@ func initConfig() {
 				currentContextPath = context.Path
 				defaultConfigNamespace = context.Project
 				break
+			}
+		}
+		if currentContextPath == "" {
+			fmt.Println("There are no must-gather resources defined.")
+			os.Exit(1)
+		}
+		exist, _ := helpers.Exists(currentContextPath + "/namespaces")
+		if !exist {
+			files, err := ioutil.ReadDir(currentContextPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			quayDir := ""
+			for _, f := range files {
+				if strings.HasPrefix(f.Name(), "quay") {
+					quayDir = f.Name()
+					currentContextPath = currentContextPath + "/" + quayDir
+					break
+				}
+			}
+			if quayDir == "" {
+				fmt.Println("Some error occurred, wrong must-gather file composition")
+				os.Exit(1)
 			}
 		}
 	} else {

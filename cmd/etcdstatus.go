@@ -16,45 +16,14 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-	"io/ioutil"
-	"log"
-	"omc/cmd/helpers"
-	"os"
-	"strings"
-
 	etcd "omc/cmd/etcd"
 
 	"github.com/spf13/cobra"
 )
 
 func etcdStatusCommand() {
-	if currentContextPath == "" {
-		fmt.Println("There are no must-gather resources defined.")
-		os.Exit(1)
-	}
-	exist, _ := helpers.Exists(currentContextPath + "/namespaces")
-	if !exist {
-		files, err := ioutil.ReadDir(currentContextPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		var QuayString string
-		for _, f := range files {
-			if strings.HasPrefix(f.Name(), "quay") {
-				QuayString = f.Name()
-				currentContextPath = currentContextPath + "/" + QuayString
-				break
-			}
-		}
-		if QuayString == "" {
-			fmt.Println("Some error occurred, wrong must-gather file composition")
-			os.Exit(1)
-		}
-	}
 	etcdFolderPath := currentContextPath + "/etcd_info/"
 	etcd.EndpointStatus(etcdFolderPath)
-
 }
 
 // etcdCmd represents the etcd command
