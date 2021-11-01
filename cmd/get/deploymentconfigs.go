@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
 
 	v1 "github.com/openshift/api/apps/v1"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
@@ -33,7 +35,7 @@ type DeploymentConfigsItems struct {
 	Items      []*v1.DeploymentConfig `json:"items"`
 }
 
-func getDeploymentConfigs(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+func getDeploymentConfigs(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "name", "revision", "desired", "current", "triggered by"}
 
 	var namespaces []string
@@ -48,7 +50,7 @@ func getDeploymentConfigs(currentContextPath string, defaultConfigNamespace stri
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
@@ -126,7 +128,7 @@ func getDeploymentConfigs(currentContextPath string, defaultConfigNamespace stri
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -159,7 +161,7 @@ func getDeploymentConfigs(currentContextPath string, defaultConfigNamespace stri
 
 	if len(_DeploymentConfigsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -183,4 +185,18 @@ func getDeploymentConfigs(currentContextPath string, defaultConfigNamespace stri
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var DeploymentConfig = &cobra.Command{
+	Use:     "deploymentconfig",
+	Aliases: []string{"deploymentconfigs", "dc"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getDeploymentConfigs(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

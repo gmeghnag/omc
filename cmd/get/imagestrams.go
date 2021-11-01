@@ -13,28 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
-	"strconv"
 	"strings"
 
-	v1 "github.com/openshift/api/build/v1"
+	v1 "github.com/openshift/api/image/v1"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-type BuildConfigsItems struct {
+type ImageStreamsItems struct {
 	ApiVersion string            `json:"apiVersion"`
-	Items      []*v1.BuildConfig `json:"items"`
+	Items      []*v1.ImageStream `json:"items"`
 }
 
-func getBuildConfigs(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "type", "from", "latest"}
+func getImageStreams(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "image repository", "tags", "updated"}
 
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -48,62 +49,66 @@ func getBuildConfigs(currentContextPath string, defaultConfigNamespace string, r
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
 	var data [][]string
-	var _BuildConfigsList = BuildConfigsItems{ApiVersion: "v1"}
+	var _ImageStreamsList = ImageStreamsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items BuildConfigsItems
+		var _Items ImageStreamsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 			os.Exit(1)
 		}
 
-		for _, BuildConfig := range _Items.Items {
-			if resourceName != "" && resourceName != BuildConfig.Name {
+		for _, ImageStream := range _Items.Items {
+			if resourceName != "" && resourceName != ImageStream.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			//name
-			BuildConfigName := BuildConfig.Name
+			ImageStreamName := ImageStream.Name
 			if allResources {
-				BuildConfigName = "buildconfig.build.openshift.io/" + BuildConfigName
+				ImageStreamName = "imagestream.image.openshift.io/" + ImageStreamName
 			}
-			//type
-			bcType := string(BuildConfig.Spec.Strategy.Type)
-			//from
-			from := string(BuildConfig.Spec.Source.Type)
-			//latest
-			latest := strconv.Itoa(int(BuildConfig.Status.LastVersion))
+			//image repository
+			imageRepository := ImageStream.Status.DockerImageRepository
+			//tags
+			tags := ""
+			for _, tag := range ImageStream.Status.Tags {
+				tags += tag.Tag + ","
+			}
+			tags = strings.TrimRight(tags, ",")
+			//updated
+			updated := helpers.GetAge(CurrentNamespacePath+"/image.openshift.io/imagestreams.yaml", ImageStream.GetCreationTimestamp())
 			//labels
-			labels := helpers.ExtractLabels(BuildConfig.GetLabels())
-			_list := []string{BuildConfig.Namespace, BuildConfigName, bcType, from, latest}
+			labels := helpers.ExtractLabels(ImageStream.GetLabels())
+			_list := []string{ImageStream.Namespace, ImageStreamName, imageRepository, tags, updated}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == BuildConfigName {
+			if resourceName != "" && resourceName == ImageStreamName {
 				break
 			}
 		}
@@ -114,7 +119,7 @@ func getBuildConfigs(currentContextPath string, defaultConfigNamespace string, r
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -145,17 +150,18 @@ func getBuildConfigs(currentContextPath string, defaultConfigNamespace string, r
 		return false
 	}
 
-	if len(_BuildConfigsList.Items) == 0 {
+	if len(_ImageStreamsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
+
 	var resource interface{}
 	if resourceName != "" {
-		resource = _BuildConfigsList.Items[0]
+		resource = _ImageStreamsList.Items[0]
 	} else {
-		resource = _BuildConfigsList
+		resource = _ImageStreamsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -170,4 +176,18 @@ func getBuildConfigs(currentContextPath string, defaultConfigNamespace string, r
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var ImageStream = &cobra.Command{
+	Use:     "imagestream",
+	Aliases: []string{"imagestreams", "is"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getImageStreams(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

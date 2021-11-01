@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strings"
 
 	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
@@ -32,7 +34,7 @@ type MachinesItems struct {
 	Items      []machineapi.Machine `json:"items"`
 }
 
-func getMachines(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+func getMachines(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "name", "phase", "type", "region", "zone", "age", "node", "providerid", "state"}
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -46,7 +48,7 @@ func getMachines(currentContextPath string, defaultConfigNamespace string, resou
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
@@ -135,7 +137,7 @@ func getMachines(currentContextPath string, defaultConfigNamespace string, resou
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -168,7 +170,7 @@ func getMachines(currentContextPath string, defaultConfigNamespace string, resou
 
 	if len(_MachinesList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -192,4 +194,18 @@ func getMachines(currentContextPath string, defaultConfigNamespace string, resou
 	}
 
 	return false
+}
+
+var Machine = &cobra.Command{
+	Use:     "machine",
+	Aliases: []string{"machines"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getMachines(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

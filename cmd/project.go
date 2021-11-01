@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"omc/models"
+	"omc/types"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -30,20 +30,20 @@ import (
 func projectDefault(omcConfigFile string, projDefault string) {
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
-	omcConfigJson := models.Config{}
+	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
-	config := models.Config{}
+	config := types.Config{}
 
-	var contexts []models.Context
-	var NewContexts []models.Context
+	var contexts []types.Context
+	var NewContexts []types.Context
 	contexts = omcConfigJson.Contexts
 	for _, c := range contexts {
 		if c.Current == "*" {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
 			fmt.Println("Now using project \"" + projDefault + "\" on must-gather \"" + c.Path + "\".")
 		} else {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
 		}
 	}
 

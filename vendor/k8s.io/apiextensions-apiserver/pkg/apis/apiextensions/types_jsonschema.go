@@ -154,7 +154,7 @@ type JSONSchemaPropsOrStringArray struct {
 	Property []string
 }
 
-// JSONSchemaDefinitions contains the models explicitly defined in this spec.
+// JSONSchemaDefinitions contains the types explicitly defined in this spec.
 type JSONSchemaDefinitions map[string]JSONSchemaProps
 
 // ExternalDocumentation allows referencing an external resource for extended documentation.

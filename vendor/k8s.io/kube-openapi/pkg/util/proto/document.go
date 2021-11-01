@@ -57,9 +57,9 @@ func VendorExtensionToMap(e []*openapi_v2.NamedAny) map[string]interface{} {
 }
 
 // Definitions is an implementation of `Models`. It looks for
-// models in an openapi Schema.
+// types in an openapi Schema.
 type Definitions struct {
-	models map[string]Schema
+	types map[string]Schema
 }
 
 var _ Models = &Definitions{}
@@ -67,13 +67,13 @@ var _ Models = &Definitions{}
 // NewOpenAPIData creates a new `Models` out of the openapi document.
 func NewOpenAPIData(doc *openapi_v2.Document) (Models, error) {
 	definitions := Definitions{
-		models: map[string]Schema{},
+		types: map[string]Schema{},
 	}
 
-	// Save the list of all models first. This will allow us to
+	// Save the list of all types first. This will allow us to
 	// validate that we don't have any dangling reference.
 	for _, namedSchema := range doc.GetDefinitions().GetAdditionalProperties() {
-		definitions.models[namedSchema.GetName()] = nil
+		definitions.types[namedSchema.GetName()] = nil
 	}
 
 	// Now, parse each model. We can validate that references exists.
@@ -83,7 +83,7 @@ func NewOpenAPIData(doc *openapi_v2.Document) (Models, error) {
 		if err != nil {
 			return nil, err
 		}
-		definitions.models[namedSchema.GetName()] = schema
+		definitions.types[namedSchema.GetName()] = schema
 	}
 
 	return &definitions, nil
@@ -106,7 +106,7 @@ func (d *Definitions) parseReference(s *openapi_v2.Schema, path *Path) (Schema, 
 		return nil, newSchemaError(path, "unallowed reference to non-definition %q", s.GetXRef())
 	}
 	reference := strings.TrimPrefix(s.GetXRef(), "#/definitions/")
-	if _, ok := d.models[reference]; !ok {
+	if _, ok := d.types[reference]; !ok {
 		return nil, newSchemaError(path, "unknown model in reference: %q", reference)
 	}
 	base, err := d.parseBaseSchema(s, path)
@@ -322,18 +322,18 @@ func (d *Definitions) ParseSchema(s *openapi_v2.Schema, path *Path) (Schema, err
 // LookupModel is public through the interface of Models. It
 // returns a visitable schema from the given model name.
 func (d *Definitions) LookupModel(model string) Schema {
-	return d.models[model]
+	return d.types[model]
 }
 
 func (d *Definitions) ListModels() []string {
-	models := []string{}
+	types := []string{}
 
-	for model := range d.models {
-		models = append(models, model)
+	for model := range d.types {
+		types = append(types, model)
 	}
 
-	sort.Strings(models)
-	return models
+	sort.Strings(types)
+	return types
 }
 
 type Ref struct {
@@ -350,7 +350,7 @@ func (r *Ref) Reference() string {
 }
 
 func (r *Ref) SubSchema() Schema {
-	return r.definitions.models[r.reference]
+	return r.definitions.types[r.reference]
 }
 
 func (r *Ref) Accept(v SchemaVisitor) {

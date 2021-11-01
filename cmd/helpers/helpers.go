@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"omc/models"
+	"omc/types"
 	"os"
 	"strconv"
 	"strings"
@@ -21,7 +21,7 @@ import (
 )
 
 // TYPES
-type Contexts []models.Context
+type Contexts []types.Context
 
 // CONSTS
 const charset = "abcdefghijklmnopqrstuvwxyz" +
@@ -112,7 +112,7 @@ func ExecuteJsonPath(data interface{}, jsonPathTemplate string) {
 }
 
 func CreateConfigFile(homePath string) {
-	config := models.Config{}
+	config := types.Config{}
 	file, _ := json.MarshalIndent(config, "", " ")
 	cfgFilePath := homePath + "/.omc.json"
 	_ = ioutil.WriteFile(cfgFilePath, file, 0644)
@@ -275,4 +275,17 @@ func Cat(filePath string) {
 		fmt.Println(scanner.Text())
 
 	}
+}
+
+func GetJsonTemplate(outputStringVar string) string {
+	jsonPathTemplate := ""
+	if strings.HasPrefix(outputStringVar, "jsonpath=") {
+		s := outputStringVar[9:]
+		if len(s) < 1 {
+			fmt.Println("error: template format specified but no template given")
+			os.Exit(1)
+		}
+		jsonPathTemplate = s
+	}
+	return jsonPathTemplate
 }

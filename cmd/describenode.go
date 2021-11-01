@@ -18,7 +18,7 @@ package cmd
 import (
 	"fmt"
 	"omc/cmd/helpers"
-	"omc/models"
+	"omc/types"
 	"os"
 	"strconv"
 	"strings"
@@ -39,7 +39,7 @@ func describeNodeCommand(currentContextPath string, defaultConfigNamespace strin
 		os.Exit(1)
 	}
 	fake := fake.NewSimpleClientset(&Node)
-	c := &models.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
+	c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
 	d := describe.NodeDescriber{c}
 	out, _ := d.Describe(defaultConfigNamespace, resourceName, describe.DescriberSettings{ShowEvents: true})
 	fmt.Printf(out)

@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -33,7 +35,7 @@ type DaemonsetsItems struct {
 	Items      []*appsv1.DaemonSet `json:"items"`
 }
 
-func getDaemonsets(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+func getDaemonSets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "name", "desired", "current", "ready", "up-to-date", "available", "node selector", "age", "containers", "images"}
 
 	var namespaces []string
@@ -48,7 +50,7 @@ func getDaemonsets(currentContextPath string, defaultConfigNamespace string, res
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
@@ -149,7 +151,7 @@ func getDaemonsets(currentContextPath string, defaultConfigNamespace string, res
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -182,7 +184,7 @@ func getDaemonsets(currentContextPath string, defaultConfigNamespace string, res
 
 	if len(_DaemonsetsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -206,4 +208,18 @@ func getDaemonsets(currentContextPath string, defaultConfigNamespace string, res
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var DaemonSet = &cobra.Command{
+	Use:     "daemonset",
+	Aliases: []string{"daemonsets"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getDaemonSets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

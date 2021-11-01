@@ -13,28 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package build
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
 
 	v1 "github.com/openshift/api/build/v1"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-type BuildsItems struct {
-	ApiVersion string      `json:"apiVersion"`
-	Items      []*v1.Build `json:"items"`
+type BuildConfigsItems struct {
+	ApiVersion string            `json:"apiVersion"`
+	Items      []*v1.BuildConfig `json:"items"`
 }
 
-func getBuilds(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "type", "from", "status", "started", "duration"}
+func getBuildConfigs(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "type", "from", "latest"}
 
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -48,69 +50,62 @@ func getBuilds(currentContextPath string, defaultConfigNamespace string, resourc
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
 	var data [][]string
-	var _BuildsList = BuildsItems{ApiVersion: "v1"}
+	var _BuildConfigsList = BuildConfigsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items BuildsItems
+		var _Items BuildConfigsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/build.openshift.io/builds.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/build.openshift.io/builds.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
 			os.Exit(1)
 		}
 
-		for _, Build := range _Items.Items {
-			if resourceName != "" && resourceName != Build.Name {
+		for _, BuildConfig := range _Items.Items {
+			if resourceName != "" && resourceName != BuildConfig.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_BuildsList.Items = append(_BuildsList.Items, Build)
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_BuildsList.Items = append(_BuildsList.Items, Build)
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_BuildsList.Items = append(_BuildsList.Items, Build)
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
 			}
 
 			//name
-			BuildName := Build.Name
+			BuildConfigName := BuildConfig.Name
 			if allResources {
-				BuildName = "build.build.openshift.io/" + BuildName
+				BuildConfigName = "buildconfig.build.openshift.io/" + BuildConfigName
 			}
 			//type
-			bcType := string(Build.Spec.Strategy.Type)
+			bcType := string(BuildConfig.Spec.Strategy.Type)
 			//from
-			from := string(Build.Spec.Source.Type)
-			if Build.Spec.Revision.Type == "Git" {
-				from += "@" + Build.Spec.Revision.Git.Commit[0:7]
-			}
-			//status
-			status := string(Build.Status.Phase)
-			//started
-			started := helpers.GetAge(CurrentNamespacePath+"/build.openshift.io/builds.yaml", *Build.Status.StartTimestamp)
-			//duration
-			duration := strconv.Itoa(int(Build.Status.Duration/1000000000)) + "s"
+			from := string(BuildConfig.Spec.Source.Type)
+			//latest
+			latest := strconv.Itoa(int(BuildConfig.Status.LastVersion))
 			//labels
-			labels := helpers.ExtractLabels(Build.GetLabels())
-			_list := []string{Build.Namespace, BuildName, bcType, from, status, started, duration}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
+			labels := helpers.ExtractLabels(BuildConfig.GetLabels())
+			_list := []string{BuildConfig.Namespace, BuildConfigName, bcType, from, latest}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == BuildName {
+			if resourceName != "" && resourceName == BuildConfigName {
 				break
 			}
 		}
@@ -121,7 +116,7 @@ func getBuilds(currentContextPath string, defaultConfigNamespace string, resourc
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -129,9 +124,9 @@ func getBuilds(currentContextPath string, defaultConfigNamespace string, resourc
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:7]
+			headers = _headers[0:5]
 		} else {
-			headers = _headers[1:7]
+			headers = _headers[1:5]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -152,17 +147,17 @@ func getBuilds(currentContextPath string, defaultConfigNamespace string, resourc
 		return false
 	}
 
-	if len(_BuildsList.Items) == 0 {
+	if len(_BuildConfigsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
 	var resource interface{}
 	if resourceName != "" {
-		resource = _BuildsList.Items[0]
+		resource = _BuildConfigsList.Items[0]
 	} else {
-		resource = _BuildsList
+		resource = _BuildConfigsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -177,4 +172,18 @@ func getBuilds(currentContextPath string, defaultConfigNamespace string, resourc
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var BuildConfig = &cobra.Command{
+	Use:     "buildconfig",
+	Aliases: []string{"buildconfigs", "bc"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getBuildConfigs(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

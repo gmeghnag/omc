@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strings"
 
 	configv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/spf13/cobra"
 
 	"sigs.k8s.io/yaml"
 )
@@ -33,7 +35,7 @@ type MachineConfigsItems struct {
 	Items      []configv1.MachineConfig `json:"items"`
 }
 
-func getMachineConfig(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+func getMachineConfig(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 	machineconfigsFolderPath := currentContextPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/"
 	_machineconfigs, _ := ioutil.ReadDir(machineconfigsFolderPath)
 	_headers := []string{"name", "generatedbycontroller", "ignitionversion", "age"}
@@ -124,4 +126,18 @@ func getMachineConfig(currentContextPath string, defaultConfigNamespace string, 
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var MachineConfig = &cobra.Command{
+	Use:     "machineconfig",
+	Aliases: []string{"machineconfigs", "mc"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getMachineConfig(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate)
+	},
 }

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
-	"omc/models"
+	"omc/types"
 	"os"
 	"reflect"
 
@@ -33,13 +33,13 @@ var contextsCmd = &cobra.Command{
 	Use: "mg",
 	Run: func(cmd *cobra.Command, args []string) {
 		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
-		omcConfigJson := models.Config{}
+		omcConfigJson := types.Config{}
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
 		var data [][]string
 		var emptyData [][]string
 		headers := []string{"current", "id", "path", "namespace"}
-		var mg []models.Context
+		var mg []types.Context
 		mg = omcConfigJson.Contexts
 		for _, context := range mg {
 			_list := []string{context.Current, context.Id, context.Path, context.Project}

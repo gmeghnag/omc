@@ -16,10 +16,10 @@ limitations under the License.
 package main
 
 import (
-	"omc/cmd"
+	"omc/root"
 )
 
 func main() {
 	//fmt.Println("inside main") // FLOW 3
-	cmd.Execute()
+	root.RootCmd.Execute()
 }

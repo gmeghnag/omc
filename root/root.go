@@ -13,15 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package root
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"omc/cmd/describe"
+	"omc/cmd/get"
 	"omc/cmd/helpers"
-	"omc/models"
+	"omc/types"
+	"omc/vars"
 	"os"
 	"strings"
 
@@ -31,22 +34,18 @@ import (
 )
 
 var cfgFile string
-var namespace string
-var id string
-var output string
 var currentContextPath string
-var defaultConfigNamespace string
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{ // FLOW 4
+// RootCmd represents the base command when called without any subcommands
+var RootCmd = &cobra.Command{ // FLOW 4
 	Use: "omc",
 	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello from omc CLI. :]") },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	cobra.CheckErr(rootCmd.Execute())
+	cobra.CheckErr(RootCmd.Execute())
 }
 
 func init() {
@@ -57,10 +56,11 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "Config file to use (default is $HOME/.omc.json).")
-	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "", "If present, list the requested object(s) for a specific namespace.")
+	RootCmd.PersistentFlags().StringVar(&vars.CfgFile, "config", "", "Config file to use (default is $HOME/.omc.json).")
+	RootCmd.PersistentFlags().StringVarP(&vars.Namespace, "namespace", "n", "", "If present, list the requested object(s) for a specific namespace.")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
+	RootCmd.AddCommand(get.GetCmd, describe.DescribeCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -84,15 +84,15 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-		omcConfigJson := models.Config{}
+		omcConfigJson := types.Config{}
 		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
-		var contexts []models.Context
+		var contexts []types.Context
 		contexts = omcConfigJson.Contexts
 		for _, context := range contexts {
 			if context.Current == "*" {
 				currentContextPath = context.Path
-				defaultConfigNamespace = context.Project
+				vars.Namespace = context.Project
 				break
 			}
 		}
@@ -119,6 +119,7 @@ func initConfig() {
 				os.Exit(1)
 			}
 		}
+		vars.MustGatherRootPath = currentContextPath
 	} else {
 		homePath, _ := os.UserHomeDir()
 		helpers.CreateConfigFile(homePath)

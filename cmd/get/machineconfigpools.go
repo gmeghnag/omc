@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package get
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
 
 	configv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/spf13/cobra"
 
 	"sigs.k8s.io/yaml"
 )
@@ -34,7 +36,7 @@ type MachineConfigPoolsItems struct {
 	Items      []configv1.MachineConfigPool `json:"items"`
 }
 
-func getMachineConfigPool(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+func getMachineConfigPool(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 
 	machineconfigpoolsFolderPath := currentContextPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigpools/"
 	_machineconfigpools, _ := ioutil.ReadDir(machineconfigpoolsFolderPath)
@@ -144,4 +146,18 @@ func getMachineConfigPool(currentContextPath string, defaultConfigNamespace stri
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var MachineConfigPool = &cobra.Command{
+	Use:     "machineconfigpool",
+	Aliases: []string{"machineconfigpool", "mcp"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getMachineConfigPool(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate)
+	},
 }

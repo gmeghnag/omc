@@ -18,7 +18,7 @@ package jsonschema
 
 import "gopkg.in/yaml.v3"
 
-// The Schema struct models a JSON Schema and, because schemas are
+// The Schema struct types a JSON Schema and, because schemas are
 // defined hierarchically, contains many references to itself.
 // All fields are pointers and are nil if the associated values
 // are not specified.

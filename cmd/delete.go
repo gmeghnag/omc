@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"omc/models"
+	"omc/types"
 	"os"
 	"strings"
 
@@ -31,19 +31,19 @@ import (
 func deleteContext(path string, omcConfigFile string, idFlag string) {
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
-	omcConfigJson := models.Config{}
+	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
-	config := models.Config{}
+	config := types.Config{}
 
-	var contexts []models.Context
-	var NewContexts []models.Context
+	var contexts []types.Context
+	var NewContexts []types.Context
 	contexts = omcConfigJson.Contexts
 	for _, c := range contexts {
 		if c.Id == idFlag || c.Path == path {
 			continue
 		} else {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
 		}
 	}
 

@@ -13,27 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package build
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
+	"strconv"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
+	v1 "github.com/openshift/api/build/v1"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-type EventsItems struct {
-	ApiVersion string          `json:"apiVersion"`
-	Items      []*corev1.Event `json:"items"`
+type BuildsItems struct {
+	ApiVersion string      `json:"apiVersion"`
+	Items      []*v1.Build `json:"items"`
 }
 
-func getEvents(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "last seen", "type", "reason", "object", "message"}
+func getBuilds(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "type", "from", "status", "started", "duration"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -46,66 +50,69 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
 	var data [][]string
-	var _EventsList = EventsItems{ApiVersion: "v1"}
+	var _BuildsList = BuildsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items EventsItems
+		var _Items BuildsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/events.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/build.openshift.io/builds.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/events.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/build.openshift.io/builds.yaml")
 			os.Exit(1)
 		}
 
-		for _, Event := range _Items.Items {
-			if resourceName != "" && resourceName != Event.Name {
+		for _, Build := range _Items.Items {
+			if resourceName != "" && resourceName != Build.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_EventsList.Items = append(_EventsList.Items, Event)
+				_BuildsList.Items = append(_BuildsList.Items, Build)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_EventsList.Items = append(_EventsList.Items, Event)
+				_BuildsList.Items = append(_BuildsList.Items, Build)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_EventsList.Items = append(_EventsList.Items, Event)
+				_BuildsList.Items = append(_BuildsList.Items, Build)
 				continue
 			}
 
-			//last seen
-			lastSeenDiffTimeString := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.LastTimestamp)
-
+			//name
+			BuildName := Build.Name
+			if allResources {
+				BuildName = "build.build.openshift.io/" + BuildName
+			}
 			//type
-			eventType := Event.Type
-			//reason
-			reason := Event.Reason
-			//object
-			object := strings.ToLower(Event.InvolvedObject.Kind) + "/" + Event.InvolvedObject.Name
-			//message
-			message := Event.Message
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.GetCreationTimestamp())
-			//containers
-
+			bcType := string(Build.Spec.Strategy.Type)
+			//from
+			from := string(Build.Spec.Source.Type)
+			if Build.Spec.Revision.Type == "Git" {
+				from += "@" + Build.Spec.Revision.Git.Commit[0:7]
+			}
+			//status
+			status := string(Build.Status.Phase)
+			//started
+			started := helpers.GetAge(CurrentNamespacePath+"/build.openshift.io/builds.yaml", *Build.Status.StartTimestamp)
+			//duration
+			duration := strconv.Itoa(int(Build.Status.Duration/1000000000)) + "s"
 			//labels
-			labels := helpers.ExtractLabels(Event.GetLabels())
-			_list := []string{Event.Namespace, lastSeenDiffTimeString, eventType, reason, object, message, age}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
+			labels := helpers.ExtractLabels(Build.GetLabels())
+			_list := []string{Build.Namespace, BuildName, bcType, from, status, started, duration}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
 
-			if resourceName != "" && resourceName == Event.Name {
+			if resourceName != "" && resourceName == BuildName {
 				break
 			}
 		}
@@ -116,7 +123,7 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -124,9 +131,9 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:6]
+			headers = _headers[0:7]
 		} else {
-			headers = _headers[1:6]
+			headers = _headers[1:7]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -147,18 +154,17 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 		return false
 	}
 
-	if len(_EventsList.Items) == 0 {
+	if len(_BuildsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
-
 	var resource interface{}
 	if resourceName != "" {
-		resource = _EventsList.Items[0]
+		resource = _BuildsList.Items[0]
 	} else {
-		resource = _EventsList
+		resource = _BuildsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -173,4 +179,18 @@ func getEvents(currentContextPath string, defaultConfigNamespace string, resourc
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var Build = &cobra.Command{
+	Use:     "build",
+	Aliases: []string{"builds"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getBuilds(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

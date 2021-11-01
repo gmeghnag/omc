@@ -1,4 +1,4 @@
-package models
+package types
 
 import "k8s.io/client-go/kubernetes"
 

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
-	"omc/models"
+	"omc/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,30 +38,30 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	//}
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
-	omcConfigJson := models.Config{}
+	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
-	config := models.Config{}
+	config := types.Config{}
 
-	var contexts []models.Context
-	var NewContexts []models.Context
+	var contexts []types.Context
+	var NewContexts []types.Context
 	contexts = omcConfigJson.Contexts
 	var found bool
 	var ctxId string
 	for _, c := range contexts {
 		if c.Id == idFlag || c.Path == path {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project})
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project})
 			found = true
 		} else {
-			NewContexts = append(NewContexts, models.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project})
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project})
 		}
 	}
 	if !found {
 		if idFlag != "" {
-			NewContexts = append(NewContexts, models.Context{Id: idFlag, Path: path, Current: "*", Project: "default"})
+			NewContexts = append(NewContexts, types.Context{Id: idFlag, Path: path, Current: "*", Project: "default"})
 		} else {
 			ctxId = helpers.RandString(8)
-			NewContexts = append(NewContexts, models.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
+			NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
 		}
 
 	}

@@ -13,29 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package core
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strings"
-	"time"
 
-	batchv1 "k8s.io/api/batch/v1"
+	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type JobsItems struct {
-	ApiVersion string         `json:"apiVersion"`
-	Items      []*batchv1.Job `json:"items"`
+type EventsItems struct {
+	ApiVersion string          `json:"apiVersion"`
+	Items      []*corev1.Event `json:"items"`
 }
 
-func getJobs(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "completions", "duration", "age"}
-
+func getEvents(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "last seen", "type", "reason", "object", "message"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -48,74 +48,66 @@ func getJobs(currentContextPath string, defaultConfigNamespace string, resourceN
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
 	var data [][]string
-	var _JobsList = JobsItems{ApiVersion: "v1"}
+	var _EventsList = EventsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items JobsItems
+		var _Items EventsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/batch/jobs.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/events.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/batch/jobs.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/events.yaml")
 			os.Exit(1)
 		}
 
-		for _, Job := range _Items.Items {
-			if resourceName != "" && resourceName != Job.Name {
+		for _, Event := range _Items.Items {
+			if resourceName != "" && resourceName != Event.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_JobsList.Items = append(_JobsList.Items, Job)
+				_EventsList.Items = append(_EventsList.Items, Event)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_JobsList.Items = append(_JobsList.Items, Job)
+				_EventsList.Items = append(_EventsList.Items, Event)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_JobsList.Items = append(_JobsList.Items, Job)
+				_EventsList.Items = append(_EventsList.Items, Event)
 				continue
 			}
 
-			//name
-			JobName := Job.Name
-			if allResources {
-				JobName = "job.batch/" + JobName
-			}
-			//completions
-			//fmt.Println(strconv.Itoa(int(*Job.Spec.Completions)))
-			completions := "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
-			if Job.Spec.Completions != nil {
-				completions = "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
-			}
-			//duration
-			duration := "Unknown"
-			if Job.Status.CompletionTime != nil {
-				t2 := Job.Status.CompletionTime.Time
-				diffTime := t2.Sub(Job.Status.StartTime.Time).String()
-				d, _ := time.ParseDuration(diffTime)
-				duration = helpers.FormatDiffTime(d)
-			}
+			//last seen
+			lastSeenDiffTimeString := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.LastTimestamp)
 
+			//type
+			eventType := Event.Type
+			//reason
+			reason := Event.Reason
+			//object
+			object := strings.ToLower(Event.InvolvedObject.Kind) + "/" + Event.InvolvedObject.Name
+			//message
+			message := Event.Message
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/batch/jobs.yaml", Job.GetCreationTimestamp())
+			age := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.GetCreationTimestamp())
+			//containers
 
 			//labels
-			labels := helpers.ExtractLabels(Job.GetLabels())
-			_list := []string{Job.Namespace, JobName, completions, duration, age}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
+			labels := helpers.ExtractLabels(Event.GetLabels())
+			_list := []string{Event.Namespace, lastSeenDiffTimeString, eventType, reason, object, message, age}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
-			if resourceName != "" && resourceName == JobName {
+			if resourceName != "" && resourceName == Event.Name {
 				break
 			}
 		}
@@ -126,7 +118,7 @@ func getJobs(currentContextPath string, defaultConfigNamespace string, resourceN
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -134,9 +126,9 @@ func getJobs(currentContextPath string, defaultConfigNamespace string, resourceN
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:5]
+			headers = _headers[0:6]
 		} else {
-			headers = _headers[1:5]
+			headers = _headers[1:6]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -157,18 +149,18 @@ func getJobs(currentContextPath string, defaultConfigNamespace string, resourceN
 		return false
 	}
 
-	if len(_JobsList.Items) == 0 {
+	if len(_EventsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _JobsList.Items[0]
+		resource = _EventsList.Items[0]
 	} else {
-		resource = _JobsList
+		resource = _EventsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -183,4 +175,18 @@ func getJobs(currentContextPath string, defaultConfigNamespace string, resourceN
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var Event = &cobra.Command{
+	Use:     "event",
+	Aliases: []string{"events"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getEvents(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }
