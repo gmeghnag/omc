@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package storage
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/spf13/cobra"
 	storagev1 "k8s.io/api/storage/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -33,7 +35,7 @@ type getStorageClassesItems struct {
 	Items      []storagev1.StorageClass `json:"items"`
 }
 
-func getStorageClasses(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+func getStorageClasses(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 	storageclassesFolderPath := currentContextPath + "/cluster-scoped-resources/storage.k8s.io/storageclasses/"
 	_storageclasses, _ := ioutil.ReadDir(storageclassesFolderPath)
 
@@ -132,4 +134,18 @@ func getStorageClasses(currentContextPath string, defaultConfigNamespace string,
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var StorageClass = &cobra.Command{
+	Use:     "storageclass",
+	Aliases: []string{"storageclasses", "sc", "storageclass.storage"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getStorageClasses(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate)
+	},
 }

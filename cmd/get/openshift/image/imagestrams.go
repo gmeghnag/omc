@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package get
+package image
 
 import (
 	"encoding/json"
@@ -23,20 +23,19 @@ import (
 	"omc/vars"
 	"os"
 	"strings"
-	"time"
 
+	v1 "github.com/openshift/api/image/v1"
 	"github.com/spf13/cobra"
-	batchv1 "k8s.io/api/batch/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type JobsItems struct {
-	ApiVersion string         `json:"apiVersion"`
-	Items      []*batchv1.Job `json:"items"`
+type ImageStreamsItems struct {
+	ApiVersion string            `json:"apiVersion"`
+	Items      []*v1.ImageStream `json:"items"`
 }
 
-func getJobs(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "completions", "duration", "age"}
+func getImageStreams(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "image repository", "tags", "updated"}
 
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -55,69 +54,61 @@ func getJobs(currentContextPath string, namespace string, resourceName string, a
 	}
 
 	var data [][]string
-	var _JobsList = JobsItems{ApiVersion: "v1"}
+	var _ImageStreamsList = ImageStreamsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items JobsItems
+		var _Items ImageStreamsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/batch/jobs.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/batch/jobs.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 			os.Exit(1)
 		}
 
-		for _, Job := range _Items.Items {
-			if resourceName != "" && resourceName != Job.Name {
+		for _, ImageStream := range _Items.Items {
+			if resourceName != "" && resourceName != ImageStream.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_JobsList.Items = append(_JobsList.Items, Job)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_JobsList.Items = append(_JobsList.Items, Job)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_JobsList.Items = append(_JobsList.Items, Job)
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
 				continue
 			}
 
 			//name
-			JobName := Job.Name
+			ImageStreamName := ImageStream.Name
 			if allResources {
-				JobName = "job.batch/" + JobName
+				ImageStreamName = "imagestream.image.openshift.io/" + ImageStreamName
 			}
-			//completions
-			//fmt.Println(strconv.Itoa(int(*Job.Spec.Completions)))
-			completions := "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
-			if Job.Spec.Completions != nil {
-				completions = "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
+			//image repository
+			imageRepository := ImageStream.Status.DockerImageRepository
+			//tags
+			tags := ""
+			for _, tag := range ImageStream.Status.Tags {
+				tags += tag.Tag + ","
 			}
-			//duration
-			duration := "Unknown"
-			if Job.Status.CompletionTime != nil {
-				t2 := Job.Status.CompletionTime.Time
-				diffTime := t2.Sub(Job.Status.StartTime.Time).String()
-				d, _ := time.ParseDuration(diffTime)
-				duration = helpers.FormatDiffTime(d)
-			}
-
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/batch/jobs.yaml", Job.GetCreationTimestamp())
-
+			tags = strings.TrimRight(tags, ",")
+			//updated
+			updated := helpers.GetAge(CurrentNamespacePath+"/image.openshift.io/imagestreams.yaml", ImageStream.GetCreationTimestamp())
 			//labels
-			labels := helpers.ExtractLabels(Job.GetLabels())
-			_list := []string{Job.Namespace, JobName, completions, duration, age}
+			labels := helpers.ExtractLabels(ImageStream.GetLabels())
+			_list := []string{ImageStream.Namespace, ImageStreamName, imageRepository, tags, updated}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == JobName {
+			if resourceName != "" && resourceName == ImageStreamName {
 				break
 			}
 		}
@@ -159,7 +150,7 @@ func getJobs(currentContextPath string, namespace string, resourceName string, a
 		return false
 	}
 
-	if len(_JobsList.Items) == 0 {
+	if len(_ImageStreamsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -168,9 +159,9 @@ func getJobs(currentContextPath string, namespace string, resourceName string, a
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _JobsList.Items[0]
+		resource = _ImageStreamsList.Items[0]
 	} else {
-		resource = _JobsList
+		resource = _ImageStreamsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -187,9 +178,9 @@ func getJobs(currentContextPath string, namespace string, resourceName string, a
 	return false
 }
 
-var Job = &cobra.Command{
-	Use:     "job",
-	Aliases: []string{"jobs"},
+var ImageStream = &cobra.Command{
+	Use:     "imagestream",
+	Aliases: []string{"imagestreams", "is", "imagestream.imagestream.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -197,6 +188,6 @@ var Job = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getJobs(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		getImageStreams(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

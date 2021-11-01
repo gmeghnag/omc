@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package get
+package apps
 
 import (
 	"encoding/json"
@@ -30,14 +30,13 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type DaemonsetsItems struct {
-	ApiVersion string              `json:"apiVersion"`
-	Items      []*appsv1.DaemonSet `json:"items"`
+type ReplicaSetsItems struct {
+	ApiVersion string               `json:"apiVersion"`
+	Items      []*appsv1.ReplicaSet `json:"items"`
 }
 
-func getDaemonSets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "desired", "current", "ready", "up-to-date", "available", "node selector", "age", "containers", "images"}
-
+func getReplicaSets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images", "selector"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -55,59 +54,56 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 	}
 
 	var data [][]string
-	var _DaemonsetsList = DaemonsetsItems{ApiVersion: "v1"}
+	var _ReplicaSetsList = ReplicaSetsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items DaemonsetsItems
-		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/daemonsets.yaml")
+		var _Items ReplicaSetsItems
+		CurrentNamespacePath := currentContextPath + "/" + "/namespaces/" + _namespace
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/replicasets.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/daemonsets.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
 			os.Exit(1)
 		}
 
-		for _, Daemonset := range _Items.Items {
-			if resourceName != "" && resourceName != Daemonset.Name {
+		for _, ReplicaSet := range _Items.Items {
+			if resourceName != "" && resourceName != ReplicaSet.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_DaemonsetsList.Items = append(_DaemonsetsList.Items, Daemonset)
+				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_DaemonsetsList.Items = append(_DaemonsetsList.Items, Daemonset)
+				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_DaemonsetsList.Items = append(_DaemonsetsList.Items, Daemonset)
+				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
 				continue
 			}
 
 			//name
-			DaemonsetName := Daemonset.Name
+			ReplicaSetName := ReplicaSet.Name
 			if allResources {
-				DaemonsetName = "daemonset.apps/" + DaemonsetName
+				ReplicaSetName = "replicaset.apps/" + ReplicaSetName
 			}
-			desired := strconv.Itoa(int(Daemonset.Status.DesiredNumberScheduled))
+			//desired
+			desired := strconv.Itoa(int(ReplicaSet.Status.Replicas))
 			//current
-			current := strconv.Itoa(int(Daemonset.Status.CurrentNumberScheduled))
+			current := strconv.Itoa(int(ReplicaSet.Status.AvailableReplicas))
 			//ready
-			ready := strconv.Itoa(int(Daemonset.Status.NumberReady))
-			//up-to-date
-			upToDate := strconv.Itoa(int(Daemonset.Status.UpdatedNumberScheduled))
-			//available
-			available := strconv.Itoa(int(Daemonset.Status.NumberAvailable))
+			ready := strconv.Itoa(int(ReplicaSet.Status.ReadyReplicas))
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/daemonsets.yaml", Daemonset.GetCreationTimestamp())
+			age := helpers.GetAge(CurrentNamespacePath+"/apps/replicasets.yaml", ReplicaSet.GetCreationTimestamp())
 			//containers
 			containers := ""
-			for _, c := range Daemonset.Spec.Template.Spec.Containers {
+			for _, c := range ReplicaSet.Spec.Template.Spec.Containers {
 				containers += fmt.Sprint(c.Name) + ","
 			}
 			if containers == "" {
@@ -117,7 +113,7 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 			}
 			//images
 			images := ""
-			for _, i := range Daemonset.Spec.Template.Spec.Containers {
+			for _, i := range ReplicaSet.Spec.Template.Spec.Containers {
 				images += fmt.Sprint(i.Image) + ","
 			}
 			if images == "" {
@@ -125,9 +121,8 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 			} else {
 				images = strings.TrimRight(images, ",")
 			}
-			//node selector
 			selector := ""
-			for k, v := range Daemonset.Spec.Template.Spec.NodeSelector {
+			for k, v := range ReplicaSet.Spec.Selector.MatchLabels {
 				selector += k + "=" + v + ","
 			}
 			if selector == "" {
@@ -136,11 +131,11 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 				selector = strings.TrimRight(selector, ",")
 			}
 			//labels
-			labels := helpers.ExtractLabels(Daemonset.GetLabels())
-			_list := []string{Daemonset.Namespace, DaemonsetName, desired, current, ready, upToDate, available, selector, age, containers, images}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 9, _list)
+			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
+			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
-			if resourceName != "" && resourceName == DaemonsetName {
+			if resourceName != "" && resourceName == ReplicaSetName {
 				break
 			}
 		}
@@ -159,9 +154,9 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:9]
+			headers = _headers[0:6]
 		} else {
-			headers = _headers[1:9]
+			headers = _headers[1:6]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -182,7 +177,7 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 		return false
 	}
 
-	if len(_DaemonsetsList.Items) == 0 {
+	if len(_ReplicaSetsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -191,9 +186,9 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _DaemonsetsList.Items[0]
+		resource = _ReplicaSetsList.Items[0]
 	} else {
-		resource = _DaemonsetsList
+		resource = _ReplicaSetsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -210,9 +205,9 @@ func getDaemonSets(currentContextPath string, namespace string, resourceName str
 	return false
 }
 
-var DaemonSet = &cobra.Command{
-	Use:     "daemonset",
-	Aliases: []string{"daemonsets"},
+var ReplicaSet = &cobra.Command{
+	Use:     "replicaset",
+	Aliases: []string{"replicasets", "rs", "replicaset.apps"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -220,6 +215,6 @@ var DaemonSet = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getDaemonSets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		getReplicaSets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

@@ -17,7 +17,18 @@ package get
 
 import (
 	"fmt"
+	"omc/cmd/get/apps"
+	"omc/cmd/get/batch"
 	"omc/cmd/get/core"
+	"omc/cmd/get/local"
+	appz "omc/cmd/get/openshift/apps"
+	"omc/cmd/get/openshift/build"
+	"omc/cmd/get/openshift/config"
+	"omc/cmd/get/openshift/image"
+	"omc/cmd/get/openshift/machine"
+	"omc/cmd/get/openshift/machineconfiguration"
+	"omc/cmd/get/openshift/route"
+	"omc/cmd/get/storage"
 	"omc/vars"
 	"os"
 	"strings"
@@ -49,18 +60,32 @@ func init() {
 	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
 	//getCmd.PersistentFlags().StringVarP(&selector, "selector", "l", "", "elector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 	GetCmd.AddCommand(
-		Build,
-		BuildConfig,
-		ClusterOperator,
-		ClusterVersion,
+		apps.DaemonSet,
+		apps.Deployment,
+		apps.ReplicaSet,
+		appz.DeploymentConfig,
+		batch.Job,
+		build.Build,
+		build.BuildConfig,
+		config.ClusterOperator,
+		config.ClusterVersion,
 		core.ConfigMap,
-		DaemonSet,
-		Deployment,
-		DeploymentConfig,
 		core.Event,
-		ImageStream,
-		Job,
-		Node,
+		core.Namespace,
+		core.Node,
+		core.PersistentVolume,
+		core.PersistentVolumeClaim,
 		core.Pod,
+		core.ReplicationController,
+		core.Secret,
+		core.Service,
+		image.ImageStream,
+		machine.Machine,
+		machine.MachineSet,
+		machineconfiguration.MachineConfig,
+		machineconfiguration.MachineConfigPool,
+		local.MustGather,
+		route.Route,
+		storage.StorageClass,
 	)
 }

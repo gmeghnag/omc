@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package get
+package machineconfiguration
 
 import (
 	"encoding/json"
@@ -150,7 +150,7 @@ func getMachineConfigPool(currentContextPath string, namespace string, resourceN
 
 var MachineConfigPool = &cobra.Command{
 	Use:     "machineconfigpool",
-	Aliases: []string{"machineconfigpool", "mcp"},
+	Aliases: []string{"machineconfigpools", "mcp"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

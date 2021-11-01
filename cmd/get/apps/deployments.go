@@ -13,28 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package apps
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/spf13/cobra"
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type ReplicaSetsItems struct {
+type DeploymentsItems struct {
 	ApiVersion string               `json:"apiVersion"`
-	Items      []*appsv1.ReplicaSet `json:"items"`
+	Items      []*appsv1.Deployment `json:"items"`
 }
 
-func getReplicaSets(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "desired", "current", "ready", "age", "containers", "images", "selector"}
+func getDeployments(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "ready", "up-to-date", "available", "age", "containers", "images"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -47,61 +50,66 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
 	var data [][]string
-	var _ReplicaSetsList = ReplicaSetsItems{ApiVersion: "v1"}
+	var _DeploymentsList = DeploymentsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items ReplicaSetsItems
-		CurrentNamespacePath := currentContextPath + "/" + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/replicasets.yaml")
+		var _Items DeploymentsItems
+		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/deployments.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/deployments.yaml")
 			os.Exit(1)
 		}
 
-		for _, ReplicaSet := range _Items.Items {
-			if resourceName != "" && resourceName != ReplicaSet.Name {
+		for _, Deployment := range _Items.Items {
+			if resourceName != "" && resourceName != Deployment.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
 				continue
 			}
 
 			//name
-			ReplicaSetName := ReplicaSet.Name
+			DeploymentName := Deployment.Name
 			if allResources {
-				ReplicaSetName = "replicaset.apps/" + ReplicaSetName
+				DeploymentName = "deployment.apps/" + DeploymentName
 			}
-			//desired
-			desired := strconv.Itoa(int(ReplicaSet.Status.Replicas))
-			//current
-			current := strconv.Itoa(int(ReplicaSet.Status.AvailableReplicas))
 			//ready
-			ready := strconv.Itoa(int(ReplicaSet.Status.ReadyReplicas))
+			ready := "??"
+			readyReplicas := Deployment.Status.ReadyReplicas
+			replicas := *Deployment.Spec.Replicas
+			ready = strconv.Itoa(int(readyReplicas)) + "/" + strconv.Itoa(int(replicas))
+			//up-to-date
+			upToDateReplicas := "??"
+			upToDateReplicas = strconv.Itoa(int(Deployment.Status.UpdatedReplicas))
+			//available
+			availableReplicas := "??"
+			availableReplicas = strconv.Itoa(int(Deployment.Status.AvailableReplicas))
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/replicasets.yaml", ReplicaSet.GetCreationTimestamp())
+			age := helpers.GetAge(CurrentNamespacePath+"/apps/deployments.yaml", Deployment.GetCreationTimestamp())
 			//containers
 			containers := ""
-			for _, c := range ReplicaSet.Spec.Template.Spec.Containers {
+			for _, c := range Deployment.Spec.Template.Spec.Containers {
 				containers += fmt.Sprint(c.Name) + ","
 			}
 			if containers == "" {
@@ -111,7 +119,7 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 			}
 			//images
 			images := ""
-			for _, i := range ReplicaSet.Spec.Template.Spec.Containers {
+			for _, i := range Deployment.Spec.Template.Spec.Containers {
 				images += fmt.Sprint(i.Image) + ","
 			}
 			if images == "" {
@@ -119,21 +127,12 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 			} else {
 				images = strings.TrimRight(images, ",")
 			}
-			selector := ""
-			for k, v := range ReplicaSet.Spec.Selector.MatchLabels {
-				selector += k + "=" + v + ","
-			}
-			if selector == "" {
-				selector = "<none>"
-			} else {
-				selector = strings.TrimRight(selector, ",")
-			}
 			//labels
-			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
-			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
+			labels := helpers.ExtractLabels(Deployment.GetLabels())
+			_list := []string{Deployment.Namespace, DeploymentName, ready, upToDateReplicas, availableReplicas, age, containers, images}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == ReplicaSetName {
+			if resourceName != "" && resourceName == DeploymentName {
 				break
 			}
 		}
@@ -144,7 +143,7 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -152,9 +151,9 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:6]
+			headers = _headers[0:5]
 		} else {
-			headers = _headers[1:6]
+			headers = _headers[1:5]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -175,18 +174,18 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		return false
 	}
 
-	if len(_ReplicaSetsList.Items) == 0 {
+	if len(_DeploymentsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ReplicaSetsList.Items[0]
+		resource = _DeploymentsList.Items[0]
 	} else {
-		resource = _ReplicaSetsList
+		resource = _DeploymentsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -201,4 +200,18 @@ func getReplicaSets(currentContextPath string, defaultConfigNamespace string, re
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var Deployment = &cobra.Command{
+	Use:     "deployment",
+	Aliases: []string{"deployments", "deployment.apps"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getDeployments(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

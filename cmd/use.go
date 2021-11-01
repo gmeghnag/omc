@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"omc/cmd/helpers"
 	"omc/types"
+	"omc/vars"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,7 +82,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 }
 
 // useCmd represents the use command
-var useCmd = &cobra.Command{
+var UseCmd = &cobra.Command{
 	Use:   "use",
 	Short: "Select the must-gather to use",
 	Long: `
@@ -116,6 +117,5 @@ var useCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(useCmd)
-	useCmd.Flags().StringVarP(&id, "id", "i", "", "Id string for the must-gather to use. If two must-gather has the same id the first one will be used.")
+	UseCmd.Flags().StringVarP(&vars.Id, "id", "i", "", "Id string for the must-gather to use. If two must-gather has the same id the first one will be used.")
 }

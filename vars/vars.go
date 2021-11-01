@@ -1,4 +1,4 @@
 package vars
 
-var CfgFile, Namespace, MustGatherRootPath, OutputStringVar string
-var AllNamespaceBoolVar, ShowLabelsBoolVar bool
+var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, Id, Container string
+var AllNamespaceBoolVar, ShowLabelsBoolVar, Previous, AllContainers bool

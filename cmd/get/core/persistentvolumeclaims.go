@@ -13,16 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package core
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -32,7 +34,7 @@ type PersistentVolumeClaimsItems struct {
 	Items      []*corev1.PersistentVolumeClaim `json:"items"`
 }
 
-func getPersistentVolumeClaims(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+func getPersistentVolumeClaims(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "name", "status", "volume", "capacity", "access modes", "storageclass", "age", "volume mode"}
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -46,7 +48,7 @@ func getPersistentVolumeClaims(currentContextPath string, defaultConfigNamespace
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
@@ -142,7 +144,7 @@ func getPersistentVolumeClaims(currentContextPath string, defaultConfigNamespace
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -175,7 +177,7 @@ func getPersistentVolumeClaims(currentContextPath string, defaultConfigNamespace
 
 	if len(_PersistentVolumeClaimsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -199,4 +201,18 @@ func getPersistentVolumeClaims(currentContextPath string, defaultConfigNamespace
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var PersistentVolumeClaim = &cobra.Command{
+	Use:     "persistentvolumeclaim",
+	Aliases: []string{"persistentvolumeclaims", "pvc"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getPersistentVolumeClaims(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

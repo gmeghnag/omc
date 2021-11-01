@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package local
 
 import (
 	"encoding/json"
@@ -29,7 +29,7 @@ import (
 )
 
 // contextsCmd represents the mg command
-var contextsCmd = &cobra.Command{
+var MustGather = &cobra.Command{
 	Use: "mg",
 	Run: func(cmd *cobra.Command, args []string) {
 		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
@@ -52,9 +52,4 @@ var contextsCmd = &cobra.Command{
 			helpers.PrintTable(headers, data)
 		}
 	},
-}
-
-func init() {
-	getCmd.AddCommand(contextsCmd)
-
 }

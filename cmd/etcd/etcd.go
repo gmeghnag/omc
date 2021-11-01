@@ -13,20 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package etcd
 
 import (
 	"github.com/spf13/cobra"
 )
 
 // etcdCmd represents the etcd command
-var describeCmd = &cobra.Command{
-	Use:   "describe",
-	Short: "descibe related subcommand",
+var Etcd = &cobra.Command{
+	Use:     "etcd",
+	Short:   "Etcd related subcommand",
+	Aliases: []string{"etcdctl"},
 	Run: func(cmd *cobra.Command, args []string) {
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(describeCmd)
+	Etcd.AddCommand(
+		Health,
+		Status,
+	)
 }

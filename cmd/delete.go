@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"omc/types"
+	"omc/vars"
 	"os"
 	"strings"
 
@@ -57,15 +58,9 @@ func deleteContext(path string, omcConfigFile string, idFlag string) {
 }
 
 // useCmd represents the use command
-var deleteCmd = &cobra.Command{
+var DeleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Delete mg from the saved.",
 	Run: func(cmd *cobra.Command, args []string) {
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
@@ -85,6 +80,5 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(deleteCmd)
-	deleteCmd.Flags().StringVarP(&id, "id", "i", "", "Id string for the must-gather. If two must-gather has the same id the first one will be used.")
+	DeleteCmd.Flags().StringVarP(&vars.Id, "id", "i", "", "Id string for the must-gather. If two must-gather has the same id the first one will be used.")
 }

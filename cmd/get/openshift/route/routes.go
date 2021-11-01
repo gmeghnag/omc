@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package get
+package route
 
 import (
 	"encoding/json"
@@ -22,22 +22,20 @@ import (
 	"omc/cmd/helpers"
 	"omc/vars"
 	"os"
-	"strconv"
 	"strings"
 
-	v1 "github.com/openshift/api/apps/v1"
+	routev1 "github.com/openshift/api/route/v1"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-type DeploymentConfigsItems struct {
-	ApiVersion string                 `json:"apiVersion"`
-	Items      []*v1.DeploymentConfig `json:"items"`
+type RoutesItems struct {
+	ApiVersion string           `json:"apiVersion"`
+	Items      []*routev1.Route `json:"items"`
 }
 
-func getDeploymentConfigs(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "revision", "desired", "current", "triggered by"}
-
+func getRoutes(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "host/port", "path", "services", "port", "termination", "wildcard"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -55,69 +53,78 @@ func getDeploymentConfigs(currentContextPath string, namespace string, resourceN
 	}
 
 	var data [][]string
-	var _DeploymentConfigsList = DeploymentConfigsItems{ApiVersion: "v1"}
+	var _RoutesList = RoutesItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items DeploymentConfigsItems
+		var _Items RoutesItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/route.openshift.io/routes.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/route.openshift.io/routes.yaml")
 			os.Exit(1)
 		}
 
-		for _, DeploymentConfig := range _Items.Items {
-			if resourceName != "" && resourceName != DeploymentConfig.Name {
+		for _, Route := range _Items.Items {
+			if resourceName != "" && resourceName != Route.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
+				_RoutesList.Items = append(_RoutesList.Items, Route)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
+				_RoutesList.Items = append(_RoutesList.Items, Route)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
+				_RoutesList.Items = append(_RoutesList.Items, Route)
 				continue
 			}
 
 			//name
-			DeploymentConfigName := DeploymentConfig.Name
+			RouteName := Route.Name
 			if allResources {
-				DeploymentConfigName = "deploymentconfig.apps.openshift.io/" + DeploymentConfigName
+				RouteName = "route.route.openshift.io/" + RouteName
 			}
-			//revision
-			revision := strconv.Itoa(int(DeploymentConfig.Status.LatestVersion))
-			//desiredReplicas
-			desiredReplicas := strconv.Itoa(int(DeploymentConfig.Spec.Replicas))
-			//current
-			currentReplicas := strconv.Itoa(int(DeploymentConfig.Status.ReadyReplicas))
-			//triggered by
-			triggeredBy := ""
-			triggers := DeploymentConfig.Spec.Triggers
-			for _, k := range triggers {
-				if k.Type == "ConfigChange" {
-					triggeredBy += "config,"
-				}
-				if k.Type == "ImageChange" {
-					triggeredBy += "image" + "(" + k.ImageChangeParams.From.Name + "),"
-				}
-			}
-			triggeredBy = strings.TrimRight(triggeredBy, ",")
-			//labels
-			labels := helpers.ExtractLabels(DeploymentConfig.GetLabels())
-			_list := []string{DeploymentConfig.Namespace, DeploymentConfigName, revision, desiredReplicas, currentReplicas, triggeredBy}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
-			if resourceName != "" && resourceName == DeploymentConfigName {
+			//host/port
+			hostPort := Route.Spec.Host
+
+			//path
+			path := Route.Spec.Path
+
+			//services
+			services := Route.Spec.To.Name
+
+			//ports
+			port := ""
+			if Route.Spec.Port == nil {
+				port = "<all>"
+			} else {
+				port = Route.Spec.Port.TargetPort.String()
+			}
+			termination := ""
+			if Route.Spec.TLS != nil {
+				termination = string(Route.Spec.TLS.Termination)
+				if Route.Spec.TLS.InsecureEdgeTerminationPolicy != "" {
+					termination += "/" + string(Route.Spec.TLS.InsecureEdgeTerminationPolicy)
+				}
+			}
+
+			//wildcard
+			wildcard := string(Route.Spec.WildcardPolicy)
+			//labels
+			labels := helpers.ExtractLabels(Route.GetLabels())
+			_list := []string{Route.Namespace, RouteName, hostPort, path, services, port, termination, wildcard}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 8, _list)
+
+			if resourceName != "" && resourceName == RouteName {
 				break
 			}
 		}
@@ -136,9 +143,9 @@ func getDeploymentConfigs(currentContextPath string, namespace string, resourceN
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:6]
+			headers = _headers[0:8]
 		} else {
-			headers = _headers[1:6]
+			headers = _headers[1:8]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -159,7 +166,7 @@ func getDeploymentConfigs(currentContextPath string, namespace string, resourceN
 		return false
 	}
 
-	if len(_DeploymentConfigsList.Items) == 0 {
+	if len(_RoutesList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -168,10 +175,11 @@ func getDeploymentConfigs(currentContextPath string, namespace string, resourceN
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _DeploymentConfigsList.Items[0]
+		resource = _RoutesList.Items[0]
 	} else {
-		resource = _DeploymentConfigsList
+		resource = _RoutesList
 	}
+
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
@@ -179,7 +187,6 @@ func getDeploymentConfigs(currentContextPath string, namespace string, resourceN
 	if outputFlag == "json" {
 		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
-
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
@@ -187,9 +194,9 @@ func getDeploymentConfigs(currentContextPath string, namespace string, resourceN
 	return false
 }
 
-var DeploymentConfig = &cobra.Command{
-	Use:     "deploymentconfig",
-	Aliases: []string{"deploymentconfigs", "dc"},
+var Route = &cobra.Command{
+	Use:     "route",
+	Aliases: []string{"routes", "route.route.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -197,6 +204,6 @@ var DeploymentConfig = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getDeploymentConfigs(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		getRoutes(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

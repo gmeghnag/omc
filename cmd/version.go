@@ -22,24 +22,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func versionOmc() {
-	fmt.Println("omc version 1.1 (https://github.com/gmeghnag/omc)")
-}
-
 // useCmd represents the use command
-var versionCmd = &cobra.Command{
+var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print omc version",
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 {
-			fmt.Println("Unexpected argument: " + args[0] + ".")
-			os.Exit(1)
-		}
-
-		versionOmc()
+		fmt.Println("omc version 1.1 (https://github.com/gmeghnag/omc)")
+		os.Exit(0)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
 }

@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package logs
 
 import (
 	"fmt"
 	"io/ioutil"
 	"log"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strings"
 
@@ -27,17 +28,17 @@ import (
 )
 
 // logsCmd represents the logs command
-var logsCmd = &cobra.Command{
+var Logs = &cobra.Command{
 	Use:   "logs",
 	Short: "Print the logs for a container in a pod",
 	Run: func(cmd *cobra.Command, args []string) {
-		if currentContextPath == "" {
+		if vars.MustGatherRootPath == "" {
 			fmt.Println("There are no must-gather resources defined.")
 			os.Exit(1)
 		}
-		exist, _ := helpers.Exists(currentContextPath + "/namespaces")
+		exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
 		if !exist {
-			files, err := ioutil.ReadDir(currentContextPath)
+			files, err := ioutil.ReadDir(vars.MustGatherRootPath)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -45,7 +46,7 @@ var logsCmd = &cobra.Command{
 			for _, f := range files {
 				if strings.HasPrefix(f.Name(), "quay") {
 					QuayString = f.Name()
-					currentContextPath = currentContextPath + "/" + QuayString
+					vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + QuayString
 					break
 				}
 			}
@@ -56,7 +57,7 @@ var logsCmd = &cobra.Command{
 		}
 		namespaceFlag, _ := cmd.Flags().GetString("namespace")
 		if namespaceFlag != "" {
-			defaultConfigNamespace = namespaceFlag
+			vars.Namespace = namespaceFlag
 		}
 		podName := ""
 		containerName, _ := cmd.Flags().GetString("container")
@@ -76,10 +77,10 @@ var logsCmd = &cobra.Command{
 					fmt.Println("error: arguments in resource/name form must have a single resource and name")
 					os.Exit(1)
 				}
-				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
 			} else {
 				podName = s[0]
-				logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
 			}
 		}
 		if len(args) == 2 {
@@ -94,7 +95,7 @@ var logsCmd = &cobra.Command{
 						os.Exit(1)
 					}
 					containerName = args[1]
-					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
 				}
 			} else {
 				if containerName != "" {
@@ -103,7 +104,7 @@ var logsCmd = &cobra.Command{
 				} else {
 					podName = args[0]
 					containerName = args[1]
-					logsPods(currentContextPath, defaultConfigNamespace, podName, containerName, previousFlag, allContainersFlag)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
 				}
 			}
 		}
@@ -111,8 +112,7 @@ var logsCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(logsCmd)
-	logsCmd.PersistentFlags().StringVarP(&output, "container", "c", "", "Print the logs of this container")
-	logsCmd.PersistentFlags().BoolP("previous", "p", false, "Print the logs for the previous instance of the container in a pod if it exists.")
-	logsCmd.PersistentFlags().BoolP("all-containers", "", false, "Get all containers' logs in the pod(s).")
+	Logs.PersistentFlags().StringVarP(&vars.Container, "container", "c", "", "Print the logs of this container")
+	Logs.PersistentFlags().BoolVarP(&vars.Previous, "previous", "p", false, "Print the logs for the previous instance of the container in a pod if it exists.")
+	Logs.PersistentFlags().BoolVarP(&vars.AllContainers, "all-containers", "", false, "Get all containers' logs in the pod(s).")
 }

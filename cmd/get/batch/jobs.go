@@ -13,27 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package batch
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"omc/cmd/helpers"
+	"omc/vars"
 	"os"
 	"strings"
+	"time"
 
-	routev1 "github.com/openshift/api/route/v1"
+	"github.com/spf13/cobra"
+	batchv1 "k8s.io/api/batch/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type RoutesItems struct {
-	ApiVersion string           `json:"apiVersion"`
-	Items      []*routev1.Route `json:"items"`
+type JobsItems struct {
+	ApiVersion string         `json:"apiVersion"`
+	Items      []*batchv1.Job `json:"items"`
 }
 
-func getRoutes(currentContextPath string, defaultConfigNamespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "host/port", "path", "services", "port", "termination", "wildcard"}
+func getJobs(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "completions", "duration", "age"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -46,83 +50,74 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 		namespaces = append(namespaces, _namespace)
 	}
 	if namespace == "" && !allNamespacesFlag {
-		var _namespace = defaultConfigNamespace
+		var _namespace = namespace
 		namespaces = append(namespaces, _namespace)
 	}
 
 	var data [][]string
-	var _RoutesList = RoutesItems{ApiVersion: "v1"}
+	var _JobsList = JobsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items RoutesItems
+		var _Items JobsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/route.openshift.io/routes.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/batch/jobs.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/route.openshift.io/routes.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/batch/jobs.yaml")
 			os.Exit(1)
 		}
 
-		for _, Route := range _Items.Items {
-			if resourceName != "" && resourceName != Route.Name {
+		for _, Job := range _Items.Items {
+			if resourceName != "" && resourceName != Job.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_RoutesList.Items = append(_RoutesList.Items, Route)
+				_JobsList.Items = append(_JobsList.Items, Job)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_RoutesList.Items = append(_RoutesList.Items, Route)
+				_JobsList.Items = append(_JobsList.Items, Job)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_RoutesList.Items = append(_RoutesList.Items, Route)
+				_JobsList.Items = append(_JobsList.Items, Job)
 				continue
 			}
 
 			//name
-			RouteName := Route.Name
+			JobName := Job.Name
 			if allResources {
-				RouteName = "route.route.openshift.io/" + RouteName
+				JobName = "job.batch/" + JobName
+			}
+			//completions
+			//fmt.Println(strconv.Itoa(int(*Job.Spec.Completions)))
+			completions := "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
+			if Job.Spec.Completions != nil {
+				completions = "" //strconv.Itoa(int(Job.Status.Succeeded)) + "/" + strconv.Itoa(int(*Job.Spec.Completions))
+			}
+			//duration
+			duration := "Unknown"
+			if Job.Status.CompletionTime != nil {
+				t2 := Job.Status.CompletionTime.Time
+				diffTime := t2.Sub(Job.Status.StartTime.Time).String()
+				d, _ := time.ParseDuration(diffTime)
+				duration = helpers.FormatDiffTime(d)
 			}
 
-			//host/port
-			hostPort := Route.Spec.Host
+			//age
+			age := helpers.GetAge(CurrentNamespacePath+"/batch/jobs.yaml", Job.GetCreationTimestamp())
 
-			//path
-			path := Route.Spec.Path
-
-			//services
-			services := Route.Spec.To.Name
-
-			//ports
-			port := ""
-			if Route.Spec.Port == nil {
-				port = "<all>"
-			} else {
-				port = Route.Spec.Port.TargetPort.String()
-			}
-			termination := ""
-			if Route.Spec.TLS != nil {
-				termination = string(Route.Spec.TLS.Termination)
-				if Route.Spec.TLS.InsecureEdgeTerminationPolicy != "" {
-					termination += "/" + string(Route.Spec.TLS.InsecureEdgeTerminationPolicy)
-				}
-			}
-
-			//wildcard
-			wildcard := string(Route.Spec.WildcardPolicy)
 			//labels
-			labels := helpers.ExtractLabels(Route.GetLabels())
-			_list := []string{Route.Namespace, RouteName, hostPort, path, services, port, termination, wildcard}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 8, _list)
+			labels := helpers.ExtractLabels(Job.GetLabels())
+			_list := []string{Job.Namespace, JobName, completions, duration, age}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == RouteName {
+			if resourceName != "" && resourceName == JobName {
 				break
 			}
 		}
@@ -133,7 +128,7 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 
 	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
@@ -141,9 +136,9 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:8]
+			headers = _headers[0:5]
 		} else {
-			headers = _headers[1:8]
+			headers = _headers[1:5]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -164,20 +159,19 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 		return false
 	}
 
-	if len(_RoutesList.Items) == 0 {
+	if len(_JobsList.Items) == 0 {
 		if !allResources {
-			fmt.Println("No resources found in " + defaultConfigNamespace + " namespace.")
+			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
 		return true
 	}
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _RoutesList.Items[0]
+		resource = _JobsList.Items[0]
 	} else {
-		resource = _RoutesList
+		resource = _JobsList
 	}
-
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
@@ -185,9 +179,24 @@ func getRoutes(currentContextPath string, defaultConfigNamespace string, resourc
 	if outputFlag == "json" {
 		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
+
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
+}
+
+var Job = &cobra.Command{
+	Use:     "job",
+	Aliases: []string{"jobs", "job.batch"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		getJobs(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+	},
 }

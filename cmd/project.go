@@ -56,8 +56,7 @@ func projectDefault(omcConfigFile string, projDefault string) {
 
 }
 
-// useCmd represents the use command
-var projectCmd = &cobra.Command{
+var ProjectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Switch to another project",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -72,8 +71,4 @@ var projectCmd = &cobra.Command{
 
 		projectDefault(viper.ConfigFileUsed(), projDefault)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(projectCmd)
 }

@@ -210,7 +210,6 @@ func getPods(currentContextPath string, namespace string, resourceName string, a
 	*/return false
 }
 
-// getCmd represents the get command
 var Pod = &cobra.Command{
 	Use:     "pod",
 	Aliases: []string{"po", "pods"},

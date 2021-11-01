@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package get
+package apps
 
 import (
 	"encoding/json"
@@ -25,18 +25,18 @@ import (
 	"strconv"
 	"strings"
 
+	v1 "github.com/openshift/api/apps/v1"
 	"github.com/spf13/cobra"
-	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/yaml"
 )
 
-type DeploymentsItems struct {
-	ApiVersion string               `json:"apiVersion"`
-	Items      []*appsv1.Deployment `json:"items"`
+type DeploymentConfigsItems struct {
+	ApiVersion string                 `json:"apiVersion"`
+	Items      []*v1.DeploymentConfig `json:"items"`
 }
 
-func getDeployments(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "ready", "up-to-date", "available", "age", "containers", "images"}
+func getDeploymentConfigs(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "revision", "desired", "current", "triggered by"}
 
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -55,84 +55,69 @@ func getDeployments(currentContextPath string, namespace string, resourceName st
 	}
 
 	var data [][]string
-	var _DeploymentsList = DeploymentsItems{ApiVersion: "v1"}
+	var _DeploymentConfigsList = DeploymentConfigsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items DeploymentsItems
+		var _Items DeploymentConfigsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps/deployments.yaml")
+		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/deployments.yaml")
+			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
 			os.Exit(1)
 		}
 
-		for _, Deployment := range _Items.Items {
-			if resourceName != "" && resourceName != Deployment.Name {
+		for _, DeploymentConfig := range _Items.Items {
+			if resourceName != "" && resourceName != DeploymentConfig.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
 				continue
 			}
 
 			//name
-			DeploymentName := Deployment.Name
+			DeploymentConfigName := DeploymentConfig.Name
 			if allResources {
-				DeploymentName = "deployment.apps/" + DeploymentName
+				DeploymentConfigName = "deploymentconfig.apps.openshift.io/" + DeploymentConfigName
 			}
-			//ready
-			ready := "??"
-			readyReplicas := Deployment.Status.ReadyReplicas
-			replicas := *Deployment.Spec.Replicas
-			ready = strconv.Itoa(int(readyReplicas)) + "/" + strconv.Itoa(int(replicas))
-			//up-to-date
-			upToDateReplicas := "??"
-			upToDateReplicas = strconv.Itoa(int(Deployment.Status.UpdatedReplicas))
-			//available
-			availableReplicas := "??"
-			availableReplicas = strconv.Itoa(int(Deployment.Status.AvailableReplicas))
-			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/apps/deployments.yaml", Deployment.GetCreationTimestamp())
-			//containers
-			containers := ""
-			for _, c := range Deployment.Spec.Template.Spec.Containers {
-				containers += fmt.Sprint(c.Name) + ","
+			//revision
+			revision := strconv.Itoa(int(DeploymentConfig.Status.LatestVersion))
+			//desiredReplicas
+			desiredReplicas := strconv.Itoa(int(DeploymentConfig.Spec.Replicas))
+			//current
+			currentReplicas := strconv.Itoa(int(DeploymentConfig.Status.ReadyReplicas))
+			//triggered by
+			triggeredBy := ""
+			triggers := DeploymentConfig.Spec.Triggers
+			for _, k := range triggers {
+				if k.Type == "ConfigChange" {
+					triggeredBy += "config,"
+				}
+				if k.Type == "ImageChange" {
+					triggeredBy += "image" + "(" + k.ImageChangeParams.From.Name + "),"
+				}
 			}
-			if containers == "" {
-				containers = "??"
-			} else {
-				containers = strings.TrimRight(containers, ",")
-			}
-			//images
-			images := ""
-			for _, i := range Deployment.Spec.Template.Spec.Containers {
-				images += fmt.Sprint(i.Image) + ","
-			}
-			if images == "" {
-				images = "??"
-			} else {
-				images = strings.TrimRight(images, ",")
-			}
+			triggeredBy = strings.TrimRight(triggeredBy, ",")
 			//labels
-			labels := helpers.ExtractLabels(Deployment.GetLabels())
-			_list := []string{Deployment.Namespace, DeploymentName, ready, upToDateReplicas, availableReplicas, age, containers, images}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
+			labels := helpers.ExtractLabels(DeploymentConfig.GetLabels())
+			_list := []string{DeploymentConfig.Namespace, DeploymentConfigName, revision, desiredReplicas, currentReplicas, triggeredBy}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 
-			if resourceName != "" && resourceName == DeploymentName {
+			if resourceName != "" && resourceName == DeploymentConfigName {
 				break
 			}
 		}
@@ -151,9 +136,9 @@ func getDeployments(currentContextPath string, namespace string, resourceName st
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:5]
+			headers = _headers[0:6]
 		} else {
-			headers = _headers[1:5]
+			headers = _headers[1:6]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -174,7 +159,7 @@ func getDeployments(currentContextPath string, namespace string, resourceName st
 		return false
 	}
 
-	if len(_DeploymentsList.Items) == 0 {
+	if len(_DeploymentConfigsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -183,9 +168,9 @@ func getDeployments(currentContextPath string, namespace string, resourceName st
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _DeploymentsList.Items[0]
+		resource = _DeploymentConfigsList.Items[0]
 	} else {
-		resource = _DeploymentsList
+		resource = _DeploymentConfigsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -202,9 +187,9 @@ func getDeployments(currentContextPath string, namespace string, resourceName st
 	return false
 }
 
-var Deployment = &cobra.Command{
-	Use:     "deployment",
-	Aliases: []string{"deployment"},
+var DeploymentConfig = &cobra.Command{
+	Use:     "deploymentconfig",
+	Aliases: []string{"deploymentconfigs", "dc", "deploymentconfig.apps.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -212,6 +197,6 @@ var Deployment = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getDeployments(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		getDeploymentConfigs(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

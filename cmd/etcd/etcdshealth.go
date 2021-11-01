@@ -13,28 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package etcd
 
 import (
-	etcd "omc/cmd/etcd"
+	"omc/vars"
 
 	"github.com/spf13/cobra"
 )
 
-func etcdHealthCommand() {
+func etcdHealthCommand(currentContextPath string) {
 	etcdFolderPath := currentContextPath + "/etcd_info/"
-	etcd.EndpointHealth(etcdFolderPath)
+	EndpointHealth(etcdFolderPath)
 }
 
 // etcdCmd represents the etcd command
-var etcdHealthCmd = &cobra.Command{
+var Health = &cobra.Command{
 	Use:   "health",
 	Short: "Etcd status",
 	Run: func(cmd *cobra.Command, args []string) {
-		etcdHealthCommand()
+		etcdHealthCommand(vars.MustGatherRootPath)
 	},
-}
-
-func init() {
-	etcdCmd.AddCommand(etcdHealthCmd)
 }

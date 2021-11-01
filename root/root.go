@@ -20,9 +20,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"omc/cmd"
 	"omc/cmd/describe"
+	"omc/cmd/etcd"
 	"omc/cmd/get"
 	"omc/cmd/helpers"
+	"omc/cmd/logs"
 	"omc/types"
 	"omc/vars"
 	"os"
@@ -60,7 +63,16 @@ func init() {
 	RootCmd.PersistentFlags().StringVarP(&vars.Namespace, "namespace", "n", "", "If present, list the requested object(s) for a specific namespace.")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	RootCmd.AddCommand(get.GetCmd, describe.DescribeCmd)
+	RootCmd.AddCommand(
+		cmd.VersionCmd,
+		cmd.DeleteCmd,
+		cmd.ProjectCmd,
+		cmd.UseCmd,
+		get.GetCmd,
+		describe.DescribeCmd,
+		etcd.Etcd,
+		logs.Logs,
+	)
 }
 
 // initConfig reads in config file and ENV variables if set.

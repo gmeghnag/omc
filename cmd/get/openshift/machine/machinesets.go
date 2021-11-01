@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package get
+package machine
 
 import (
 	"encoding/json"
@@ -22,21 +22,21 @@ import (
 	"omc/cmd/helpers"
 	"omc/vars"
 	"os"
+	"strconv"
 	"strings"
 
-	v1 "github.com/openshift/api/image/v1"
+	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-type ImageStreamsItems struct {
-	ApiVersion string            `json:"apiVersion"`
-	Items      []*v1.ImageStream `json:"items"`
+type MachineSetsItems struct {
+	ApiVersion string                  `json:"apiVersion"`
+	Items      []machineapi.MachineSet `json:"items"`
 }
 
-func getImageStreams(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "image repository", "tags", "updated"}
-
+func getMachineSets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "desired", "current", "ready", "available", "age"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
@@ -54,61 +54,69 @@ func getImageStreams(currentContextPath string, namespace string, resourceName s
 	}
 
 	var data [][]string
-	var _ImageStreamsList = ImageStreamsItems{ApiVersion: "v1"}
+	var _MachineSetsList = MachineSetsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
-		var _Items ImageStreamsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
+		_machinesets, err := ioutil.ReadDir(CurrentNamespacePath + "/machine.openshift.io/machinesets/")
 		if err != nil && !allNamespacesFlag {
 			fmt.Println("No resources found in " + _namespace + " namespace.")
 			os.Exit(1)
 		}
-		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
-			os.Exit(1)
-		}
+		for _, f := range _machinesets {
+			machineYamlPath := CurrentNamespacePath + "/machine.openshift.io/machinesets/" + f.Name()
+			_file := helpers.ReadYaml(machineYamlPath)
+			MachineSet := machineapi.MachineSet{}
+			if err := yaml.Unmarshal([]byte(_file), &MachineSet); err != nil {
+				fmt.Println("Error when trying to unmarshall file " + machineYamlPath)
+				os.Exit(1)
+			}
 
-		for _, ImageStream := range _Items.Items {
-			if resourceName != "" && resourceName != ImageStream.Name {
+			// secret path
+			if resourceName != "" && resourceName != MachineSet.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
+				_MachineSetsList.Items = append(_MachineSetsList.Items, MachineSet)
 				continue
 			}
 
 			if outputFlag == "json" {
-				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
+				_MachineSetsList.Items = append(_MachineSetsList.Items, MachineSet)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
+				_MachineSetsList.Items = append(_MachineSetsList.Items, MachineSet)
 				continue
 			}
 
 			//name
-			ImageStreamName := ImageStream.Name
-			if allResources {
-				ImageStreamName = "imagestream.image.openshift.io/" + ImageStreamName
-			}
-			//image repository
-			imageRepository := ImageStream.Status.DockerImageRepository
-			//tags
-			tags := ""
-			for _, tag := range ImageStream.Status.Tags {
-				tags += tag.Tag + ","
-			}
-			tags = strings.TrimRight(tags, ",")
-			//updated
-			updated := helpers.GetAge(CurrentNamespacePath+"/image.openshift.io/imagestreams.yaml", ImageStream.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(ImageStream.GetLabels())
-			_list := []string{ImageStream.Namespace, ImageStreamName, imageRepository, tags, updated}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
+			MachineSetName := MachineSet.Name
 
-			if resourceName != "" && resourceName == ImageStreamName {
+			//desired
+			desired := ""
+			if MachineSet.Spec.Replicas != nil {
+				desired = strconv.Itoa(int(*MachineSet.Spec.Replicas))
+			}
+
+			//current
+			current := strconv.Itoa(int(MachineSet.Status.Replicas))
+
+			//ready
+			ready := strconv.Itoa(int(MachineSet.Status.ReadyReplicas))
+
+			//avaialble
+			avaialble := strconv.Itoa(int(MachineSet.Status.AvailableReplicas))
+
+			//age
+			age := helpers.GetAge(machineYamlPath, MachineSet.GetCreationTimestamp())
+			//labels
+			labels := helpers.ExtractLabels(MachineSet.GetLabels())
+			_list := []string{MachineSet.Namespace, MachineSetName, desired, current, ready, avaialble, age}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
+
+			if resourceName != "" && resourceName == MachineSetName {
 				break
 			}
 		}
@@ -127,9 +135,9 @@ func getImageStreams(currentContextPath string, namespace string, resourceName s
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:5]
+			headers = _headers[0:7]
 		} else {
-			headers = _headers[1:5]
+			headers = _headers[1:7]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -150,7 +158,7 @@ func getImageStreams(currentContextPath string, namespace string, resourceName s
 		return false
 	}
 
-	if len(_ImageStreamsList.Items) == 0 {
+	if len(_MachineSetsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -159,9 +167,9 @@ func getImageStreams(currentContextPath string, namespace string, resourceName s
 
 	var resource interface{}
 	if resourceName != "" {
-		resource = _ImageStreamsList.Items[0]
+		resource = _MachineSetsList.Items[0]
 	} else {
-		resource = _ImageStreamsList
+		resource = _MachineSetsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -170,17 +178,17 @@ func getImageStreams(currentContextPath string, namespace string, resourceName s
 	if outputFlag == "json" {
 		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
-
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
 		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
+
 	return false
 }
 
-var ImageStream = &cobra.Command{
-	Use:     "imagestream",
-	Aliases: []string{"imagestreams", "is"},
+var MachineSet = &cobra.Command{
+	Use:     "machineset",
+	Aliases: []string{"machinesets", "machineset.machine.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -188,6 +196,6 @@ var ImageStream = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getImageStreams(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		getMachineSets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }
