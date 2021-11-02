@@ -27,23 +27,23 @@ jobs:
         run: |
           export PATH=$PATH:/usr/local/go/bin \
           && go build -o omc \
-          && tar -cvf omc-1.2.1_Linux_x86_64.tar.gz omc \
+          && tar -cvf omc-1.2.2_Linux_x86_64.tar.gz omc \
           && rm -rf omc \
           && env GOOS=darwin GOARCH=amd64 go build -o omc \
-          && tar -cvf omc-1.2.1_Darwin_x86_64.tar.gz omc \
+          && tar -cvf omc-1.2.2_Darwin_x86_64.tar.gz omc \
           && rm -rf omc \
           && env GOOS=windows GOARCH=amd64 go build -o omc.exe \
-          && zip omc-1.2.1_Windows_x86_64.zip omc.exe \
-          && md5sum omc-1.2.1_Linux_x86_64.tar.gz | tee -a checksums.txt \
-          && md5sum omc-1.2.1_Darwin_x86_64.tar.gz | tee -a checksums.txt \
-          && md5sum omc-1.2.1_Windows_x86_64.zip | tee -a checksums.txt
+          && zip omc-1.2.2_Windows_x86_64.zip omc.exe \
+          && md5sum omc-1.2.2_Linux_x86_64.tar.gz | tee -a checksums.txt \
+          && md5sum omc-1.2.2_Darwin_x86_64.tar.gz | tee -a checksums.txt \
+          && md5sum omc-1.2.2_Windows_x86_64.zip | tee -a checksums.txt
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.2.1
+          tag_name: v1.2.2
           files: |
             checksums.txt
-            omc-1.2.1_Linux_x86_64.tar.gz 
-            omc-1.2.1_Darwin_x86_64.tar.gz
-            omc-1.2.1_Windows_x86_64.zip
-          name: "v1.2.1 release"
+            omc-1.2.2_Linux_x86_64.tar.gz 
+            omc-1.2.2_Darwin_x86_64.tar.gz
+            omc-1.2.2_Windows_x86_64.zip
+          name: "v1.2.2 release"
