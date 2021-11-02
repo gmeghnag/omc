@@ -35,7 +35,7 @@ type DeploymentsItems struct {
 	Items      []*appsv1.Deployment `json:"items"`
 }
 
-func getDeployments(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+func GetDeployments(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
 	_headers := []string{"namespace", "name", "ready", "up-to-date", "available", "age", "containers", "images"}
 
 	var namespaces []string
@@ -212,6 +212,6 @@ var Deployment = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getDeployments(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		GetDeployments(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

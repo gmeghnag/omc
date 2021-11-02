@@ -89,6 +89,7 @@ func init() {
 		machine.MachineSet,
 		machineconfiguration.MachineConfig,
 		machineconfiguration.MachineConfigPool,
+		local.All,
 		local.MustGather,
 		route.Route,
 		storage.StorageClass,

@@ -27,7 +27,7 @@ var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print omc version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("omc version 1.1 (https://github.com/gmeghnag/omc)")
+		fmt.Println("omc version 1.2.2 (https://github.com/gmeghnag/omc)")
 		os.Exit(0)
 	},
 }
