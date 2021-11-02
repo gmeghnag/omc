@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"os"
 
+	"omc/vars"
+
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +29,7 @@ var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print omc version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("omc version 1.2.2 (https://github.com/gmeghnag/omc)")
+		fmt.Printf:with("omc version: %s\nhash: %s\nhttps://github.com/gmeghnag/omc\n", vars.OMCVersionTag, vars.OMCVersionHash)
 		os.Exit(0)
 	},
 }

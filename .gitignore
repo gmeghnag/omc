@@ -3,3 +3,6 @@ TEST
 omc
 .DS_Store
 **/.DS_Store
+omc-darwin-amd64
+omc-linux-amd64
+omc-win-amd64
