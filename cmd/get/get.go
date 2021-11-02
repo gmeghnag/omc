@@ -52,7 +52,7 @@ var GetCmd = &cobra.Command{
 }
 
 func init() {
-	if os.Args[1] == "get" && len(os.Args) > 2 {
+	if len(os.Args) > 2 && os.Args[1] == "get" {
 		if strings.Contains(os.Args[2], "/") {
 			seg := strings.Split(os.Args[2], "/")
 			resource, name := seg[0], seg[1]
