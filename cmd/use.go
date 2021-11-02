@@ -43,7 +43,6 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
 	config := types.Config{}
-
 	var contexts []types.Context
 	var NewContexts []types.Context
 	contexts = omcConfigJson.Contexts

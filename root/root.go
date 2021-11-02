@@ -81,6 +81,12 @@ func initConfig() {
 		// Find home directory.
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
+		exist, _ := helpers.Exists(home + "/.omc.json")
+		if !exist {
+			config := types.Config{}
+			file, _ := json.MarshalIndent(config, "", " ")
+			_ = ioutil.WriteFile(vars.CfgFile, file, 0644)
+		}
 		// Search config in home directory with name ".omc" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigType("json")
@@ -100,31 +106,31 @@ func initConfig() {
 		for _, context := range contexts {
 			if context.Current == "*" {
 				vars.MustGatherRootPath = context.Path
-				vars.Namespace = context.Project
+				if vars.Namespace == "" {
+					vars.Namespace = context.Project
+				}
 				break
 			}
 		}
-		if vars.MustGatherRootPath == "" {
-			fmt.Println("There are no must-gather resources defined.")
-			os.Exit(1)
-		}
-		exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
-		if !exist {
-			files, err := ioutil.ReadDir(vars.MustGatherRootPath)
-			if err != nil {
-				log.Fatal(err)
-			}
-			baseDir := ""
-			for _, f := range files {
-				if f.IsDir() {
-					baseDir = f.Name()
-					vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
-					break
+		if vars.MustGatherRootPath != "" {
+			exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
+			if !exist {
+				files, err := ioutil.ReadDir(vars.MustGatherRootPath)
+				if err != nil {
+					log.Fatal(err)
 				}
-			}
-			if baseDir == "" {
-				fmt.Println("Some error occurred, wrong must-gather file composition")
-				os.Exit(1)
+				baseDir := ""
+				for _, f := range files {
+					if f.IsDir() {
+						baseDir = f.Name()
+						vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
+						break
+					}
+				}
+				if baseDir == "" {
+					fmt.Println("Some error occurred, wrong must-gather file composition")
+					os.Exit(1)
+				}
 			}
 		}
 	} else {
