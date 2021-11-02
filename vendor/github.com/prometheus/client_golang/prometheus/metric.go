@@ -26,7 +26,7 @@ import (
 
 var separatorByteSlice = []byte{model.SeparatorByte} // For convenient use with xxhash.
 
-// A Metric types a single sample value with its meta data being exported to
+// A Metric models a single sample value with its meta data being exported to
 // Prometheus. Implementations of Metric in this package are Gauge, Counter,
 // Histogram, Summary, and Untyped.
 type Metric interface {

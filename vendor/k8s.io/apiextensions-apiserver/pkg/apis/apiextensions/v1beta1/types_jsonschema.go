@@ -247,7 +247,7 @@ func (_ JSONSchemaPropsOrStringArray) OpenAPISchemaType() []string {
 // the OpenAPI spec of this type.
 func (_ JSONSchemaPropsOrStringArray) OpenAPISchemaFormat() string { return "" }
 
-// JSONSchemaDefinitions contains the types explicitly defined in this spec.
+// JSONSchemaDefinitions contains the models explicitly defined in this spec.
 type JSONSchemaDefinitions map[string]JSONSchemaProps
 
 // ExternalDocumentation allows referencing an external resource for extended documentation.

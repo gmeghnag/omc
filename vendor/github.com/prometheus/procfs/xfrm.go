@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// XfrmStat types the contents of /proc/net/xfrm_stat.
+// XfrmStat models the contents of /proc/net/xfrm_stat.
 type XfrmStat struct {
 	// All errors which are not matched by other
 	XfrmInError int

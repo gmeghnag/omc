@@ -17,7 +17,7 @@ limitations under the License.
 package v1beta1
 
 // This file contains a collection of methods that can be used from go-restful to
-// generate Swagger API documentation for its types. Please read this PR for more
+// generate Swagger API documentation for its models. Please read this PR for more
 // information on the implementation: https://github.com/emicklei/go-restful/pull/215
 //
 // TODOs are ignored from the parser (e.g. TODO(andronat):... || TODO:...) if and only if

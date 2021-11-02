@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/procfs/internal/util"
 )
 
-// ProcIO types the content of /proc/<pid>/io.
+// ProcIO models the content of /proc/<pid>/io.
 type ProcIO struct {
 	// Chars read.
 	RChar uint64
