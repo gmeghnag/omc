@@ -18,18 +18,20 @@ jobs:
       - name: Dependencies
         run: |
           wget -nv https://golang.org/dl/go1.17.2.linux-amd64.tar.gz \
-          && sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.17.2.linux-amd64.tar.gz \
+          && sudo rm -rf /usr/local/go \
+          && sudo rm -rf m -rf /usr/bin/go \
+          && sudo tar -C /usr/local -xzf go1.17.2.linux-amd64.tar.gz \
           && export PATH=$PATH:/usr/local/go/bin \
           && go version
       - name: Build
         run: |
-          /usr/local/go/bin/go build -o omc \
+          go build -o omc \
           && tar -cvf omc-1.2.1_Linux_x86_64.tar.gz omc \
           && rm -rf omc \
-          && env GOOS=darwin GOARCH=amd64 /usr/local/go/bin/go build -o omc \
+          && env GOOS=darwin GOARCH=amd64 go build -o omc \
           && tar -cvf omc-1.2.1_Darwin_x86_64.tar.gz omc \
           && rm -rf omc \
-          && env GOOS=windows GOARCH=amd64 /usr/local/go/bin/go build -o omc.exe \
+          && env GOOS=windows GOARCH=amd64 go build -o omc.exe \
           && zip omc-1.2.1_Windows_x86_64.zip omc.exe \
           && md5sum omc-1.2.1_Linux_x86_64.tar.gz | tee -a checksums.txt \
           && md5sum omc-1.2.1_Darwin_x86_64.tar.gz | tee -a checksums.txt \
@@ -43,4 +45,4 @@ jobs:
             omc-1.2.1_Linux_x86_64.tar.gz 
             omc-1.2.1_Darwin_x86_64.tar.gz
             omc-1.2.1_Windows_x86_64.zip
-          name: "v1.2.1 release :tada:"
+          name: "v1.2.1 release"
