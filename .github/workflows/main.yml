@@ -25,7 +25,8 @@ jobs:
           && go version
       - name: Build
         run: |
-          go build -o omc \
+          export PATH=$PATH:/usr/local/go/bin \
+          && go build -o omc \
           && tar -cvf omc-1.2.1_Linux_x86_64.tar.gz omc \
           && rm -rf omc \
           && env GOOS=darwin GOARCH=amd64 go build -o omc \
