@@ -16,15 +16,18 @@ limitations under the License.
 package etcd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
 // etcdCmd represents the etcd command
 var Etcd = &cobra.Command{
 	Use:     "etcd",
-	Short:   "Etcd related subcommand",
 	Aliases: []string{"etcdctl"},
 	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+		os.Exit(0)
 	},
 }
 

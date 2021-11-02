@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package describe
+package core
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func describeNode(currentContextPath string, namespace string, resourceName stri
 	fake := fake.NewSimpleClientset(&Node)
 	c := &types.DescribeClient{Namespace: namespace, Interface: fake}
 	d := desc.NodeDescriber{c}
-	out, _ := d.Describe(namespace, resourceName, desc.DescriberSettings{ShowEvents: true})
+	out, _ := d.Describe(namespace, resourceName, desc.DescriberSettings{ShowEvents: false})
 	fmt.Printf(out)
 }
 

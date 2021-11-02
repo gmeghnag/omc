@@ -29,15 +29,11 @@ import (
 	"omc/types"
 	"omc/vars"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/spf13/viper"
 )
-
-var cfgFile string
-var currentContextPath string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{ // FLOW 4
@@ -78,9 +74,9 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	// fmt.Println("inside initConfig") FLOW 1
-	if cfgFile != "" {
+	if vars.CfgFile != "" {
 		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
+		viper.SetConfigFile(vars.CfgFile)
 	} else {
 		// Find home directory.
 		home, err := os.UserHomeDir()
@@ -103,35 +99,34 @@ func initConfig() {
 		contexts = omcConfigJson.Contexts
 		for _, context := range contexts {
 			if context.Current == "*" {
-				currentContextPath = context.Path
+				vars.MustGatherRootPath = context.Path
 				vars.Namespace = context.Project
 				break
 			}
 		}
-		if currentContextPath == "" {
+		if vars.MustGatherRootPath == "" {
 			fmt.Println("There are no must-gather resources defined.")
 			os.Exit(1)
 		}
-		exist, _ := helpers.Exists(currentContextPath + "/namespaces")
+		exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
 		if !exist {
-			files, err := ioutil.ReadDir(currentContextPath)
+			files, err := ioutil.ReadDir(vars.MustGatherRootPath)
 			if err != nil {
 				log.Fatal(err)
 			}
-			quayDir := ""
+			baseDir := ""
 			for _, f := range files {
-				if strings.HasPrefix(f.Name(), "quay") {
-					quayDir = f.Name()
-					currentContextPath = currentContextPath + "/" + quayDir
+				if f.IsDir() {
+					baseDir = f.Name()
+					vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
 					break
 				}
 			}
-			if quayDir == "" {
+			if baseDir == "" {
 				fmt.Println("Some error occurred, wrong must-gather file composition")
 				os.Exit(1)
 			}
 		}
-		vars.MustGatherRootPath = currentContextPath
 	} else {
 		homePath, _ := os.UserHomeDir()
 		helpers.CreateConfigFile(homePath)

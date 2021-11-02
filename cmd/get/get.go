@@ -42,7 +42,12 @@ var allNamespaceBoolVar, showLabelsBoolVar bool
 var GetCmd = &cobra.Command{
 	Use: "get",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("get called", args)
+		if len(args) == 0 {
+			cmd.Help()
+			os.Exit(0)
+		}
+		fmt.Println("Invalid object type:", args[0])
+		os.Exit(1)
 	},
 }
 

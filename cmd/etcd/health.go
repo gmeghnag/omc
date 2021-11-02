@@ -29,7 +29,7 @@ func etcdHealthCommand(currentContextPath string) {
 // etcdCmd represents the etcd command
 var Health = &cobra.Command{
 	Use:   "health",
-	Short: "Etcd status",
+	Short: "Etcd health",
 	Run: func(cmd *cobra.Command, args []string) {
 		etcdHealthCommand(vars.MustGatherRootPath)
 	},

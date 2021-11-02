@@ -52,4 +52,5 @@ var MustGather = &cobra.Command{
 			helpers.PrintTable(headers, data)
 		}
 	},
+	Hidden: true,
 }

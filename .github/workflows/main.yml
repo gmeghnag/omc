@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build
+        run: |
+          go build -o omc \
+          && tar -cvf omc-1.2.1_Linux_x86_64.tar.gz omc \
+          && rm -rf omc \
+          && env GOOS=darwin GOARCH=amd64 go build -o omc \
+          && tar -cvf omc-1.2.1_Darwin_x86_64.tar.gz omc \
+          && rm -rf omc \
+          && env GOOS=windows GOARCH=amd64 go build -o omc.exe \
+          && zip omc-1.2.1_Windows_x86_64.zip omc.exe \
+          && md5sum omc-1.2.1_Linux_x86_64.tar.gz | tee -a checksums.txt \
+          && md5sum omc-1.2.1_Darwin_x86_64.tar.gz | tee -a checksums.txt \
+          && md5sum omc-1.2.1_Windows_x86_64.zip | tee -a checksums.txt
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.2.1
+          files: |
+            checksums.txt
+            omc-1.2.1_Linux_x86_64.tar.gz 
+            omc-1.2.1_Darwin_x86_64.tar.gz
+            omc-1.2.1_Windows_x86_64.zip
+          name: "v1.2.1 release :tada:"

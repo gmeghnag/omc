@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package describe
+package core
 
 import (
 	"fmt"
@@ -40,7 +40,7 @@ func describePod(currentContextPath string, defaultConfigNamespace string, resou
 	fake := fake.NewSimpleClientset(&Pod)
 	c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
 	d := describe.PodDescriber{c}
-	out, _ := d.Describe(defaultConfigNamespace, resourceName, describe.DescriberSettings{ShowEvents: true})
+	out, _ := d.Describe(defaultConfigNamespace, resourceName, describe.DescriberSettings{ShowEvents: false})
 	fmt.Printf(out)
 }
 

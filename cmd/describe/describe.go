@@ -17,18 +17,23 @@ package describe
 
 import (
 	"fmt"
+	"omc/cmd/describe/core"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-
 // DescribeCmd represents the describe command
 var DescribeCmd = &cobra.Command{
 	Use: "describe",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("describe called", args)
+		if len(args) == 0 {
+			cmd.Help()
+			os.Exit(0)
+		}
+		fmt.Println("Invalid object type:", args[0])
+		os.Exit(1)
 	},
 }
 
@@ -40,5 +45,8 @@ func init() {
 			os.Args = append([]string{os.Args[0], "describe", resource, name}, os.Args[3:]...)
 		}
 	}
-    DescribeCmd.AddCommand(Node, Pod)
+	DescribeCmd.AddCommand(
+		core.Node,
+		core.Pod,
+	)
 }
