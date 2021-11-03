@@ -25,7 +25,7 @@ jobs:
       - name: Build
         run: |
           echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV 
-          TAG=${GITHUB_REF#refs/tags/}"
+          TAG="${GITHUB_REF#refs/tags/}"
           HASH=$(git log -n1 --pretty=format:%h)
           export PATH=$PATH:/usr/local/go/bin \
           && env GOOS=linux GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc \
