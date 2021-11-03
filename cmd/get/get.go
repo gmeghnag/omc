@@ -46,6 +46,23 @@ var GetCmd = &cobra.Command{
 			cmd.Help()
 			os.Exit(0)
 		}
+		// support (not completed) for comma separated resources
+		if len(args) == 1 && strings.Contains(args[0], ",") {
+			commaSeparatedResources := strings.TrimSuffix(args[0], ",")
+			commaSeparatedResources = strings.TrimPrefix(commaSeparatedResources, ",")
+			resources := strings.Split(commaSeparatedResources, ",")
+			for _, r := range resources {
+				c, _, err := cmd.Find([]string{r})
+				if err != nil {
+					fmt.Println("err", err.Error())
+				}
+				os.Args = append([]string{os.Args[0], "get", r}, os.Args[3:]...)
+				c.Execute()
+				fmt.Println("")
+			}
+			os.Exit(0)
+		}
+		// object not found
 		fmt.Println("Invalid object type:", args[0])
 		os.Exit(1)
 	},

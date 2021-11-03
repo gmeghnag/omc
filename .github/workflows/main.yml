@@ -2,9 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - "v*.*.*"
 
   workflow_dispatch:
 
@@ -25,25 +24,26 @@ jobs:
           && go version
       - name: Build
         run: |
-          export PATH=$PATH:/usr/local/go/bin \
-          && go build -o omc \
-          && tar -cvf omc-1.2.2_Linux_x86_64.tar.gz omc \
-          && rm -rf omc \
-          && env GOOS=darwin GOARCH=amd64 go build -o omc \
-          && tar -cvf omc-1.2.2_Darwin_x86_64.tar.gz omc \
-          && rm -rf omc \
-          && env GOOS=windows GOARCH=amd64 go build -o omc.exe \
-          && zip omc-1.2.2_Windows_x86_64.zip omc.exe \
-          && md5sum omc-1.2.2_Linux_x86_64.tar.gz | tee -a checksums.txt \
-          && md5sum omc-1.2.2_Darwin_x86_64.tar.gz | tee -a checksums.txt \
-          && md5sum omc-1.2.2_Windows_x86_64.zip | tee -a checksums.txt
+          TAG=$(git tag | tail -1) \
+          && echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          && HASH=$(git log -n1 --pretty=format:%h) \
+          && export PATH=$PATH:/usr/local/go/bin \
+          && env GOOS=linux GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && tar -cvf omc-${TAG}_Linux_x86_64.tar.gz omc && rm -rf omc \
+          && env GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && tar -cvf omc-${TAG}_Darwin_x86_64.tar.gz omc && rm -rf omc \
+          && env GOOS=windows GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc.exe \
+          && zip omc-${TAG}_Windows_x86_64.zip omc.exe \
+          && md5sum omc-${TAG}_Linux_x86_64.tar.gz | tee -a checksums.txt \
+          && md5sum omc-${TAG}_Darwin_x86_64.tar.gz | tee -a checksums.txt \
+          && md5sum omc-${TAG}_Windows_x86_64.zip | tee -a checksums.txt
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.2.2
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             checksums.txt
-            omc-1.2.2_Linux_x86_64.tar.gz 
-            omc-1.2.2_Darwin_x86_64.tar.gz
-            omc-1.2.2_Windows_x86_64.zip
-          name: "v1.2.2 release"
+            omc-${{ env.RELEASE_TAG }}_Linux_x86_64.tar.gz 
+            omc-${{ env.RELEASE_TAG }}_Darwin_x86_64.tar.gz
+            omc-${{ env.RELEASE_TAG }}_Windows_x86_64.zip
+          name: "${{ env.RELEASE_TAG }} release"

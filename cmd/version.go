@@ -29,7 +29,7 @@ var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print omc version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf:with("omc version: %s\nhash: %s\nhttps://github.com/gmeghnag/omc\n", vars.OMCVersionTag, vars.OMCVersionHash)
+		fmt.Printf("omc version: %s\nhash: %s\nhttps://github.com/gmeghnag/omc\n", vars.OMCVersionTag, vars.OMCVersionHash)
 		os.Exit(0)
 	},
 }
