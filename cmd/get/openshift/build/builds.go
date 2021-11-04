@@ -98,8 +98,10 @@ func GetBuilds(currentContextPath string, namespace string, resourceName string,
 			bcType := string(Build.Spec.Strategy.Type)
 			//from
 			from := string(Build.Spec.Source.Type)
-			if Build.Spec.Revision.Type == "Git" {
-				from += "@" + Build.Spec.Revision.Git.Commit[0:7]
+			if Build.Spec.Revision != nil {
+				if Build.Spec.Revision.Type == "Git" {
+					from += "@" + Build.Spec.Revision.Git.Commit[0:7]
+				}
 			}
 			//status
 			status := string(Build.Status.Phase)
