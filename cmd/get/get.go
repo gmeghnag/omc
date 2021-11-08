@@ -20,7 +20,9 @@ import (
 	"omc/cmd/get/apps"
 	"omc/cmd/get/batch"
 	"omc/cmd/get/core"
+	"omc/cmd/get/istio/networking"
 	"omc/cmd/get/local"
+	"omc/cmd/get/maistra"
 	appz "omc/cmd/get/openshift/apps"
 	"omc/cmd/get/openshift/build"
 	"omc/cmd/get/openshift/config"
@@ -106,6 +108,8 @@ func init() {
 		machine.MachineSet,
 		machineconfiguration.MachineConfig,
 		machineconfiguration.MachineConfigPool,
+		maistra.ServiceMeshControlPlane,
+		networking.DestinationRule,
 		local.All,
 		local.MustGather,
 		route.Route,

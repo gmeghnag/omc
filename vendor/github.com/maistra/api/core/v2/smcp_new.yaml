@@ -1,0 +1,481 @@
+spec:
+  template: default
+  version: v2.0
+  cluster:
+    name: Kubernetes
+    network: main
+    multiCluster: # null to disable multi-cluster
+      meshNetworks: {}
+        # local cluster network is added automatically by default, e.g.
+        # main
+        #   endpoints:
+        #   - fromRegistry: Kubernetes
+        #   gateways:
+        #   - service: istio-ingressgateway.istio-system.svc.cluster.local
+        #     port: 443
+      ingress: false
+    # not sure if this should be under multiCluster or not
+    meshExpansion: # null to disable mesh expansion, note meshExpansion is enabled if multiCluster is configured
+      ilbGateway: # if null, ingress gateway will be used for expansion and expansion ports will be added to it automatically
+        # these apply to all gateway definitions, with the following exceptions for ILB gateway:
+        # * service.type is forced to be LoadBalancer, regardless of user setting
+        # * mesh expansion ports are added automatically to service.ports
+        namespace: istio-system # install namespace is default
+        routerMode: sni-dnat # default
+        requestedNetworkView: [] # "external" added to egress gateway if multiCluster is enabled
+        sds:
+          enabled: false # default
+          runtime:
+            resources: {}
+        # this is corev1.ServiceSpec.  not sure if we should create our own, pruning unapplied fields
+        service:
+          metadata:
+            annotations:
+              cloud.google.com/load-balancer-type: "internal" # default for istio-ilbgateway, from gateways/values.yaml
+            labels: {} # additional labels. applied to selector
+          type: LoadBalancer # default is ClusterIP for other gateways.  LoadBalancer cannot be overriden for ILB gateway
+          loadBalancerIP: "" # if any
+          loadBalancerSourceRanges: [] # if any
+          externalTrafficPolicy: "" # if any
+          externalIPs: [] # if any
+          ports: [] # additional corev1.ServicePort definitions
+        runtime:
+          # this applies to most components (i.e. if you see runtime: all these settings will be available)
+          deployment:
+            replicas: 1 # default
+            strategy:
+              type: RollingUpdate # default, only type supported (i.e. charts apply this setting)
+              rollingUpdate:
+                maxUnavailable: 25% # default in values.yaml
+                maxSurge: 100% # default in values.yaml
+            autoScaling: # defaults to null, no autoscaling
+              minReplicas: 1 # default in values.yaml
+              maxReplicas: 5 # default in values.yaml
+              targetCPUUtilizationPercentage: 80 # default in values.yaml
+          pod:
+            metadata:
+              annotations: {} # maps to podAnnotations
+            nodeSelector: {}
+            tolerations: {}
+            priorityClassName: "" # i think this can only be applied globally, not per component/deployment
+            affinity: {}
+          container:
+            # container definition also includes image, imagePullPolicy,
+            # imageRegistry, imageTag, imagePullSecrets, but the following are
+            # only supported for gateways
+            resources: {} # limits and requirements for istio-proxy container
+        volumes:
+        - volume:
+            name: some-extra-secret
+            secret:
+              secretName: some-secret
+          mount:
+            name: some-extra-secret-mount
+            mountPath: /path/to/secret/files
+        - volume: # note, config maps are currently not mounted, but can be specified.  not sure if this is a bug in the charts
+            name: some-extra-configmap
+            configMap:
+              name: some-configmap
+          mount:
+            name: some-extra-configmap-mount
+            mountPath: /path/to/configmap/files
+
+
+  # this would apply to control plane components
+  general:
+    logging:
+      componentLevels: {}
+        # misc: error
+      logAsJSON: false
+
+    validationMessages: true
+
+  policy:
+    type: Istiod # or Mixer or Remote, Mixer is default for pre v2.0
+    # one of the following.  if omitted, will default to whatever settings are in values.yaml
+    mixer: # legacy v1
+      enableChecks: false # default
+      failOpen: false # default
+      sessionAffinity: true
+      adapters:
+        useAdapterCRDs: false
+        kubernetesenv: true
+    # or
+    remote:
+      address: my-remote-policy.example.com
+      createServices: false # applies to both mixer policy and telemetry, i.e. no separate setting for each
+      enableChecks: false
+      failOpen: false
+    # or v2
+    istiod: {}
+
+  telemetry:
+    type: Istiod # or Mixer or Remote
+    # one of the following
+    mixer: # legacy v1
+      sessionAffinity: false
+      batching:
+        maxEntries: 100
+        maxTime: 1s
+      loadshedding:
+        mode: enforce
+        latencyThreshold: 100ms
+      adapters:
+        useAdapterCRDs: false # i think this should be removed, as it's not available in istio 1.1, and has been removed from 1.4+
+        kubernetesenv: true
+        stdio:
+          outputAsJSON: false
+    # or
+    remote:
+      address: my-remote-telemetry.example.com
+      createServices: false # also applies to policy, as mentioned above
+      sessionAffinity: false
+      batching:
+        maxEntries: 100
+        maxTime: 1s
+    # no config if using istiod
+
+  tracing:
+    type: Jaeger # or Stackdriver, following not yet configurable: Zipkin, Lightstep, Datadog
+    sampling: 10000 # scaled integer, 0-100% in 0.01% increments, i.e. 1=.001%, 100=1%, 10000=100%
+
+  proxy:
+    autoInject: true
+    adminPort: 15000
+    concurrency: 0
+    # this would apply only to proxies
+    logging:
+      level: info
+      componentLevel: {}
+        # misc: error
+    networking:
+      clusterDomain: cluster.local
+      connectionTimeout: 10s
+      maxConnectionAge: 30m
+      injection:
+        autoInject: true
+        alwaysInjectSelector: [] # label selector
+        neverInjectSelector: [] # label selector
+        injectedAnnotations: {} # string:string, annotations to be added to injected pods
+      trafficControl:
+        inbound:
+          interceptionMode: REDIRECT
+          includedPorts:
+          - "*"
+          excludedPorts: []
+        outbound:
+          includedIPRanges: []
+          excludedIPRanges: []
+          excludedPorts: []
+          policy: ALLOW_ANY
+      protocol:
+        autoDetect:
+          timeout: 100ms
+          inbound: false
+          outbound: false
+      dns:
+        refreshRate: 300s
+        searchSuffixes: [
+          # the following are added automatically, if multiCluster is enabled
+          # "global",
+          # "{{ valueOrDefault .DeploymentMeta.Namespace \"istio-system\" }}.global",
+        ]
+    initialization:
+      type: CNI # or InitContainer
+      initContainer:
+        runtime:
+          image: proxy-init
+          imageRegistry: registry.redhat.io
+          imageTag: "2.0"
+          imagePullPolicy: Always
+          imagePullSecrets: []
+          resources: {}
+    accessLogging:
+      # both may be specified
+      file:
+        name: /dev/stdout # file name
+        encoding: TEXT # TEXT or JSON
+        format: cutom-format # format for log messages
+      envoySerivce:
+        enabled: false
+        address: accesslog-service.istio-system:15000
+      tlsSettings:
+        mode: DISABLE # DISABLE, SIMPLE, MUTUAL, ISTIO_MUTUAL
+        clientCertificate: # example: /etc/istio/als/cert-chain.pem
+        privateKey:        # example: /etc/istio/als/key.pem
+        caCertificates:    # example: /etc/istio/als/root-cert.pem
+        sni:               # example: als.somedomain
+        subjectAltNames: []
+        # - als.somedomain
+      tcpKeepalive:
+        probes: 3
+        time: 10s
+        interval: 10s
+    envoyMetricsService:
+      enabled: false
+      address: metrics-service.istio-system:15000
+      tlsSettings:
+        mode: DISABLE # DISABLE, SIMPLE, MUTUAL, ISTIO_MUTUAL
+        clientCertificate: # example: /etc/istio/ms/cert-chain.pem
+        privateKey:        # example: /etc/istio/ms/key.pem
+        caCertificates:    # example: /etc/istio/ms/root-cert.pem
+        sni:               # example: ms.somedomain
+        subjectAltNames: []
+        # - ms.somedomain
+      tcpKeepalive:
+        probes: 3
+        time: 10s
+        interval: 10s
+    runtime:
+      readiness:
+        rewriteApplicationProbes: false
+        statusPort: 15020
+        initialDelaySeconds: 1
+        periodSeconds: 2
+        failureThreshold: 30
+      container:
+        imageName: proxyv2
+        resources: {} # requirements and limits
+
+  security:
+    trust:
+      domain: cluster.local
+      additionalDomains: [some-other.cluster]
+    certificateAuthority:
+      workloadCertTTLDefault: 24h
+      workloadCertTTLMax: 90d
+      type: Istiod # or Custom
+      # one of the following
+      istiod:
+        type: SelfSigned # or PrivateKey
+        # one of the following
+        selfSigned:
+          ttl: 10y
+          gracePeriod: 20%
+          checkPeriod: 1h
+          enableJitter: true
+          org: cluster.local # XXX: there is overlap between this and security.trust.domain. this isn't used, so should probably be removed
+        # or
+        privateKey:
+          encryptionSecret: cacerts # currently not configurable
+          rootCADir: /etc/cacerts
+          signingKeyFile: ca-key.pem # currently not configurable
+          signingCertFile: ca-cert.pem # currently not configurable
+          rootCertFile: root-cert.pem # currently not configurable
+          certChainFile: cert-chain.pem # currently not configurable
+      # or
+      custom: # i have no idea about this
+        address: some.location.domain
+    identity: # specifies how service tokens are verified
+      type: Kubernetes # or ThirdParty
+      # one of
+      kubernetes: {} # local k8s token review
+      # or
+      thirdParty: # simply mounts service account token to a different directory with a specified audience
+        tokenPath: /var/run/secrets/tokens/istio-token # currently not configurable
+        issuer: "" # uses token's iss by default
+        audience: istio-ca
+    controlPlane:
+      mtls: true # enable mtls for control plane
+      certProvider: Istiod # or Kubernetes or Custom, who's providing the serving cert for the control plane
+      tls:
+        cipherSuites: []
+        ecdhCurves: []
+        minProtocolVersion: TLSv1_2
+        maxProtocolVersion: TLSv1_3
+    dataPlane:
+      mlts: true # enable mtls for data plane
+      automtls: true
+  gateways:
+    ingress: # _the_ istio-ingressgateway
+      # same settings as ilb gateway above
+      service:
+        type: ClusterIP
+        ports:
+        - name: status-port
+          port: 15020
+        - name: http2
+          port: 80
+          targetPort: 8080
+        - name: https
+          port: 443
+          targetPort: 8443
+      meshExpansionPorts: [] # additional expansion ports. default expansion ports will be added automatically if multiCluster is configured
+    egress: # _the_ istio-egressgateway
+      service:
+        type: ClusterIP
+        ports:
+        - name: status-port
+          port: 15020
+        - name: http2
+          port: 80
+          targetPort: 8080
+        - name: https
+          port: 443
+          targetPort: 8443
+      # requestedNetworkView: [external] set automatically if multi-cluster is enabled
+    additionalIngress:
+      some-other-ingress-gateway: {}
+    additionalEgress:
+      some-other-egress-gateway: {}
+    openshiftRoute: # configures the Gateway ↔ OpenShift Route integration
+      enabled: true
+
+  runtime:
+    components:
+    # component specific overrides
+      pilot: # same as gateway.runtime structure illustrated above
+        deployment:
+          replicas: 2
+        pod:
+          affinity: {}
+        container:
+          imageName: my-pilot
+          env:
+            SOME_ENV: some-value
+          resources:
+            limits: {}
+            requirements: {}
+      security: {} # for configuring citadel,, similar to pilot above
+      galley: {} # similar to pilot above
+      mixer: {} # v1.x mixer, similar to pilot above
+      mixer.policy: {} # v2.x mixer policy, similar to pilot above
+      mixer.telemetry: {} # v2.x mixer telemetry, similar to pilot above
+      sidecarInjectorWebhook: {} # similar to pilot above
+      tracing: {} # similar to pilot above
+      tracing.jaeger: {} # similar to pilot above
+      tracing.jaeger.elasticsearch: {} # similar to pilot above
+      tracing.jaeger.agent: {} # similar to pilot above
+      tracing.jaeger.allInOne: {} # similar to pilot above
+      tracing.jaeger.collector: {} # similar to pilot above
+      tracing.jaeger.query: {} # similar to pilot above
+      prometheus: {} # similar to pilot above
+      kiali: {} # similar to pilot above
+      grafana: {} # similar to pilot above
+      prometheus: {} # similar to pilot above
+    # default runtime settings
+    defaults: # merged into any component specific overrides. component specific overrides take precedence
+      deployment: {} # similar to gateway.runtime.deployment
+      pod:
+        nodeSelector: {}
+        tolerations: {}
+        priorityClassName: ""
+      container:
+        imageRegistry: registry.redhat.io # old global.hub
+        imageTag: "2.0" # old global.tag
+        imagePullPolicy: Always
+        imagePullSecrets:
+        - name: registry-token-secret
+        resources: # old global.defaultResources
+          limits: {}
+          requirements: {}
+
+  addons:
+    prometheus:
+      enabled: true
+      scrape: true # configure scraping of telemetry by prometheus
+      metricsExpiryDuration: 10m
+      address: some-url-to-prometheus # specify this or install (i'm not sure if we can support this or not)
+      install: # install prometheus, as opposed to using an existing install at address
+        selfManaged: true # use prometheus CR, maybe poor naming?
+        retention: 6h
+        scrapeInterval: 15s
+        useTLS: true # .Values.prometheus.security.enabled, i don't think this applies to us
+        service:
+          metadata: {}
+          nodePort: null # use node port if not null
+          ingress: # enables Ingress/Route if not null
+            contextPath: /prometheus
+            tls: # raw yaml, so it can be used with both Route and Ingress resources
+              termination: reencrypt
+
+    jaeger:
+      name: jaeger # name of Jaeger CR to reference/create
+      install: # create a jaeger CR if it doesn't already exist
+        storage:
+          type: Memory # or Elasticsearch
+          memory: # implies tracing.jaeger.template=all-in-one
+            maxTraces: 100000
+          # or
+          elasticSearch: # implies tracing.jaeger.template=production-elasticsearch
+            nodeCount: 3
+            storage: {} # raw jaeger config, .Values.tracing.jaeger.elasticsearch.storage
+            redundancyPolicy: {} # raw jaeger config, .Values.tracing.jaeger.elasticsearch.redundancyPolicy
+            indexCleaner: {} # raw jaeger config, .Values.tracing.jaeger.elasticsearch.esIndexCleaner
+            runtime: {} # .Values.tracing.jaeger.elasticsearch.<runtime-specific-settings>
+        ingress: # configure Ingress/Route if not null
+          metadata:
+            labels: {}
+            annotations: {}
+    grafana:
+      address: some-grafana-url # use existing grafana install, or...
+      install: # install grafana if not null
+        selfManaged: true # use grafana CR, maybe poor naming?
+        config:
+          env: {} # .Values.grafana.env
+          envSecrets: {} # .Values.grafana.envSecrets
+        persistence:
+          storageClassName: ""
+          accessMode: ReadWriteOnce
+          capacity: 5Gi # not supported in charts
+        service: # similar to addons.tracing.jaeger.install.config.service
+          ingress:
+            contextPath: /grafana
+            tls:
+              termination: reencrypt
+    kiali:
+      name: kiali # kiali CR to create/reference
+      install: # install kiali CR if not present
+        dashboard:
+          viewOnly: false
+          # not sure if the following should be supported or just based on other addon config
+          enableGrafana: true
+          enableTracing: true
+          enablePrometheus: true
+        service: # similar to addons.tracing.jaeger.install.config.service
+          ingress:
+            contextPath: /kiali
+    3scale:
+      enabled: false
+      listen_addr: 3333
+      log_grpc: false
+      log_json: true
+      log_level: info
+      metrics:
+        port: 8080
+        report: true
+      system:
+        cache_max_size: 1000
+        cache_refresh_retries: 1
+        cache_refresh_interval: 180
+        cache_ttl: 300
+      client:
+        allow_insecure_connections: false
+        timeout: 10
+      grpc:
+        max_conn_timeout: 60
+      backend:
+        enable_cache: false
+        cache_flush_interval: 15
+        policy_fail_closed: true
+    stackdriver:
+      telemetry:
+        enabled: false
+        enableContextGraph: false
+        enableLogging: false
+        enableMetrics: false
+        accessLogging:
+          logWindowDuration: 12h
+        auth:
+          appCredentials: false
+          apiKey: ""
+          serviceAccountPath: ""
+      tracer:
+        # enables trace output to stdout.
+        debug: false
+        # The global default max number of attributes per span.
+        maxNumberOfAttributes: 200
+        # The global default max number of annotation events per span.
+        maxNumberOfAnnotations: 200
+        # The global default max number of message events per span.
+        maxNumberOfMessageEvents: 200

@@ -70,6 +70,14 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 			}
 		}
 		if containerMatch == "" {
+			for _, c := range Pod.Spec.InitContainers {
+				if containerName == c.Name {
+					containerMatch = containerName
+					break
+				}
+			}
+		}
+		if containerMatch == "" {
 			if containerName != "" {
 				fmt.Println("error: container " + containerName + " is not valid for pod " + Pod.Name)
 			} else {
