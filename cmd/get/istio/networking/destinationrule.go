@@ -34,6 +34,7 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 
 	var namespaces []string
 	if allNamespacesFlag == true {
+		namespace = "all"
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())

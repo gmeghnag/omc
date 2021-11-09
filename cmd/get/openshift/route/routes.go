@@ -38,18 +38,13 @@ func GetRoutes(currentContextPath string, namespace string, resourceName string,
 	_headers := []string{"namespace", "name", "host/port", "path", "services", "port", "termination", "wildcard"}
 	var namespaces []string
 	if allNamespacesFlag == true {
+		namespace = "all"
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())
 		}
-	}
-	if namespace != "" && !allNamespacesFlag {
-		var _namespace = namespace
-		namespaces = append(namespaces, _namespace)
-	}
-	if namespace == "" && !allNamespacesFlag {
-		var _namespace = namespace
-		namespaces = append(namespaces, _namespace)
+	} else {
+		namespaces = append(namespaces, namespace)
 	}
 
 	var data [][]string

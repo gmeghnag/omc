@@ -20,9 +20,7 @@ import (
 	"omc/cmd/get/apps"
 	"omc/cmd/get/batch"
 	"omc/cmd/get/core"
-	"omc/cmd/get/istio/networking"
 	"omc/cmd/get/local"
-	"omc/cmd/get/maistra"
 	appz "omc/cmd/get/openshift/apps"
 	"omc/cmd/get/openshift/build"
 	"omc/cmd/get/openshift/config"
@@ -78,7 +76,6 @@ func init() {
 			os.Args = append([]string{os.Args[0], "get", resource, name}, os.Args[3:]...)
 		}
 	}
-
 	GetCmd.PersistentFlags().BoolVarP(&vars.AllNamespaceBoolVar, "all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces.")
 	GetCmd.PersistentFlags().BoolVarP(&vars.ShowLabelsBoolVar, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
 	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
@@ -108,10 +105,12 @@ func init() {
 		machine.MachineSet,
 		machineconfiguration.MachineConfig,
 		machineconfiguration.MachineConfigPool,
-		maistra.ServiceMeshControlPlane,
-		networking.DestinationRule,
+		//maistra.ServiceMeshControlPlane,
+		//networking.DestinationRule,
 		local.All,
 		local.MustGather,
+		//operators.ClusterServiceVersion,
+		//operators.Subscription,
 		route.Route,
 		storage.StorageClass,
 	)

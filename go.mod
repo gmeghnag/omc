@@ -9,11 +9,11 @@ require (
 	github.com/openshift/api v0.0.0-20210906075240-3611f00b94fd
 	github.com/openshift/machine-api-operator v0.2.1-0.20210917195819-eb6706653664
 	github.com/openshift/machine-config-operator v0.0.1-0.20210917223957-ff7e847c56ac
+	github.com/operator-framework/api v0.10.7
 	github.com/spf13/cast v1.4.0 // indirect
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
 	go.etcd.io/etcd/api/v3 v3.5.0
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/client-go v0.0.0-20210503213042-e6eb157f0d81
 	k8s.io/api v0.22.1
