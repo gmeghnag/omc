@@ -28,6 +28,7 @@ import (
 	"omc/cmd/get/openshift/machine"
 	"omc/cmd/get/openshift/machineconfiguration"
 	"omc/cmd/get/openshift/route"
+	//operators "omc/cmd/get/operator-framework"
 	"omc/cmd/get/storage"
 	"omc/vars"
 	"os"
@@ -90,6 +91,7 @@ func init() {
 		build.BuildConfig,
 		config.ClusterOperator,
 		config.ClusterVersion,
+		config.Proxy,
 		core.ConfigMap,
 		core.Event,
 		core.Namespace,

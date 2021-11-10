@@ -33,6 +33,7 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 	_headers := []string{"namespace", "name", "display", "version", "replaces", "phase"}
 	var namespaces []string
 	if allNamespacesFlag == true {
+		namespace = "all"
 		_namespaces, _ := ioutil.ReadDir(currentContextPath + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())

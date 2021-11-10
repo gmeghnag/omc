@@ -90,7 +90,7 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 			channel := Subscription.Spec.Channel
 
 			labels := helpers.ExtractLabels(Subscription.GetLabels())
-			_list := []string{Subscription.Namespace, SubscriptionName, subPackage, source, channel}
+			_list := []string{_namespace, SubscriptionName, subPackage, source, channel}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
 			if resourceName != "" && resourceName == SubscriptionName {
