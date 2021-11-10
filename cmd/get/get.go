@@ -92,6 +92,7 @@ func init() {
 		config.ClusterOperator,
 		config.ClusterVersion,
 		config.Proxy,
+		config.Infrastructure,
 		config.Network,
 		core.ConfigMap,
 		core.Event,
