@@ -93,6 +93,7 @@ func init() {
 		config.ClusterVersion,
 		config.Proxy,
 		config.Infrastructure,
+		config.Network,
 		core.ConfigMap,
 		core.Event,
 		core.Namespace,
