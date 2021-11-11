@@ -99,7 +99,7 @@ func getMachineConfig(currentContextPath string, namespace string, resourceName 
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
-
+		return false
 	}
 	if outputFlag == "wide" {
 		headers = _headers // -A -o wide
@@ -107,6 +107,7 @@ func getMachineConfig(currentContextPath string, namespace string, resourceName 
 			headers = append(headers, "labels")
 		}
 		helpers.PrintTable(headers, data)
+		return false
 	}
 	var resource interface{}
 	if resourceName != "" {
