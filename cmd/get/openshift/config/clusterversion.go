@@ -80,6 +80,7 @@ func getClusterVersion(currentContextPath string, namespace string, resourceName
 		for _, h := range ClusterVersion.Status.History {
 			if h.State == "Completed" {
 				version = h.Version
+				break
 			}
 		}
 		// conditions
