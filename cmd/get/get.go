@@ -96,6 +96,7 @@ func init() {
 		config.Proxy,
 		config.Infrastructure,
 		config.Network,
+		config.DNS,
 		core.ConfigMap,
 		core.Event,
 		core.Namespace,
