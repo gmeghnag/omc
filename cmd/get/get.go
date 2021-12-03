@@ -21,7 +21,9 @@ import (
 	"omc/cmd/get/batch"
 	"omc/cmd/get/certificate"
 	"omc/cmd/get/core"
+	"omc/cmd/get/istio/networking"
 	"omc/cmd/get/local"
+	"omc/cmd/get/maistra"
 	appz "omc/cmd/get/openshift/apps"
 	"omc/cmd/get/openshift/build"
 	"omc/cmd/get/openshift/config"
@@ -29,6 +31,7 @@ import (
 	"omc/cmd/get/openshift/machine"
 	"omc/cmd/get/openshift/machineconfiguration"
 	"omc/cmd/get/openshift/route"
+
 	//operators "omc/cmd/get/operator-framework"
 	"omc/cmd/get/storage"
 	"omc/vars"
@@ -112,8 +115,9 @@ func init() {
 		machine.MachineSet,
 		machineconfiguration.MachineConfig,
 		machineconfiguration.MachineConfigPool,
-		//maistra.ServiceMeshControlPlane,
-		//networking.DestinationRule,
+		maistra.ServiceMeshControlPlane,
+		maistra.ServiceMeshMemberRoll,
+		networking.DestinationRule,
 		local.All,
 		local.MustGather,
 		//operators.ClusterServiceVersion,

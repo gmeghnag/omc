@@ -113,7 +113,10 @@ func getPersistentVolumeClaims(currentContextPath string, namespace string, reso
 			accessMode = strings.TrimSuffix(accessMode, ",")
 
 			//storage class
-			storageClass := *PersistentVolumeClaim.Spec.StorageClassName
+			storageClass := ""
+			if PersistentVolumeClaim.Spec.StorageClassName != nil {
+				storageClass = *PersistentVolumeClaim.Spec.StorageClassName
+			}
 
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/core/persistentvolumeclaims.yaml", PersistentVolumeClaim.GetCreationTimestamp())

@@ -24,13 +24,13 @@ import (
 	"os"
 	"strings"
 
-	v2 "github.com/maistra/api/core/v2"
+	v1 "github.com/maistra/api/core/v1"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
 
-func GetServiceMeshControlPlane(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "ready", "status", "profiles", "version", "age", "image registry"}
+func GetServiceMeshMemberRoll(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "ready", "status", "age", "members"}
 
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -44,70 +44,65 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 	}
 
 	var data [][]string
-	var ServiceMeshControlPlanesList = v2.ServiceMeshControlPlaneList{}
+	var ServiceMeshMemberRollsList = v1.ServiceMeshMemberRollList{}
 	for _, _namespace := range namespaces {
-		var n_ServiceMeshControlPlanesList = v2.ServiceMeshControlPlaneList{}
+		var n_ServiceMeshMemberRollsList = v1.ServiceMeshMemberRollList{}
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/maistra.io/servicemeshcontrolplanes/")
+		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/maistra.io/servicemeshmemberrolls/")
 		for _, f := range _smcps {
-			smcpYamlPath := CurrentNamespacePath + "/maistra.io/servicemeshcontrolplanes/" + f.Name()
+			smcpYamlPath := CurrentNamespacePath + "/maistra.io/servicemeshmemberrolls/" + f.Name()
 			_file := helpers.ReadYaml(smcpYamlPath)
-			_ServiceMeshControlPlane := v2.ServiceMeshControlPlane{}
-			if err := yaml.Unmarshal([]byte(_file), &_ServiceMeshControlPlane); err != nil {
+			_ServiceMeshMemberRoll := v1.ServiceMeshMemberRoll{}
+			if err := yaml.Unmarshal([]byte(_file), &_ServiceMeshMemberRoll); err != nil {
 				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
 				os.Exit(1)
 			}
-			n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, _ServiceMeshControlPlane)
+			n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, _ServiceMeshMemberRoll)
 		}
-		for _, ServiceMeshControlPlane := range n_ServiceMeshControlPlanesList.Items {
-			if resourceName != "" && resourceName != ServiceMeshControlPlane.Name {
+		for _, ServiceMeshMemberRoll := range n_ServiceMeshMemberRollsList.Items {
+			if resourceName != "" && resourceName != ServiceMeshMemberRoll.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
-				ServiceMeshControlPlanesList.Items = append(ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
+				n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
+				ServiceMeshMemberRollsList.Items = append(ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
 				continue
 			}
 
 			if outputFlag == "json" {
-				n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
-				ServiceMeshControlPlanesList.Items = append(ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
+				n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
+				ServiceMeshMemberRollsList.Items = append(ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
-				ServiceMeshControlPlanesList.Items = append(ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
+				n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
+				ServiceMeshMemberRollsList.Items = append(ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
 				continue
 			}
 
 			//name
-			ServiceMeshControlPlaneName := ServiceMeshControlPlane.Name
+			ServiceMeshMemberRollName := ServiceMeshMemberRoll.Name
 			//ready
-			ready := helpers.ExtractLabel(ServiceMeshControlPlane.Status.Annotations, "readyComponentCount")
+			ready := helpers.ExtractLabel(ServiceMeshMemberRoll.Status.Annotations, "configuredMemberCount")
 			//status
 			status := ""
-			for _, c := range ServiceMeshControlPlane.Status.Conditions {
+			for _, c := range ServiceMeshMemberRoll.Status.Conditions {
 				if c.Type == "Ready" {
 					status = string(c.Reason)
 					break
 				}
 			}
-			//profiles
-			profiles := fmt.Sprintf("%q", ServiceMeshControlPlane.Status.AppliedSpec.Profiles)
-			//version
-			version := ServiceMeshControlPlane.Status.ChartVersion
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/maistra.io/servicemeshcontrolplanes/"+ServiceMeshControlPlaneName+".yaml", ServiceMeshControlPlane.GetCreationTimestamp())
-			//image egistry
-			registry := ServiceMeshControlPlane.Status.AppliedSpec.Runtime.Defaults.Container.ImageRegistry
-
-			labels := helpers.ExtractLabels(ServiceMeshControlPlane.GetLabels())
-			_list := []string{ServiceMeshControlPlane.Namespace, ServiceMeshControlPlaneName, ready, status, profiles, version, age, registry}
+			age := helpers.GetAge(CurrentNamespacePath+"/maistra.io/servicemeshmemberrolls/"+ServiceMeshMemberRollName+".yaml", ServiceMeshMemberRoll.GetCreationTimestamp())
+			//members
+			ServiceMeshMemberRollMembers := "[" + strings.Join(ServiceMeshMemberRoll.Status.Members, ",") + "]"
+			labels := helpers.ExtractLabels(ServiceMeshMemberRoll.GetLabels())
+			_list := []string{ServiceMeshMemberRoll.Namespace, ServiceMeshMemberRollName, ready, status, age, ServiceMeshMemberRollMembers}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == ServiceMeshControlPlaneName {
+			if resourceName != "" && resourceName == ServiceMeshMemberRollName {
 				break
 			}
 		}
@@ -149,7 +144,7 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 		return false
 	}
 
-	if len(ServiceMeshControlPlanesList.Items) == 0 {
+	if len(ServiceMeshMemberRollsList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -157,9 +152,9 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 	}
 	var resource interface{}
 	if resourceName != "" {
-		resource = ServiceMeshControlPlanesList.Items[0]
+		resource = ServiceMeshMemberRollsList.Items[0]
 	} else {
-		resource = ServiceMeshControlPlanesList
+		resource = ServiceMeshMemberRollsList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -176,9 +171,9 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 	return false
 }
 
-var ServiceMeshControlPlane = &cobra.Command{
-	Use:     "servicemeshcontrolplane",
-	Aliases: []string{"smcp", "servicemeshcontrolplanes"},
+var ServiceMeshMemberRoll = &cobra.Command{
+	Use:     "servicemeshmemberroll",
+	Aliases: []string{"smmr", "servicemeshmemberrolls"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -186,6 +181,6 @@ var ServiceMeshControlPlane = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		GetServiceMeshControlPlane(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		GetServiceMeshMemberRoll(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

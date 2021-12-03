@@ -30,7 +30,7 @@ import (
 )
 
 func GetDestinationRule(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name"}
+	_headers := []string{"namespace", "name", "host", "age"}
 
 	var namespaces []string
 	if allNamespacesFlag == true {
@@ -46,35 +46,38 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 	var data [][]string
 	var DestinationRulesList = v1alpha3.DestinationRuleList{}
 	for _, _namespace := range namespaces {
+		n_DestinationRulesList := v1alpha3.DestinationRuleList{}
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/networking.io/destinationrules/")
+		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/networking.istio.io/destinationrules/")
 		for _, f := range _smcps {
-			smcpYamlPath := CurrentNamespacePath + "/networking.io/destinationrules/" + f.Name()
+			smcpYamlPath := CurrentNamespacePath + "/networking.istio.io/destinationrules/" + f.Name()
 			_file := helpers.ReadYaml(smcpYamlPath)
 			_DestinationRule := v1alpha3.DestinationRule{}
 			if err := yaml.Unmarshal([]byte(_file), &_DestinationRule); err != nil {
 				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
 				os.Exit(1)
 			}
-			fmt.Println("ddddd")
-			DestinationRulesList.Items = append(DestinationRulesList.Items, _DestinationRule)
+			n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, _DestinationRule)
 		}
-		for _, DestRule := range DestinationRulesList.Items {
+		for _, DestRule := range n_DestinationRulesList.Items {
 			if resourceName != "" && resourceName != DestRule.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
+				n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, DestRule)
 				DestinationRulesList.Items = append(DestinationRulesList.Items, DestRule)
 				continue
 			}
 
 			if outputFlag == "json" {
+				n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, DestRule)
 				DestinationRulesList.Items = append(DestinationRulesList.Items, DestRule)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
+				n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, DestRule)
 				DestinationRulesList.Items = append(DestinationRulesList.Items, DestRule)
 				continue
 			}
@@ -82,9 +85,13 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 			//name
 			DestinationRuleName := DestRule.Name
 
+			//host
+			DestinationRuleHost := DestRule.Spec.Host
+
+			age := helpers.GetAge(CurrentNamespacePath+"/networking.istio.io/destinationrules/"+DestinationRuleName+".yaml", DestRule.GetCreationTimestamp())
 			labels := helpers.ExtractLabels(DestRule.GetLabels())
-			_list := []string{DestRule.Namespace, DestinationRuleName}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
+			_list := []string{DestRule.Namespace, DestinationRuleName, DestinationRuleHost, age}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 4, _list)
 
 			if resourceName != "" && resourceName == DestinationRuleName {
 				break
@@ -105,9 +112,9 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:5]
+			headers = _headers[0:4]
 		} else {
-			headers = _headers[1:5]
+			headers = _headers[1:4]
 		}
 		if showLabels {
 			headers = append(headers, "labels")

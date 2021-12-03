@@ -96,6 +96,7 @@ github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
 # github.com/maistra/api v0.0.0-20210601141927-1cbee4cb8ce8 => maistra.io/api v0.0.0-20210601141927-1cbee4cb8ce8
 ## explicit
+github.com/maistra/api/core/v1
 github.com/maistra/api/core/v2
 # github.com/mattn/go-runewidth v0.0.13
 github.com/mattn/go-runewidth
