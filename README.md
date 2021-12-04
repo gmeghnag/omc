@@ -1,40 +1,54 @@
 ## OMC
 ---
 
-Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` we want to be able to inspect a must-gather in the same way as we inspect a cluster with the oc command.
+Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` you can inspect a must-gather in the same way as we inspect a cluster with the oc command.
 
-The `omc` tool does not simply parse the yaml file, it uses the official Kubernetes and OpenShift golang types to decode yaml file to their respective objects.
+The `omc` tool does not simply parse the yaml file, it uses the official Kubernetes and OpenShift golang types to decode yaml files to their respective objects.
 
 ---
 ### Supported resources and flags
 
 To date, the `omc get` command supports the following resources:
 
-- Builds
-- BuildConfigs
-- ConfigMaps
-- ClusterOperators
-- ClusterVersion
-- DaemonSets
-- Deployments
-- DeploymentConfigs
-- Events
-- Jobs
-- Machines
-- MachineConfigs
-- MachineConfigPools
-- MachineSets
-- Nodes
-- PersistentVolumes
-- PersistentVolumeClaims
-- Pods
-- Projects
-- ReplicationControllers
-- ReplicaSets
-- Secrets
-- Services
-- StorageClasses
-- Routes
+- apps.DaemonSet
+- apps.Deployment
+- apps.ReplicaSet
+- apps.DeploymentConfig
+- batch.Job
+- build.Build
+- build.BuildConfig
+- certificate.CertificateSigningRequest
+- config.ClusterOperator
+- config.ClusterVersion
+- config.Proxy
+- config.Infrastructure
+- config.Network
+- config.DNS
+- core.ConfigMap
+- core.Event
+- core.Namespace
+- core.Node
+- core.PersistentVolume
+- core.PersistentVolumeClaim
+- core.Pod
+- core.ReplicationController
+- core.Secret
+- core.Service
+- image.ImageStream
+- machine.Machine
+- machine.MachineSet
+- machineconfiguration.MachineConfig
+- machineconfiguration.MachineConfigPool
+- maistra.ServiceMeshControlPlane
+- maistra.ServiceMeshMemberRoll
+- networking.DestinationRule
+- networking.Gateway
+- networking.VirtualService
+- operators.ClusterServiceVersion
+- operators.InstallPlan
+- operators.Subscription
+- route.Route
+- storage.StorageClass
 
 and the following flags:
 - -A, --all-namespaces

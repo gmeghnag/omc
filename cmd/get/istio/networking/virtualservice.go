@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package operators
+package networking
 
 import (
 	"encoding/json"
@@ -24,13 +24,14 @@ import (
 	"os"
 	"strings"
 
-	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/spf13/cobra"
+	v1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
-func GetSubscription(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "package", "source", "channel"}
+func GetVirtualService(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "gateways", "hosts", "age"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -41,62 +42,66 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	} else {
 		namespaces = append(namespaces, namespace)
 	}
+
 	var data [][]string
-	var SubscriptionList = v1alpha1.SubscriptionList{}
+	var VirtualServicesList = v1beta1.VirtualServiceList{}
 	for _, _namespace := range namespaces {
-		n_SubscriptionList := v1alpha1.SubscriptionList{}
+		n_VirtualServicesList := v1beta1.VirtualServiceList{}
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/operators.coreos.com/subscriptions/")
+		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/networking.istio.io/virtualservices/")
 		for _, f := range _smcps {
-			smcpYamlPath := CurrentNamespacePath + "/operators.coreos.com/subscriptions/" + f.Name()
-			_file, err := ioutil.ReadFile(smcpYamlPath)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			_Subscription := v1alpha1.Subscription{}
-			if err := yaml.Unmarshal([]byte(_file), &_Subscription); err != nil {
+			smcpYamlPath := CurrentNamespacePath + "/networking.istio.io/virtualservices/" + f.Name()
+			_file := helpers.ReadYaml(smcpYamlPath)
+			_VirtualService := v1beta1.VirtualService{}
+			if err := yaml.Unmarshal([]byte(_file), &_VirtualService); err != nil {
 				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
 				os.Exit(1)
 			}
-			n_SubscriptionList.Items = append(n_SubscriptionList.Items, _Subscription)
+			n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, _VirtualService)
 		}
-		for _, Subscription := range n_SubscriptionList.Items {
-			if resourceName != "" && resourceName != Subscription.Name {
+		for _, VService := range n_VirtualServicesList.Items {
+			if resourceName != "" && resourceName != VService.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, VService)
+				VirtualServicesList.Items = append(VirtualServicesList.Items, VService)
 				continue
 			}
 
 			if outputFlag == "json" {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, VService)
+				VirtualServicesList.Items = append(VirtualServicesList.Items, VService)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, VService)
+				VirtualServicesList.Items = append(VirtualServicesList.Items, VService)
 				continue
 			}
 
 			//name
-			SubscriptionName := Subscription.Name
-			//package
-			subPackage := Subscription.Spec.Package
-			//source
-			source := Subscription.Spec.CatalogSource
-			//channel
-			channel := Subscription.Spec.Channel
+			VirtualServiceName := VService.Name
 
-			labels := helpers.ExtractLabels(Subscription.GetLabels())
-			_list := []string{_namespace, SubscriptionName, subPackage, source, channel}
+			//gateways
+			VirtualServiceGateways := ""
+			if len(VService.Spec.Gateways) != 0 {
+				VirtualServiceGateways = "[" + strings.Join(VService.Spec.Gateways, ", ") + "]"
+			}
+			//hosts
+			VirtualServiceHosts := ""
+			if len(VService.Spec.Hosts) != 0 {
+				VirtualServiceHosts = "[" + strings.Join(VService.Spec.Hosts, ", ") + "]"
+			}
+
+			age := helpers.GetAge(CurrentNamespacePath+"/networking.istio.io/virtualservices/"+VirtualServiceName+".yaml", VService.GetCreationTimestamp())
+			labels := helpers.ExtractLabels(VService.GetLabels())
+			_list := []string{VService.Namespace, VirtualServiceName, VirtualServiceGateways, VirtualServiceHosts, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == SubscriptionName {
+			if resourceName != "" && resourceName == VirtualServiceName {
 				break
 			}
 		}
@@ -138,7 +143,7 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 		return false
 	}
 
-	if len(SubscriptionList.Items) == 0 {
+	if len(VirtualServicesList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -146,9 +151,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	}
 	var resource interface{}
 	if resourceName != "" {
-		resource = SubscriptionList.Items[0]
+		resource = VirtualServicesList.Items[0]
 	} else {
-		resource = SubscriptionList
+		resource = VirtualServicesList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -165,9 +170,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	return false
 }
 
-var Subscription = &cobra.Command{
-	Use:     "subscription",
-	Aliases: []string{"sub", "subscriptions", "subscription.operators.coreos.com"},
+var VirtualService = &cobra.Command{
+	Use:     "virtualservice",
+	Aliases: []string{"vs", "virtualservices"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -175,6 +180,6 @@ var Subscription = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		GetSubscription(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		GetVirtualService(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

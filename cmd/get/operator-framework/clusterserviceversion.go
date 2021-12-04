@@ -44,6 +44,7 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 	var data [][]string
 	var ClusterServiceVersionList = v1alpha1.ClusterServiceVersionList{}
 	for _, _namespace := range namespaces {
+		n_ClusterServiceVersionList := v1alpha1.ClusterServiceVersionList{}
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/operators.coreos.com/clusterserviceversions/")
 		for _, f := range _smcps {
@@ -54,24 +55,27 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
 				os.Exit(1)
 			}
-			ClusterServiceVersionList.Items = append(ClusterServiceVersionList.Items, _ClusterServiceVersion)
+			n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, _ClusterServiceVersion)
 		}
-		for _, ClusterServiceVersion := range ClusterServiceVersionList.Items {
+		for _, ClusterServiceVersion := range n_ClusterServiceVersionList.Items {
 			if resourceName != "" && resourceName != ClusterServiceVersion.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
+				n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, ClusterServiceVersion)
 				ClusterServiceVersionList.Items = append(ClusterServiceVersionList.Items, ClusterServiceVersion)
 				continue
 			}
 
 			if outputFlag == "json" {
+				n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, ClusterServiceVersion)
 				ClusterServiceVersionList.Items = append(ClusterServiceVersionList.Items, ClusterServiceVersion)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
+				n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, ClusterServiceVersion)
 				ClusterServiceVersionList.Items = append(ClusterServiceVersionList.Items, ClusterServiceVersion)
 				continue
 			}
@@ -162,7 +166,7 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 
 var ClusterServiceVersion = &cobra.Command{
 	Use:     "clusterserviceversion",
-	Aliases: []string{"csv", "clusterserviceversions"},
+	Aliases: []string{"csv", "clusterserviceversions", "clusterserviceversion.operators.coreos.com"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

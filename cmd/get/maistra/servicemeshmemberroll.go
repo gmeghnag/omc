@@ -97,7 +97,11 @@ func GetServiceMeshMemberRoll(currentContextPath string, namespace string, resou
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/maistra.io/servicemeshmemberrolls/"+ServiceMeshMemberRollName+".yaml", ServiceMeshMemberRoll.GetCreationTimestamp())
 			//members
-			ServiceMeshMemberRollMembers := "[" + strings.Join(ServiceMeshMemberRoll.Status.Members, ",") + "]"
+			ServiceMeshMemberRollMembers := ""
+			if len(ServiceMeshMemberRoll.Status.Members) != 0 {
+				ServiceMeshMemberRollMembers = "[" + strings.Join(ServiceMeshMemberRoll.Status.Members, ", ") + "]"
+			}
+
 			labels := helpers.ExtractLabels(ServiceMeshMemberRoll.GetLabels())
 			_list := []string{ServiceMeshMemberRoll.Namespace, ServiceMeshMemberRollName, ready, status, age, ServiceMeshMemberRollMembers}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)

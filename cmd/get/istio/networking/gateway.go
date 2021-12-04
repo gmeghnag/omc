@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package operators
+package networking
 
 import (
 	"encoding/json"
@@ -24,13 +24,14 @@ import (
 	"os"
 	"strings"
 
-	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/spf13/cobra"
+	v1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"sigs.k8s.io/yaml"
 )
 
-func GetSubscription(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "package", "source", "channel"}
+func GetGateway(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "age"}
+
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -41,62 +42,55 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	} else {
 		namespaces = append(namespaces, namespace)
 	}
+
 	var data [][]string
-	var SubscriptionList = v1alpha1.SubscriptionList{}
+	var GatewaysList = v1beta1.GatewayList{}
 	for _, _namespace := range namespaces {
-		n_SubscriptionList := v1alpha1.SubscriptionList{}
+		n_GatewaysList := v1beta1.GatewayList{}
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/operators.coreos.com/subscriptions/")
+		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/networking.istio.io/gateways/")
 		for _, f := range _smcps {
-			smcpYamlPath := CurrentNamespacePath + "/operators.coreos.com/subscriptions/" + f.Name()
-			_file, err := ioutil.ReadFile(smcpYamlPath)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-			_Subscription := v1alpha1.Subscription{}
-			if err := yaml.Unmarshal([]byte(_file), &_Subscription); err != nil {
+			smcpYamlPath := CurrentNamespacePath + "/networking.istio.io/gateways/" + f.Name()
+			_file := helpers.ReadYaml(smcpYamlPath)
+			_Gateway := v1beta1.Gateway{}
+			if err := yaml.Unmarshal([]byte(_file), &_Gateway); err != nil {
 				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
 				os.Exit(1)
 			}
-			n_SubscriptionList.Items = append(n_SubscriptionList.Items, _Subscription)
+			n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)
 		}
-		for _, Subscription := range n_SubscriptionList.Items {
-			if resourceName != "" && resourceName != Subscription.Name {
+		for _, _Gateway := range n_GatewaysList.Items {
+			if resourceName != "" && resourceName != _Gateway.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)
+				GatewaysList.Items = append(GatewaysList.Items, _Gateway)
 				continue
 			}
 
 			if outputFlag == "json" {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)
+				GatewaysList.Items = append(GatewaysList.Items, _Gateway)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)
+				GatewaysList.Items = append(GatewaysList.Items, _Gateway)
 				continue
 			}
 
 			//name
-			SubscriptionName := Subscription.Name
-			//package
-			subPackage := Subscription.Spec.Package
-			//source
-			source := Subscription.Spec.CatalogSource
-			//channel
-			channel := Subscription.Spec.Channel
+			GatewayName := _Gateway.Name
 
-			labels := helpers.ExtractLabels(Subscription.GetLabels())
-			_list := []string{_namespace, SubscriptionName, subPackage, source, channel}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
+			age := helpers.GetAge(CurrentNamespacePath+"/networking.istio.io/gateways/"+GatewayName+".yaml", _Gateway.GetCreationTimestamp())
+			labels := helpers.ExtractLabels(_Gateway.GetLabels())
+			_list := []string{_Gateway.Namespace, GatewayName, age}
+			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 3, _list)
 
-			if resourceName != "" && resourceName == SubscriptionName {
+			if resourceName != "" && resourceName == GatewayName {
 				break
 			}
 		}
@@ -115,9 +109,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:5]
+			headers = _headers[0:3]
 		} else {
-			headers = _headers[1:5]
+			headers = _headers[1:3]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
@@ -138,7 +132,7 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 		return false
 	}
 
-	if len(SubscriptionList.Items) == 0 {
+	if len(GatewaysList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -146,9 +140,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	}
 	var resource interface{}
 	if resourceName != "" {
-		resource = SubscriptionList.Items[0]
+		resource = GatewaysList.Items[0]
 	} else {
-		resource = SubscriptionList
+		resource = GatewaysList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -165,9 +159,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	return false
 }
 
-var Subscription = &cobra.Command{
-	Use:     "subscription",
-	Aliases: []string{"sub", "subscriptions", "subscription.operators.coreos.com"},
+var Gateway = &cobra.Command{
+	Use:     "gateway",
+	Aliases: []string{"gateways"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -175,6 +169,6 @@ var Subscription = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		GetSubscription(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		GetGateway(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }

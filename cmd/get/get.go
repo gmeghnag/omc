@@ -32,7 +32,7 @@ import (
 	"omc/cmd/get/openshift/machineconfiguration"
 	"omc/cmd/get/openshift/route"
 
-	//operators "omc/cmd/get/operator-framework"
+	operators "omc/cmd/get/operator-framework"
 	"omc/cmd/get/storage"
 	"omc/vars"
 	"os"
@@ -118,10 +118,13 @@ func init() {
 		maistra.ServiceMeshControlPlane,
 		maistra.ServiceMeshMemberRoll,
 		networking.DestinationRule,
+		networking.Gateway,
+		networking.VirtualService,
 		local.All,
 		local.MustGather,
-		//operators.ClusterServiceVersion,
-		//operators.Subscription,
+		operators.ClusterServiceVersion,
+		operators.InstallPlan,
+		operators.Subscription,
 		route.Route,
 		storage.StorageClass,
 	)

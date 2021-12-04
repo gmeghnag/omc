@@ -22,6 +22,7 @@ import (
 	"omc/cmd/helpers"
 	"omc/vars"
 	"os"
+	"strconv"
 	"strings"
 
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
@@ -29,8 +30,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func GetSubscription(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "package", "source", "channel"}
+func GetInstallPlan(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
+	_headers := []string{"namespace", "name", "csv", "approval", "approved"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -42,61 +43,67 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 		namespaces = append(namespaces, namespace)
 	}
 	var data [][]string
-	var SubscriptionList = v1alpha1.SubscriptionList{}
+	var InstallPlanList = v1alpha1.InstallPlanList{}
 	for _, _namespace := range namespaces {
-		n_SubscriptionList := v1alpha1.SubscriptionList{}
+		n_InstallPlanList := v1alpha1.InstallPlanList{}
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
-		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/operators.coreos.com/subscriptions/")
+		_smcps, _ := ioutil.ReadDir(CurrentNamespacePath + "/operators.coreos.com/installplans/")
 		for _, f := range _smcps {
-			smcpYamlPath := CurrentNamespacePath + "/operators.coreos.com/subscriptions/" + f.Name()
+			smcpYamlPath := CurrentNamespacePath + "/operators.coreos.com/installplans/" + f.Name()
 			_file, err := ioutil.ReadFile(smcpYamlPath)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			_Subscription := v1alpha1.Subscription{}
-			if err := yaml.Unmarshal([]byte(_file), &_Subscription); err != nil {
+			_InstallPlan := v1alpha1.InstallPlan{}
+			if err := yaml.Unmarshal([]byte(_file), &_InstallPlan); err != nil {
 				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
 				os.Exit(1)
 			}
-			n_SubscriptionList.Items = append(n_SubscriptionList.Items, _Subscription)
+			n_InstallPlanList.Items = append(n_InstallPlanList.Items, _InstallPlan)
 		}
-		for _, Subscription := range n_SubscriptionList.Items {
-			if resourceName != "" && resourceName != Subscription.Name {
+		for _, InstallPlan := range n_InstallPlanList.Items {
+			if resourceName != "" && resourceName != InstallPlan.Name {
 				continue
 			}
 
 			if outputFlag == "yaml" {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_InstallPlanList.Items = append(n_InstallPlanList.Items, InstallPlan)
+				InstallPlanList.Items = append(InstallPlanList.Items, InstallPlan)
 				continue
 			}
 
 			if outputFlag == "json" {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_InstallPlanList.Items = append(n_InstallPlanList.Items, InstallPlan)
+				InstallPlanList.Items = append(InstallPlanList.Items, InstallPlan)
 				continue
 			}
 
 			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
-				SubscriptionList.Items = append(SubscriptionList.Items, Subscription)
+				n_InstallPlanList.Items = append(n_InstallPlanList.Items, InstallPlan)
+				InstallPlanList.Items = append(InstallPlanList.Items, InstallPlan)
 				continue
 			}
 
 			//name
-			SubscriptionName := Subscription.Name
+			InstallPlanName := InstallPlan.Name
 			//package
-			subPackage := Subscription.Spec.Package
+			csv := ""
+			if len(InstallPlan.Spec.ClusterServiceVersionNames) == 1 {
+				csv = InstallPlan.Spec.ClusterServiceVersionNames[0]
+			}
+			if len(InstallPlan.Spec.ClusterServiceVersionNames) > 1 {
+				csv = "[" + strings.Join(InstallPlan.Spec.ClusterServiceVersionNames, ", ") + "]"
+			}
 			//source
-			source := Subscription.Spec.CatalogSource
+			approval := string(InstallPlan.Spec.Approval)
 			//channel
-			channel := Subscription.Spec.Channel
+			approved := strconv.FormatBool(InstallPlan.Spec.Approved)
 
-			labels := helpers.ExtractLabels(Subscription.GetLabels())
-			_list := []string{_namespace, SubscriptionName, subPackage, source, channel}
+			labels := helpers.ExtractLabels(InstallPlan.GetLabels())
+			_list := []string{_namespace, InstallPlanName, csv, approval, approved}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
-			if resourceName != "" && resourceName == SubscriptionName {
+			if resourceName != "" && resourceName == InstallPlanName {
 				break
 			}
 		}
@@ -138,7 +145,7 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 		return false
 	}
 
-	if len(SubscriptionList.Items) == 0 {
+	if len(InstallPlanList.Items) == 0 {
 		if !allResources {
 			fmt.Println("No resources found in " + namespace + " namespace.")
 		}
@@ -146,9 +153,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	}
 	var resource interface{}
 	if resourceName != "" {
-		resource = SubscriptionList.Items[0]
+		resource = InstallPlanList.Items[0]
 	} else {
-		resource = SubscriptionList
+		resource = InstallPlanList
 	}
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
@@ -165,9 +172,9 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 	return false
 }
 
-var Subscription = &cobra.Command{
-	Use:     "subscription",
-	Aliases: []string{"sub", "subscriptions", "subscription.operators.coreos.com"},
+var InstallPlan = &cobra.Command{
+	Use:     "installplan",
+	Aliases: []string{"ip", "installplans", "installplan.operators.coreos.com"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
@@ -175,6 +182,6 @@ var Subscription = &cobra.Command{
 			resourceName = args[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		GetSubscription(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		GetInstallPlan(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
 	},
 }
