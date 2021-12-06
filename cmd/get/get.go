@@ -90,6 +90,7 @@ func init() {
 		apps.Deployment,
 		apps.ReplicaSet,
 		appz.DeploymentConfig,
+		batch.CronJob,
 		batch.Job,
 		build.Build,
 		build.BuildConfig,

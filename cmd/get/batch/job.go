@@ -183,8 +183,8 @@ func GetJobs(currentContextPath string, namespace string, resourceName string, a
 }
 
 var Job = &cobra.Command{
-	Use:     "job",
-	Aliases: []string{"jobs", "job.batch"},
+	Use:     "cronjob",
+	Aliases: []string{"cronjob", "cronjob.batch"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
