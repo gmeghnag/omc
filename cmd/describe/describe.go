@@ -17,6 +17,7 @@ package describe
 
 import (
 	"fmt"
+	//"omc/cmd/describe/apps"
 	"omc/cmd/describe/core"
 	"os"
 	"strings"
@@ -46,6 +47,7 @@ func init() {
 		}
 	}
 	DescribeCmd.AddCommand(
+		//apps.Deployment,
 		core.Node,
 		core.Pod,
 	)
