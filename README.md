@@ -1,4 +1,3 @@
-![CI workflow](https://github.com/gmeghnag/omc/actions/workflows/main.yml/badge.svg)
 ## OMC
 ---
 
@@ -15,6 +14,7 @@ To date, the `omc get` command supports the following resources:
 - apps.Deployment
 - apps.ReplicaSet
 - apps.DeploymentConfig
+- batch.CronJob
 - batch.Job
 - build.Build
 - build.BuildConfig
@@ -26,6 +26,7 @@ To date, the `omc get` command supports the following resources:
 - config.Network
 - config.DNS
 - core.ConfigMap
+- core.Endpoint
 - core.Event
 - core.Namespace
 - core.Node
