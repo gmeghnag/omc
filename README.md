@@ -1,9 +1,10 @@
-## OMC
----
+# `omc`: OpenShift Must-Gather Client
+
+[![GitHub Actions CI Status](https://github.com/gmeghnag/omc/workflows/main/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ACI)
 
 Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` you can inspect a must-gather in the same way as we inspect a cluster with the oc command.
 
-The `omc` tool does not simply parse the yaml file, it uses the official Kubernetes and OpenShift golang types to decode yaml files to their respective objects.
+The `omc` tool does not simply parse yaml files, it uses the official Kubernetes and OpenShift golang types to decode yaml files to their respective OpenShift resources.
 
 ---
 ### Supported resources and flags
