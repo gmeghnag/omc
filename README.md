@@ -1,3 +1,4 @@
+![CI workflow](https://github.com/gmeghnag/omc/actions/workflows/main.yml/badge.svg)
 ## OMC
 ---
 
