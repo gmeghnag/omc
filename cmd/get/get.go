@@ -102,6 +102,7 @@ func init() {
 		config.Network,
 		config.DNS,
 		core.ConfigMap,
+		core.Endpoint,
 		core.Event,
 		core.Namespace,
 		core.Node,
