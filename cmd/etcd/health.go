@@ -16,7 +16,7 @@ limitations under the License.
 package etcd
 
 import (
-	"omc/vars"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 )

@@ -19,11 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
-	"omc/vars"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 
 	v1 "github.com/openshift/api/apps/v1"
 	"github.com/spf13/cobra"

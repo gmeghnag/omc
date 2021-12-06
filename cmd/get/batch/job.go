@@ -19,11 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
-	"omc/vars"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 	batchv1 "k8s.io/api/batch/v1"

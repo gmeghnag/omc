@@ -17,10 +17,11 @@ package core
 
 import (
 	"fmt"
-	"omc/cmd/helpers"
-	"omc/types"
-	"omc/vars"
 	"os"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/types"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"

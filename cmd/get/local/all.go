@@ -17,15 +17,16 @@ package local
 
 import (
 	"fmt"
-	"omc/cmd/get/apps"
-	"omc/cmd/get/batch"
-	"omc/cmd/get/core"
-	appz "omc/cmd/get/openshift/apps"
-	"omc/cmd/get/openshift/build"
-	"omc/cmd/get/openshift/image"
-	"omc/cmd/get/openshift/route"
-	"omc/cmd/helpers"
-	"omc/vars"
+
+	"github.com/gmeghnag/omc/cmd/get/apps"
+	"github.com/gmeghnag/omc/cmd/get/batch"
+	"github.com/gmeghnag/omc/cmd/get/core"
+	appz "github.com/gmeghnag/omc/cmd/get/openshift/apps"
+	"github.com/gmeghnag/omc/cmd/get/openshift/build"
+	"github.com/gmeghnag/omc/cmd/get/openshift/image"
+	"github.com/gmeghnag/omc/cmd/get/openshift/route"
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 )

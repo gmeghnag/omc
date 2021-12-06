@@ -19,17 +19,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
-	"omc/vars"
 	"os"
 	"strings"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/spf13/cobra"
 
 	"sigs.k8s.io/yaml"
 )
-
 
 func getProxies(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 
@@ -70,7 +70,7 @@ func getProxies(currentContextPath string, namespace string, resourceName string
 		//Name
 		proxyName := Proxy.Name
 		age := helpers.GetAge(proxyYamlPath, Proxy.GetCreationTimestamp())
-		
+
 		labels := helpers.ExtractLabels(Proxy.GetLabels())
 		_list := []string{proxyName, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 2, _list)

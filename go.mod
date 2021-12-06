@@ -1,4 +1,4 @@
-module omc
+module github.com/gmeghnag/omc
 
 go 1.16
 

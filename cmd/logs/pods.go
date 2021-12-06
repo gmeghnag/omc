@@ -18,8 +18,9 @@ package logs
 import (
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
 	"os"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
 
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"

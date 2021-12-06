@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"omc/vars"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 )

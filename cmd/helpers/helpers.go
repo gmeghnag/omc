@@ -8,11 +8,12 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
-	"omc/types"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gmeghnag/omc/types"
 
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v2"

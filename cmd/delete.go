@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"omc/types"
-	"omc/vars"
 	"os"
 	"strings"
+
+	"github.com/gmeghnag/omc/types"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

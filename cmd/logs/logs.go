@@ -19,10 +19,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"omc/cmd/helpers"
-	"omc/vars"
 	"os"
 	"strings"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 )

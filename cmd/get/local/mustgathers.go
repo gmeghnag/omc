@@ -19,10 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
-	"omc/types"
 	"os"
 	"reflect"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

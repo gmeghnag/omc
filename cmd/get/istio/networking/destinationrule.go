@@ -19,10 +19,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
-	"omc/vars"
 	"os"
 	"strings"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 	v1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"

@@ -17,10 +17,11 @@ package describe
 
 import (
 	"fmt"
-	//"omc/cmd/describe/apps"
-	"omc/cmd/describe/core"
+	//"github.com/gmeghnag/omc/cmd/describe/apps"
 	"os"
 	"strings"
+
+	"github.com/gmeghnag/omc/cmd/describe/core"
 
 	"github.com/spf13/cobra"
 )

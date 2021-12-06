@@ -19,18 +19,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"omc/cmd/helpers"
-	"reflect"
-	"omc/vars"
 	"os"
+	"reflect"
 	"strings"
 
-	v1 "k8s.io/api/certificates/v1"
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
+
 	"github.com/spf13/cobra"
+	v1 "k8s.io/api/certificates/v1"
 
 	"sigs.k8s.io/yaml"
 )
-
 
 func getCertificateSigningRequests(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 
@@ -71,40 +71,40 @@ func getCertificateSigningRequests(currentContextPath string, namespace string, 
 		//Name
 		certificatesigningrequestName := CertificateSigningRequest.Name
 		age := helpers.GetAge(certificatesigningrequestYamlPath, CertificateSigningRequest.GetCreationTimestamp())
-		
+
 		//signername
-		signername:= CertificateSigningRequest.Spec.SignerName
+		signername := CertificateSigningRequest.Spec.SignerName
 		//requestor
-		requestor:= CertificateSigningRequest.Spec.Username
+		requestor := CertificateSigningRequest.Spec.Username
 
 		//condition
 		condition := "Unknown"
 		if reflect.DeepEqual(CertificateSigningRequest.Status, v1.CertificateSigningRequestStatus{}) {
 			condition = "Pending"
 		} else {
-		    for _, c := range CertificateSigningRequest.Status.Conditions {
-		    	//Approved
-		    	if c.Type == "Approved" {
-		    		condition = "Approved,Issued"
-		    		break
-		    	}
-		    	//Denied
-		    	if c.Type == "Denied" {
-		    		condition = "Denied"
-		    		break
-		    	}
-		    	//Failed
-		    	if c.Type == "Failed" {
-		    		condition = "Failed"
-		    		break
+			for _, c := range CertificateSigningRequest.Status.Conditions {
+				//Approved
+				if c.Type == "Approved" {
+					condition = "Approved,Issued"
+					break
+				}
+				//Denied
+				if c.Type == "Denied" {
+					condition = "Denied"
+					break
+				}
+				//Failed
+				if c.Type == "Failed" {
+					condition = "Failed"
+					break
 				}
 				//Pending
-		    	if c.Type == "Pending" {
-		    		condition = "Pending"
-		    		break
+				if c.Type == "Pending" {
+					condition = "Pending"
+					break
 				}
-		    }
-	    }
+			}
+		}
 		labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
 		_list := []string{certificatesigningrequestName, age, signername, requestor, condition}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 5, _list)

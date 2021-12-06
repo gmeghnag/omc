@@ -16,7 +16,7 @@ limitations under the License.
 package main
 
 import (
-	"omc/root"
+	"github.com/gmeghnag/omc/root"
 )
 
 func main() {
