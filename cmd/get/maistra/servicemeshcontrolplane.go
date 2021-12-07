@@ -25,8 +25,8 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 
-	v2 "github.com/maistra/api/core/v2"
 	"github.com/spf13/cobra"
+	v2 "maistra.io/api/core/v2"
 	"sigs.k8s.io/yaml"
 )
 
