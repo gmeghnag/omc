@@ -44,12 +44,10 @@ type ServiceMeshExtensionStatus struct {
 }
 
 type DeploymentStatus struct {
-	// +kubebuilder:validation:Optional
-	Ready           bool   `json:"ready"`
+	Ready           bool   `json:"ready,omitempty"`
 	ContainerSHA256 string `json:"containerSha256,omitempty"`
 	SHA256          string `json:"sha256,omitempty"`
 	URL             string `json:"url,omitempty"`
-	Message         string `json:"message,omitempty"`
 }
 
 // WorkloadSelector is used to match workloads based on pod labels
@@ -73,7 +71,6 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:categories=maistra-io,shortName=sme
-// +kubebuilder:printcolumn:name="Ready",type="boolean",JSONPath=".status.deployment.ready",description="Whether this extension is ready to be consumed"
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
