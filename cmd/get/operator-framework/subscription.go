@@ -56,7 +56,7 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 			}
 			_Subscription := v1alpha1.Subscription{}
 			if err := yaml.Unmarshal([]byte(_file), &_Subscription); err != nil {
-				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
+				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
 				os.Exit(1)
 			}
 			n_SubscriptionList.Items = append(n_SubscriptionList.Items, _Subscription)

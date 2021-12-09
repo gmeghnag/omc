@@ -55,7 +55,7 @@ func GetServiceMeshMemberRoll(currentContextPath string, namespace string, resou
 			_file := helpers.ReadYaml(smcpYamlPath)
 			_ServiceMeshMemberRoll := v1.ServiceMeshMemberRoll{}
 			if err := yaml.Unmarshal([]byte(_file), &_ServiceMeshMemberRoll); err != nil {
-				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
+				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
 				os.Exit(1)
 			}
 			n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, _ServiceMeshMemberRoll)

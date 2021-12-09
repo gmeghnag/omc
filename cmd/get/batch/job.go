@@ -61,7 +61,7 @@ func GetJobs(currentContextPath string, namespace string, resourceName string, a
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/batch/jobs.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/batch/jobs.yaml")
 			os.Exit(1)
 		}
 

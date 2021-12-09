@@ -48,7 +48,7 @@ func getPersistentVolumes(currentContextPath string, namespace string, resourceN
 		_file := helpers.ReadYaml(persistentvolumeYamlPath)
 		PersistentVolume := corev1.PersistentVolume{}
 		if err := yaml.Unmarshal([]byte(_file), &PersistentVolume); err != nil {
-			fmt.Println("Error when trying to unmarshall file: " + persistentvolumeYamlPath)
+			fmt.Println("Error when trying to unmarshal file: " + persistentvolumeYamlPath)
 			os.Exit(1)
 		}
 

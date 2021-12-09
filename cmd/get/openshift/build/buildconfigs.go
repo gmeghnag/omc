@@ -61,7 +61,7 @@ func GetBuildConfigs(currentContextPath string, namespace string, resourceName s
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
 			os.Exit(1)
 		}
 

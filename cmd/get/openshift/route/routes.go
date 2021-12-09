@@ -59,7 +59,7 @@ func GetRoutes(currentContextPath string, namespace string, resourceName string,
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/route.openshift.io/routes.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/route.openshift.io/routes.yaml")
 			os.Exit(1)
 		}
 
