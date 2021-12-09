@@ -208,7 +208,7 @@ func GetDaemonSets(currentContextPath string, namespace string, resourceName str
 
 var DaemonSet = &cobra.Command{
 	Use:     "daemonset",
-	Aliases: []string{"daemonsets", "daemonset.apps"},
+	Aliases: []string{"daemonsets", "daemonset.apps", "ds"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
