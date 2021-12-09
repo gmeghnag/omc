@@ -46,7 +46,7 @@ func getNetwork(currentContextPath string, namespace string, resourceName string
 	_file, _ := ioutil.ReadFile(networksYamlPath)
 	NetworkList := configv1.NetworkList{}
 	if err := yaml.Unmarshal([]byte(_file), &NetworkList); err != nil {
-		fmt.Println("Error when trying to unmarshall file: " + networksYamlPath)
+		fmt.Println("Error when trying to unmarshal file: " + networksYamlPath)
 		os.Exit(1)
 	}
 

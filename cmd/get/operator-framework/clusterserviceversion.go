@@ -53,7 +53,7 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 			_file, _ := ioutil.ReadFile(smcpYamlPath)
 			_ClusterServiceVersion := v1alpha1.ClusterServiceVersion{}
 			if err := yaml.Unmarshal([]byte(_file), &_ClusterServiceVersion); err != nil {
-				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
+				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
 				os.Exit(1)
 			}
 			n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, _ClusterServiceVersion)

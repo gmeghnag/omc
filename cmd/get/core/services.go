@@ -59,7 +59,7 @@ func GetServices(currentContextPath string, namespace string, resourceName strin
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/services.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/core/services.yaml")
 			os.Exit(1)
 		}
 
