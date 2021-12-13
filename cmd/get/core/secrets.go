@@ -60,7 +60,7 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/secrets.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/core/secrets.yaml")
 			os.Exit(1)
 		}
 

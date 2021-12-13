@@ -52,7 +52,7 @@ func getClusterVersion(currentContextPath string, namespace string, resourceName
 		_file, _ := ioutil.ReadFile(clusterversionYamlPath)
 		ClusterVersion := configv1.ClusterVersion{}
 		if err := yaml.Unmarshal([]byte(_file), &ClusterVersion); err != nil {
-			fmt.Println("Error when trying to unmarshall file: " + clusterversionYamlPath)
+			fmt.Println("Error when trying to unmarshal file: " + clusterversionYamlPath)
 			os.Exit(1)
 		}
 

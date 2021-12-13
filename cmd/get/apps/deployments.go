@@ -61,7 +61,7 @@ func GetDeployments(currentContextPath string, namespace string, resourceName st
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/deployments.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/apps/deployments.yaml")
 			os.Exit(1)
 		}
 

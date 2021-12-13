@@ -57,7 +57,7 @@ func GetInstallPlan(currentContextPath string, namespace string, resourceName st
 			}
 			_InstallPlan := v1alpha1.InstallPlan{}
 			if err := yaml.Unmarshal([]byte(_file), &_InstallPlan); err != nil {
-				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
+				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
 				os.Exit(1)
 			}
 			n_InstallPlanList.Items = append(n_InstallPlanList.Items, _InstallPlan)

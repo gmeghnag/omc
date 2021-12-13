@@ -61,7 +61,7 @@ func GetDeploymentConfigs(currentContextPath string, namespace string, resourceN
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/apps.openshift.io/deploymentconfigs.yaml")
 			os.Exit(1)
 		}
 

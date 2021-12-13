@@ -46,7 +46,7 @@ func getDNS(currentContextPath string, namespace string, resourceName string, al
 	_file, _ := ioutil.ReadFile(dnsesYamlPath)
 	DNSList := configv1.DNSList{}
 	if err := yaml.Unmarshal([]byte(_file), &DNSList); err != nil {
-		fmt.Println("Error when trying to unmarshall file: " + dnsesYamlPath)
+		fmt.Println("Error when trying to unmarshal file: " + dnsesYamlPath)
 		os.Exit(1)
 	}
 

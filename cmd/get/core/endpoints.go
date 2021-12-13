@@ -61,7 +61,7 @@ func getEndpoints(currentContextPath string, namespace string, resourceName stri
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/core/endpoints.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/core/endpoints.yaml")
 			os.Exit(1)
 		}
 

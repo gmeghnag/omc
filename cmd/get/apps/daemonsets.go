@@ -61,7 +61,7 @@ func GetDaemonSets(currentContextPath string, namespace string, resourceName str
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/daemonsets.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/apps/daemonsets.yaml")
 			os.Exit(1)
 		}
 
@@ -208,7 +208,7 @@ func GetDaemonSets(currentContextPath string, namespace string, resourceName str
 
 var DaemonSet = &cobra.Command{
 	Use:     "daemonset",
-	Aliases: []string{"daemonsets", "daemonset.apps"},
+	Aliases: []string{"daemonsets", "daemonset.apps", "ds"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

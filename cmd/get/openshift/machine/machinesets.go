@@ -63,7 +63,7 @@ func getMachineSets(currentContextPath string, namespace string, resourceName st
 			_file := helpers.ReadYaml(machineYamlPath)
 			MachineSet := machineapi.MachineSet{}
 			if err := yaml.Unmarshal([]byte(_file), &MachineSet); err != nil {
-				fmt.Println("Error when trying to unmarshall file " + machineYamlPath)
+				fmt.Println("Error when trying to unmarshal file " + machineYamlPath)
 				os.Exit(1)
 			}
 

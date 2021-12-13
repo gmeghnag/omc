@@ -55,7 +55,7 @@ func GetVirtualService(currentContextPath string, namespace string, resourceName
 			_file := helpers.ReadYaml(smcpYamlPath)
 			_VirtualService := v1beta1.VirtualService{}
 			if err := yaml.Unmarshal([]byte(_file), &_VirtualService); err != nil {
-				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
+				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
 				os.Exit(1)
 			}
 			n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, _VirtualService)

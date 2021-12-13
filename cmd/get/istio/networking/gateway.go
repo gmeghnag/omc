@@ -55,7 +55,7 @@ func GetGateway(currentContextPath string, namespace string, resourceName string
 			_file := helpers.ReadYaml(smcpYamlPath)
 			_Gateway := v1beta1.Gateway{}
 			if err := yaml.Unmarshal([]byte(_file), &_Gateway); err != nil {
-				fmt.Println("Error when trying to unmarshall file: " + smcpYamlPath)
+				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
 				os.Exit(1)
 			}
 			n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)

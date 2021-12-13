@@ -60,7 +60,7 @@ func GetReplicaSets(currentContextPath string, namespace string, resourceName st
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshall file " + CurrentNamespacePath + "/apps/replicasets.yaml")
+			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/apps/replicasets.yaml")
 			os.Exit(1)
 		}
 
