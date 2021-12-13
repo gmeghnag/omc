@@ -104,7 +104,10 @@ func getMachines(currentContextPath string, namespace string, resourceName strin
 			zone := helpers.ExtractLabel(Machine.GetLabels(), "machine.openshift.io/zone")
 
 			//node
-			node := Machine.Status.NodeRef.Name
+			node := ""
+			if Machine.Status.NodeRef != nil {
+				node = Machine.Status.NodeRef.Name
+			}
 
 			//providerid
 			providerid := ""
