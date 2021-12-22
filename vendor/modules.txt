@@ -118,6 +118,7 @@ github.com/openshift/api/image/docker10
 github.com/openshift/api/image/dockerpre012
 github.com/openshift/api/image/v1
 github.com/openshift/api/network/v1
+github.com/openshift/api/operator/v1
 github.com/openshift/api/route/v1
 # github.com/openshift/client-go v0.0.0-20210831095141-e19a065e79f7
 github.com/openshift/client-go/config/clientset/versioned
