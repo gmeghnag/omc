@@ -175,7 +175,7 @@ func getEvents(currentContextPath string, namespace string, resourceName string,
 
 var Event = &cobra.Command{
 	Use:     "event",
-	Aliases: []string{"events"},
+	Aliases: []string{"events", "ev"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
