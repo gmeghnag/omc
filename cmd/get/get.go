@@ -32,6 +32,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/get/openshift/machine"
 	"github.com/gmeghnag/omc/cmd/get/openshift/machineconfiguration"
 	"github.com/gmeghnag/omc/cmd/get/openshift/network"
+	"github.com/gmeghnag/omc/cmd/get/openshift/operator"
 	"github.com/gmeghnag/omc/cmd/get/openshift/route"
 
 	"os"
@@ -133,5 +134,6 @@ func init() {
 		route.Route,
 		storage.StorageClass,
 		network.ClusterNetwork,
+		operator.Authentication,
 	)
 }
