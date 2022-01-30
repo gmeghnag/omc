@@ -57,7 +57,17 @@ func getClusterOperators(currentContextPath string, namespace string, resourceNa
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(ClusterOperator.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != ClusterOperator.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_ClusterOperatorsList.Items = append(_ClusterOperatorsList.Items, ClusterOperator)
+			fmt.Println("clusteroperator.config.openshift.io/" + ClusterOperator.Name)
 			continue
 		}
 
@@ -125,7 +135,6 @@ func getClusterOperators(currentContextPath string, namespace string, resourceNa
 		diffTime := t2.Sub(lastTransitionTime.Time).String()
 		d, _ := time.ParseDuration(diffTime)
 		since = helpers.FormatDiffTime(d)
-		labels := helpers.ExtractLabels(ClusterOperator.GetLabels())
 		_list := []string{clusterOperatorName, version, available, progressing, degraded, since}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 6, _list)
 	}
@@ -170,7 +179,7 @@ func getClusterOperators(currentContextPath string, namespace string, resourceNa
 
 var ClusterOperator = &cobra.Command{
 	Use:     "clusteroperator",
-	Aliases: []string{"co", "clusteroperators"},
+	Aliases: []string{"co", "clusteroperators", "clusteroperator.config.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

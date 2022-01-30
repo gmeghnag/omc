@@ -66,8 +66,17 @@ func getMachines(currentContextPath string, namespace string, resourceName strin
 				os.Exit(1)
 			}
 
-			// secret path
+			labels := helpers.ExtractLabels(Machine.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Machine.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_MachinesList.Items = append(_MachinesList.Items, Machine)
+				fmt.Println("machine.machine.openshift.io/" + Machine.Name)
 				continue
 			}
 
@@ -120,8 +129,7 @@ func getMachines(currentContextPath string, namespace string, resourceName strin
 
 			//age
 			age := helpers.GetAge(machineYamlPath, Machine.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(Machine.GetLabels())
+
 			_list := []string{Machine.Namespace, MachineName, phase, machineType, region, zone, age, node, providerid, state}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
 

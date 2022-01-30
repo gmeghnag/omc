@@ -65,7 +65,17 @@ func GetReplicaSets(currentContextPath string, namespace string, resourceName st
 		}
 
 		for _, ReplicaSet := range _Items.Items {
+			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != ReplicaSet.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_ReplicaSetsList.Items = append(_ReplicaSetsList.Items, ReplicaSet)
+				fmt.Println("replicaset.apps/" + ReplicaSet.Name)
 				continue
 			}
 
@@ -127,7 +137,6 @@ func GetReplicaSets(currentContextPath string, namespace string, resourceName st
 				selector = strings.TrimRight(selector, ",")
 			}
 			//labels
-			labels := helpers.ExtractLabels(ReplicaSet.GetLabels())
 			_list := []string{ReplicaSet.Namespace, ReplicaSetName, desired, current, ready, age, containers, images, selector}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 

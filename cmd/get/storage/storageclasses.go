@@ -53,7 +53,17 @@ func getStorageClasses(currentContextPath string, namespace string, resourceName
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(StorageClass.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != StorageClass.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_getStorageClassesList.Items = append(_getStorageClassesList.Items, StorageClass)
+			fmt.Println("storageclass.storage.k8s.io/" + StorageClass.Name)
 			continue
 		}
 
@@ -95,7 +105,7 @@ func getStorageClasses(currentContextPath string, namespace string, resourceName
 
 		//AGE
 		age := helpers.GetAge(storageclassYamlPath, StorageClass.GetCreationTimestamp())
-		labels := helpers.ExtractLabels(StorageClass.GetLabels())
+
 		_list := []string{StorageClassName, provisioner, reclaimPolicy, volumeBindingMode, allowVolumeExpansion, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 6, _list)
 	}
@@ -139,7 +149,7 @@ func getStorageClasses(currentContextPath string, namespace string, resourceName
 
 var StorageClass = &cobra.Command{
 	Use:     "storageclass",
-	Aliases: []string{"storageclasses", "sc", "storageclass.storage"},
+	Aliases: []string{"storageclasses", "sc", "storageclass.storage", "storageclass.storage.k8s.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

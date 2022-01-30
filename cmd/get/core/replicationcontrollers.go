@@ -65,7 +65,17 @@ func GetReplicationControllers(currentContextPath string, namespace string, reso
 		}
 
 		for _, ReplicationController := range _Items.Items {
+			labels := helpers.ExtractLabels(ReplicationController.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != ReplicationController.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				_ReplicationControllersList.Items = append(_ReplicationControllersList.Items, ReplicationController)
+				fmt.Println("replicationcontroller/" + ReplicationController.Name)
 				continue
 			}
 
@@ -118,8 +128,6 @@ func GetReplicationControllers(currentContextPath string, namespace string, reso
 				images = strings.TrimRight(images, ",")
 			}
 
-			//labels
-			labels := helpers.ExtractLabels(ReplicationController.GetLabels())
 			_list := []string{ReplicationController.Namespace, ReplicationControllerName, desired, current, ready, age, containers, images}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 

@@ -65,8 +65,17 @@ func GetPods(currentContextPath string, namespace string, resourceName string, a
 		}
 
 		for _, Pod := range _Items.Items {
+			labels := helpers.ExtractLabels(Pod.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			// pod path
 			if resourceName != "" && resourceName != Pod.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				_PodsList.Items = append(_PodsList.Items, Pod)
+				fmt.Println("pod/" + Pod.Name)
 				continue
 			}
 
@@ -111,6 +120,11 @@ func GetPods(currentContextPath string, namespace string, resourceName string, a
 			if status == "Succeeded" {
 				status = "Completed"
 			}
+			if len(Pod.Status.ContainerStatuses) == 1 && Pod.Status.ContainerStatuses[0].Ready == false {
+				if Pod.Status.ContainerStatuses[0].State.Waiting != nil {
+					status = Pod.Status.ContainerStatuses[0].State.Waiting.Reason
+				}
+			}
 			// restarts
 			ContainersRestarts := 0
 			for _, i := range containerStatuses {
@@ -121,7 +135,7 @@ func GetPods(currentContextPath string, namespace string, resourceName string, a
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/core/pods.yaml", Pod.GetCreationTimestamp())
 			//labels
-			labels := helpers.ExtractLabels(Pod.GetLabels())
+
 			_list := []string{Pod.Namespace, PodName, ContainersReady, status, strconv.Itoa(ContainersRestarts), age, string(Pod.Status.PodIP), Pod.Spec.NodeName}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 

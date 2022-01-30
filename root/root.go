@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/gmeghnag/omc/cmd"
@@ -84,9 +83,8 @@ func initConfig() {
 		cobra.CheckErr(err)
 		exist, _ := helpers.Exists(home + "/.omc.json")
 		if !exist {
-			config := types.Config{}
-			file, _ := json.MarshalIndent(config, "", " ")
-			_ = ioutil.WriteFile(vars.CfgFile, file, 0644)
+			homePath, _ := os.UserHomeDir()
+			helpers.CreateConfigFile(homePath)
 		}
 		// Search config in home directory with name ".omc" (without extension).
 		viper.AddConfigPath(home)
@@ -118,19 +116,22 @@ func initConfig() {
 			if !exist {
 				files, err := ioutil.ReadDir(vars.MustGatherRootPath)
 				if err != nil {
-					log.Fatal(err)
-				}
-				baseDir := ""
-				for _, f := range files {
-					if f.IsDir() {
-						baseDir = f.Name()
-						vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
-						break
+					fmt.Println(err)
+					cmd.DeleteContext(vars.MustGatherRootPath, viper.ConfigFileUsed(), "")
+					fmt.Println("Cleaning", viper.ConfigFileUsed())
+				} else {
+					baseDir := ""
+					for _, f := range files {
+						if f.IsDir() {
+							baseDir = f.Name()
+							vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
+							break
+						}
 					}
-				}
-				if baseDir == "" {
-					fmt.Println("Some error occurred, wrong must-gather file composition")
-					os.Exit(1)
+					if baseDir == "" {
+						fmt.Println("Some error occurred, wrong must-gather file composition")
+						os.Exit(1)
+					}
 				}
 			}
 		}

@@ -61,7 +61,17 @@ func GetGateway(currentContextPath string, namespace string, resourceName string
 			n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)
 		}
 		for _, _Gateway := range n_GatewaysList.Items {
+			labels := helpers.ExtractLabels(_Gateway.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != _Gateway.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_GatewaysList.Items = append(n_GatewaysList.Items, _Gateway)
+				fmt.Println("gateway.networking.istio.io/" + _Gateway.Name)
 				continue
 			}
 
@@ -87,7 +97,7 @@ func GetGateway(currentContextPath string, namespace string, resourceName string
 			GatewayName := _Gateway.Name
 
 			age := helpers.GetAge(CurrentNamespacePath+"/networking.istio.io/gateways/"+GatewayName+".yaml", _Gateway.GetCreationTimestamp())
-			labels := helpers.ExtractLabels(_Gateway.GetLabels())
+
 			_list := []string{_Gateway.Namespace, GatewayName, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 3, _list)
 
@@ -162,7 +172,7 @@ func GetGateway(currentContextPath string, namespace string, resourceName string
 
 var Gateway = &cobra.Command{
 	Use:     "gateway",
-	Aliases: []string{"gateways"},
+	Aliases: []string{"gateways", "gateway.networking.istio.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

@@ -52,7 +52,17 @@ func getPersistentVolumes(currentContextPath string, namespace string, resourceN
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(PersistentVolume.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != PersistentVolume.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_PersistentVolumesList.Items = append(_PersistentVolumesList.Items, PersistentVolume)
+			fmt.Println("persistentvolume/" + PersistentVolume.Name)
 			continue
 		}
 
@@ -114,7 +124,6 @@ func getPersistentVolumes(currentContextPath string, namespace string, resourceN
 		//AGE
 		age := helpers.GetAge(persistentvolumeYamlPath, PersistentVolume.GetCreationTimestamp())
 
-		labels := helpers.ExtractLabels(PersistentVolume.GetLabels())
 		_list := []string{PersistentVolume.Name, capacity, accessMode, reclaimPolicy, status, claim, sc, reason, age, volumeMode}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 9, _list)
 	}

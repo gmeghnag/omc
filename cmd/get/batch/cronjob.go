@@ -66,10 +66,19 @@ func GetCronJobs(currentContextPath string, namespace string, resourceName strin
 		}
 
 		for _, CronJob := range _Items.Items {
+			labels := helpers.ExtractLabels(CronJob.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != CronJob.Name {
 				continue
 			}
 
+			if outputFlag == "name" {
+				_CronJobsList.Items = append(_CronJobsList.Items, CronJob)
+				fmt.Println("cronjob.batch/" + CronJob.Name)
+				continue
+			}
 			if outputFlag == "yaml" {
 				_CronJobsList.Items = append(_CronJobsList.Items, CronJob)
 				continue
@@ -139,7 +148,6 @@ func GetCronJobs(currentContextPath string, namespace string, resourceName strin
 				}
 			}
 			//labels
-			labels := helpers.ExtractLabels(CronJob.GetLabels())
 			_list := []string{CronJob.Namespace, CronJobName, schedule, suspend, active, lastSchedule, age, containers, images, selector}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
 
@@ -215,7 +223,7 @@ func GetCronJobs(currentContextPath string, namespace string, resourceName strin
 
 var CronJob = &cobra.Command{
 	Use:     "cronjob",
-	Aliases: []string{"cronjobs", "cronjob.batch"},
+	Aliases: []string{"cj", "cronjobs", "cronjob.batch"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

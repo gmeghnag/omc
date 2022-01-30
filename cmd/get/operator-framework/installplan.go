@@ -63,7 +63,17 @@ func GetInstallPlan(currentContextPath string, namespace string, resourceName st
 			n_InstallPlanList.Items = append(n_InstallPlanList.Items, _InstallPlan)
 		}
 		for _, InstallPlan := range n_InstallPlanList.Items {
+			labels := helpers.ExtractLabels(InstallPlan.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != InstallPlan.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_InstallPlanList.Items = append(n_InstallPlanList.Items, InstallPlan)
+				fmt.Println("installplan.operators.coreos.com/" + InstallPlan.Name)
 				continue
 			}
 
@@ -100,7 +110,6 @@ func GetInstallPlan(currentContextPath string, namespace string, resourceName st
 			//channel
 			approved := strconv.FormatBool(InstallPlan.Spec.Approved)
 
-			labels := helpers.ExtractLabels(InstallPlan.GetLabels())
 			_list := []string{_namespace, InstallPlanName, csv, approval, approved}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 

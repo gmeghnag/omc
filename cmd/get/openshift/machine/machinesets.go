@@ -67,8 +67,17 @@ func getMachineSets(currentContextPath string, namespace string, resourceName st
 				os.Exit(1)
 			}
 
-			// secret path
+			labels := helpers.ExtractLabels(MachineSet.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != MachineSet.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_MachineSetsList.Items = append(_MachineSetsList.Items, MachineSet)
+				fmt.Println("machineset.machine.openshift.io/" + MachineSet.Name)
 				continue
 			}
 
@@ -107,8 +116,7 @@ func getMachineSets(currentContextPath string, namespace string, resourceName st
 
 			//age
 			age := helpers.GetAge(machineYamlPath, MachineSet.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(MachineSet.GetLabels())
+
 			_list := []string{MachineSet.Namespace, MachineSetName, desired, current, ready, avaialble, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
 

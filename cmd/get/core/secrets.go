@@ -65,8 +65,17 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 		}
 
 		for _, Secret := range _Items.Items {
-			// secret path
+			labels := helpers.ExtractLabels(Secret.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != Secret.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				_SecretsList.Items = append(_SecretsList.Items, Secret)
+				fmt.Println("replicationcontroller/" + Secret.Name)
 				continue
 			}
 
@@ -97,8 +106,7 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/core/secrets.yaml", Secret.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(Secret.GetLabels())
+
 			_list := []string{Secret.Namespace, SecretName, secretType, secretData, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 

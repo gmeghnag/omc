@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func deleteContext(path string, omcConfigFile string, idFlag string) {
+func DeleteContext(path string, omcConfigFile string, idFlag string) {
 	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
@@ -76,7 +76,7 @@ var DeleteCmd = &cobra.Command{
 			}
 		}
 
-		deleteContext(path, viper.ConfigFileUsed(), idFlag)
+		DeleteContext(path, viper.ConfigFileUsed(), idFlag)
 	},
 }
 

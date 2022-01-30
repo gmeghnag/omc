@@ -61,7 +61,17 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 			n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, _ServiceMeshControlPlane)
 		}
 		for _, ServiceMeshControlPlane := range n_ServiceMeshControlPlanesList.Items {
+			labels := helpers.ExtractLabels(ServiceMeshControlPlane.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != ServiceMeshControlPlane.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, ServiceMeshControlPlane)
+				fmt.Println("servicemeshcontrolplane.maistra.io/" + ServiceMeshControlPlane.Name)
 				continue
 			}
 
@@ -104,7 +114,6 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 			//image egistry
 			registry := ServiceMeshControlPlane.Status.AppliedSpec.Runtime.Defaults.Container.ImageRegistry
 
-			labels := helpers.ExtractLabels(ServiceMeshControlPlane.GetLabels())
 			_list := []string{ServiceMeshControlPlane.Namespace, ServiceMeshControlPlaneName, ready, status, profiles, version, age, registry}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
@@ -179,7 +188,7 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 
 var ServiceMeshControlPlane = &cobra.Command{
 	Use:     "servicemeshcontrolplane",
-	Aliases: []string{"smcp", "servicemeshcontrolplanes"},
+	Aliases: []string{"smcp", "servicemeshcontrolplanes", "servicemeshcontrolplane.maistra.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

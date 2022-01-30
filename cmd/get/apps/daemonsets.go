@@ -66,7 +66,17 @@ func GetDaemonSets(currentContextPath string, namespace string, resourceName str
 		}
 
 		for _, Daemonset := range _Items.Items {
+			labels := helpers.ExtractLabels(Daemonset.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Daemonset.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_DaemonsetsList.Items = append(_DaemonsetsList.Items, Daemonset)
+				fmt.Println("daemonset.apps/" + Daemonset.Name)
 				continue
 			}
 
@@ -131,8 +141,6 @@ func GetDaemonSets(currentContextPath string, namespace string, resourceName str
 			} else {
 				selector = strings.TrimRight(selector, ",")
 			}
-			//labels
-			labels := helpers.ExtractLabels(Daemonset.GetLabels())
 			_list := []string{Daemonset.Namespace, DaemonsetName, desired, current, ready, upToDate, available, selector, age, containers, images}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 9, _list)
 

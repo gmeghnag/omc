@@ -49,7 +49,17 @@ func getProxies(currentContextPath string, namespace string, resourceName string
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(Proxy.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != Proxy.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_ProxiesList.Items = append(_ProxiesList.Items, Proxy)
+			fmt.Println("proxy.config.openshift.io/" + Proxy.Name)
 			continue
 		}
 
@@ -71,7 +81,6 @@ func getProxies(currentContextPath string, namespace string, resourceName string
 		proxyName := Proxy.Name
 		age := helpers.GetAge(proxyYamlPath, Proxy.GetCreationTimestamp())
 
-		labels := helpers.ExtractLabels(Proxy.GetLabels())
 		_list := []string{proxyName, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 2, _list)
 	}
@@ -116,7 +125,7 @@ func getProxies(currentContextPath string, namespace string, resourceName string
 
 var Proxy = &cobra.Command{
 	Use:     "proxy",
-	Aliases: []string{"proxies"},
+	Aliases: []string{"proxies", "proxy.config.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

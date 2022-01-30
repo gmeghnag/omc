@@ -66,7 +66,17 @@ func GetDeployments(currentContextPath string, namespace string, resourceName st
 		}
 
 		for _, Deployment := range _Items.Items {
+			labels := helpers.ExtractLabels(Deployment.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Deployment.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_DeploymentsList.Items = append(_DeploymentsList.Items, Deployment)
+				fmt.Println("deployment.apps/" + Deployment.Name)
 				continue
 			}
 
@@ -123,8 +133,6 @@ func GetDeployments(currentContextPath string, namespace string, resourceName st
 			} else {
 				images = strings.TrimRight(images, ",")
 			}
-			//labels
-			labels := helpers.ExtractLabels(Deployment.GetLabels())
 			_list := []string{Deployment.Namespace, DeploymentName, ready, upToDateReplicas, availableReplicas, age, containers, images}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
@@ -200,7 +208,7 @@ func GetDeployments(currentContextPath string, namespace string, resourceName st
 
 var Deployment = &cobra.Command{
 	Use:     "deployment",
-	Aliases: []string{"deployments", "deployment.apps"},
+	Aliases: []string{"deployments", "deployment.apps", "deploy"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

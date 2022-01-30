@@ -54,7 +54,18 @@ func getMachineConfigPool(currentContextPath string, namespace string, resourceN
 			fmt.Println("Error when trying to unmarshal file: " + machineconfigpoolYamlPath)
 			os.Exit(1)
 		}
+
+		labels := helpers.ExtractLabels(MachineConfigPool.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != MachineConfigPool.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_MachineConfigPoolsList.Items = append(_MachineConfigPoolsList.Items, MachineConfigPool)
+			fmt.Println("machineconfigpool.machineconfiguration.openshift.io/" + MachineConfigPool.Name)
 			continue
 		}
 
@@ -108,7 +119,7 @@ func getMachineConfigPool(currentContextPath string, namespace string, resourceN
 		degradedmachinecount := strconv.Itoa(int(MachineConfigPool.Status.DegradedMachineCount))
 		//age
 		age := helpers.GetAge(machineconfigpoolYamlPath, MachineConfigPool.GetCreationTimestamp())
-		labels := helpers.ExtractLabels(MachineConfigPool.GetLabels())
+
 		_list := []string{clusterOperatorName, config, updated, updating, degraded, machinecount, readymachinecount, updatedmachinecount, degradedmachinecount, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 10, _list)
 	}
@@ -152,7 +163,7 @@ func getMachineConfigPool(currentContextPath string, namespace string, resourceN
 
 var MachineConfigPool = &cobra.Command{
 	Use:     "machineconfigpool",
-	Aliases: []string{"machineconfigpools", "mcp"},
+	Aliases: []string{"machineconfigpools", "mcp", "machineconfigpool.machineconfiguration.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

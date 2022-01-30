@@ -59,7 +59,17 @@ func getNamespaces(currentContextPath string, defaultConfigNamespace string, res
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(Namespace.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != Namespace.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_NamespacesList.Items = append(_NamespacesList.Items, Namespace)
+			fmt.Println("namespace/" + Namespace.Name)
 			continue
 		}
 
@@ -87,7 +97,6 @@ func getNamespaces(currentContextPath string, defaultConfigNamespace string, res
 			}
 		}
 
-		labels := helpers.ExtractLabels(Namespace.GetLabels())
 		_list := []string{Namespace.Name, displayName, string(Namespace.Status.Phase)}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 3, _list)
 	}

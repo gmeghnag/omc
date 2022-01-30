@@ -62,7 +62,17 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 			n_SubscriptionList.Items = append(n_SubscriptionList.Items, _Subscription)
 		}
 		for _, Subscription := range n_SubscriptionList.Items {
+			labels := helpers.ExtractLabels(Subscription.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != Subscription.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_SubscriptionList.Items = append(n_SubscriptionList.Items, Subscription)
+				fmt.Println("subscription.operators.coreos.com/" + Subscription.Name)
 				continue
 			}
 
@@ -93,7 +103,6 @@ func GetSubscription(currentContextPath string, namespace string, resourceName s
 			//channel
 			channel := Subscription.Spec.Channel
 
-			labels := helpers.ExtractLabels(Subscription.GetLabels())
 			_list := []string{_namespace, SubscriptionName, subPackage, source, channel}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 

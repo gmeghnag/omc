@@ -50,6 +50,7 @@ func PrintTable(headers []string, data [][]string) {
 	table.SetHeader(headers)
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
+	table.SetTrimWhiteSpaceAtEOL(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetCenterSeparator("")
@@ -289,4 +290,45 @@ func GetJsonTemplate(outputStringVar string) string {
 		jsonPathTemplate = s
 	}
 	return jsonPathTemplate
+}
+
+func StringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func MatchLabels(labels string, selector string) bool {
+	isMatching := true
+	if selector == "" {
+		return isMatching
+	}
+	selectorArray := strings.Split(selector, ",")
+	labelsArray := strings.Split(labels, ",")
+
+	for _, s := range selectorArray {
+		if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
+			s = "app=" + s
+		}
+		if strings.Contains(s, "!=") {
+			if StringInSlice(strings.ReplaceAll(s, "!=", "="), labelsArray) {
+				isMatching = false
+				break
+			}
+		} else if strings.Contains(s, "==") {
+			if !StringInSlice(strings.ReplaceAll(s, "==", "="), labelsArray) {
+				isMatching = false
+				break
+			}
+		} else if strings.Contains(s, "=") {
+			if !StringInSlice(s, labelsArray) {
+				isMatching = false
+				break
+			}
+		}
+	}
+	return isMatching
 }

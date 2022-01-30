@@ -66,7 +66,17 @@ func GetBuilds(currentContextPath string, namespace string, resourceName string,
 		}
 
 		for _, Build := range _Items.Items {
+			labels := helpers.ExtractLabels(Build.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Build.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_BuildsList.Items = append(_BuildsList.Items, Build)
+				fmt.Println("build.build.openshift.io/" + Build.Name)
 				continue
 			}
 
@@ -105,8 +115,7 @@ func GetBuilds(currentContextPath string, namespace string, resourceName string,
 			started := helpers.GetAge(CurrentNamespacePath+"/build.openshift.io/builds.yaml", *Build.Status.StartTimestamp)
 			//duration
 			duration := strconv.Itoa(int(Build.Status.Duration/1000000000)) + "s"
-			//labels
-			labels := helpers.ExtractLabels(Build.GetLabels())
+
 			_list := []string{Build.Namespace, BuildName, bcType, from, status, started, duration}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
 
@@ -181,7 +190,7 @@ func GetBuilds(currentContextPath string, namespace string, resourceName string,
 
 var Build = &cobra.Command{
 	Use:     "build",
-	Aliases: []string{"builds"},
+	Aliases: []string{"builds", "build.build.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

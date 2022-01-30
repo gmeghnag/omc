@@ -66,10 +66,19 @@ func GetBuildConfigs(currentContextPath string, namespace string, resourceName s
 		}
 
 		for _, BuildConfig := range _Items.Items {
+			labels := helpers.ExtractLabels(BuildConfig.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != BuildConfig.Name {
 				continue
 			}
 
+			if outputFlag == "name" {
+				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
+				fmt.Println("buildconfig.build.openshift.io/" + BuildConfig.Name)
+				continue
+			}
 			if outputFlag == "yaml" {
 				_BuildConfigsList.Items = append(_BuildConfigsList.Items, BuildConfig)
 				continue
@@ -96,8 +105,7 @@ func GetBuildConfigs(currentContextPath string, namespace string, resourceName s
 			from := string(BuildConfig.Spec.Source.Type)
 			//latest
 			latest := strconv.Itoa(int(BuildConfig.Status.LastVersion))
-			//labels
-			labels := helpers.ExtractLabels(BuildConfig.GetLabels())
+
 			_list := []string{BuildConfig.Namespace, BuildConfigName, bcType, from, latest}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
@@ -172,7 +180,7 @@ func GetBuildConfigs(currentContextPath string, namespace string, resourceName s
 
 var BuildConfig = &cobra.Command{
 	Use:     "buildconfig",
-	Aliases: []string{"buildconfigs", "bc"},
+	Aliases: []string{"buildconfigs", "bc", "buildconfig.build.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

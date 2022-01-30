@@ -64,7 +64,17 @@ func GetServices(currentContextPath string, namespace string, resourceName strin
 		}
 
 		for _, Service := range _Items.Items {
+			labels := helpers.ExtractLabels(Service.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != Service.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				_ServicesList.Items = append(_ServicesList.Items, Service)
+				fmt.Println("service/" + Service.Name)
 				continue
 			}
 
@@ -132,8 +142,7 @@ func GetServices(currentContextPath string, namespace string, resourceName strin
 			} else {
 				selector = strings.TrimRight(selector, ",")
 			}
-			//labels
-			labels := helpers.ExtractLabels(Service.GetLabels())
+
 			_list := []string{Service.Namespace, ServiceName, string(Service.Spec.Type), ClusterIp, externalIp, ports, age, selector}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 7, _list)
 

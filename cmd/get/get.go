@@ -79,6 +79,7 @@ var GetCmd = &cobra.Command{
 
 func init() {
 	if len(os.Args) > 2 && os.Args[1] == "get" {
+		os.Args[2] = strings.ToLower(os.Args[2])
 		if strings.Contains(os.Args[2], "/") {
 			seg := strings.Split(os.Args[2], "/")
 			resource, name := seg[0], seg[1]
@@ -88,7 +89,7 @@ func init() {
 	GetCmd.PersistentFlags().BoolVarP(&vars.AllNamespaceBoolVar, "all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces.")
 	GetCmd.PersistentFlags().BoolVarP(&vars.ShowLabelsBoolVar, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
 	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
-	//getCmd.PersistentFlags().StringVarP(&selector, "selector", "l", "", "elector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
+	GetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 	GetCmd.AddCommand(
 		apps.DaemonSet,
 		apps.Deployment,

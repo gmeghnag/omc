@@ -54,7 +54,17 @@ func getNetwork(currentContextPath string, namespace string, resourceName string
 
 	for _, Network := range NetworkList.Items {
 
+		labels := helpers.ExtractLabels(Network.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != Network.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_NetworksList.Items = append(_NetworksList.Items, Network)
+			fmt.Println("network.config.openshift.io/" + Network.Name)
 			continue
 		}
 
@@ -62,7 +72,6 @@ func getNetwork(currentContextPath string, namespace string, resourceName string
 
 		NetworkName := Network.Name
 		since := helpers.GetAge(networksYamlPath, Network.GetCreationTimestamp())
-		labels := helpers.ExtractLabels(Network.GetLabels())
 		_list := []string{NetworkName, since}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 2, _list)
 	}

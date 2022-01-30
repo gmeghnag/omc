@@ -49,7 +49,17 @@ func getAuthentications(currentContextPath string, namespace string, resourceNam
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(Authentication.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != Authentication.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_AuthenticationsList.Items = append(_AuthenticationsList.Items, Authentication)
+			fmt.Println("authentication.operator.openshift.io/" + Authentication.Name)
 			continue
 		}
 
@@ -71,7 +81,6 @@ func getAuthentications(currentContextPath string, namespace string, resourceNam
 		authenticationName := Authentication.Name
 		age := helpers.GetAge(authenticationsYamlPath, Authentication.GetCreationTimestamp())
 
-		labels := helpers.ExtractLabels(Authentication.GetLabels())
 		_list := []string{authenticationName, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 2, _list)
 	}
@@ -115,8 +124,8 @@ func getAuthentications(currentContextPath string, namespace string, resourceNam
 }
 
 var Authentication = &cobra.Command{
-	Use:     "authentications.operator",
-	Aliases: []string{"authentication.operator", "authentication.operator.openshift.io", "authentications.operator", "authentications.operator.openshift.io"},
+	Use:     "authentication",
+	Aliases: []string{"authentication.operator", "authentication.operator.openshift.io", "authentications.operator", "authentications.operator.openshift.io", "authentication.config.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

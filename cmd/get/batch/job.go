@@ -66,10 +66,19 @@ func GetJobs(currentContextPath string, namespace string, resourceName string, a
 		}
 
 		for _, Job := range _Items.Items {
+			labels := helpers.ExtractLabels(Job.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Job.Name {
 				continue
 			}
 
+			if outputFlag == "name" {
+				_JobsList.Items = append(_JobsList.Items, Job)
+				fmt.Println("job.batch/" + Job.Name)
+				continue
+			}
 			if outputFlag == "yaml" {
 				_JobsList.Items = append(_JobsList.Items, Job)
 				continue
@@ -108,8 +117,6 @@ func GetJobs(currentContextPath string, namespace string, resourceName string, a
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/batch/jobs.yaml", Job.GetCreationTimestamp())
 
-			//labels
-			labels := helpers.ExtractLabels(Job.GetLabels())
 			_list := []string{Job.Namespace, JobName, completions, duration, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 

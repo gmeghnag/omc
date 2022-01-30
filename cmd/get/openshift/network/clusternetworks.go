@@ -31,61 +31,96 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type clusterNetworksItems struct {
-	ApiVersion string                     `json:"apiVersion"`
-	Items      []networkv1.ClusterNetwork `json:"items"`
-}
-
 func getClusterNetwork(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 
-	// There is only one clusternetwork per cluster, therefore the must gather
-	// only contains a single clusternetwork rather than a list. Do not take
-	// this file as an example because most of what you see is exceptional.
+	clusterNetworksFolderPath := currentContextPath + "/cluster-scoped-resources/network.openshift.io/clusternetworks/"
+	_clusterNetworks, _ := ioutil.ReadDir(clusterNetworksFolderPath)
 
-	if resourceName != "" && resourceName != "default" {
-		fmt.Println("omc only supports the \"default\" clusternetwork. Try omc get clusternetwork or omc get clusternetwork default")
-		os.Exit(1)
-	}
+	_headers := []string{"name", "cluster network", "service network", "plugin name"}
+	var data [][]string
 
-	clusterNetworksYamlPath := currentContextPath + "/cluster-scoped-resources/network.openshift.io/clusternetworks/default.yaml"
-
-	_file, _ := ioutil.ReadFile(clusterNetworksYamlPath)
-
-	clusterNetwork := networkv1.ClusterNetwork{}
-	if err := yaml.Unmarshal([]byte(_file), &clusterNetwork); err != nil {
-		fmt.Println("Error when trying to unmarshal file: " + clusterNetworksYamlPath)
-		os.Exit(1)
-	}
-
-	if outputFlag == "" || outputFlag == "wide" {
-		headers := []string{"NAME", "CLUSTER NETWORK", "SERVICE NETWORK", "PLUGIN NAME"}
-		clusterNetworkName := clusterNetwork.Name
-		clusterNetworkCIDR := clusterNetwork.Network
-		serviceNetwork := clusterNetwork.ServiceNetwork
-		pluginName := clusterNetwork.PluginName
-		labels := helpers.ExtractLabels(clusterNetwork.GetLabels())
-
-		cn := []string{clusterNetworkName, clusterNetworkCIDR, serviceNetwork, pluginName}
-
-		if showLabels {
-			headers = append(headers, "labels")
-			cn = append(cn, labels)
+	_ClusterNetworkList := networkv1.ClusterNetworkList{}
+	for _, f := range _clusterNetworks {
+		clusterNetworkYamlPath := clusterNetworksFolderPath + f.Name()
+		_file, _ := ioutil.ReadFile(clusterNetworkYamlPath)
+		ClusterNetwork := networkv1.ClusterNetwork{}
+		if err := yaml.Unmarshal([]byte(_file), &ClusterNetwork); err != nil {
+			fmt.Println("Error when trying to unmarshal file: " + clusterNetworkYamlPath)
+			os.Exit(1)
 		}
 
-		data := [][]string{cn}
-		helpers.PrintTable(headers, data)
+		labels := helpers.ExtractLabels(ClusterNetwork.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
+		if resourceName != "" && resourceName != ClusterNetwork.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_ClusterNetworkList.Items = append(_ClusterNetworkList.Items, ClusterNetwork)
+			fmt.Println("clusternetwork.config.openshift.io/" + ClusterNetwork.Name)
+			continue
+		}
+
+		if outputFlag == "yaml" {
+			_ClusterNetworkList.Items = append(_ClusterNetworkList.Items, ClusterNetwork)
+			continue
+		}
+
+		if outputFlag == "json" {
+			_ClusterNetworkList.Items = append(_ClusterNetworkList.Items, ClusterNetwork)
+			continue
+		}
+
+		if strings.HasPrefix(outputFlag, "jsonpath=") {
+			_ClusterNetworkList.Items = append(_ClusterNetworkList.Items, ClusterNetwork)
+			continue
+		}
+
+		clusterNetworkName := ClusterNetwork.Name
+		clusterNetworkCIDR := ClusterNetwork.Network
+		serviceNetwork := ClusterNetwork.ServiceNetwork
+		pluginName := ClusterNetwork.PluginName
+
+		_list := []string{clusterNetworkName, clusterNetworkCIDR, serviceNetwork, pluginName}
+		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 4, _list)
 	}
 
+	var headers []string
+	if outputFlag == "" {
+		headers = _headers[0:4] // -A
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
+		return false
+
+	}
+	if outputFlag == "wide" {
+		headers = _headers // -A -o wide
+		if showLabels {
+			headers = append(headers, "labels")
+		}
+		helpers.PrintTable(headers, data)
+		return false
+	}
+	var resource interface{}
+	if resourceName != "" {
+		resource = _ClusterNetworkList.Items[0]
+	} else {
+		resource = _ClusterNetworkList
+	}
 	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(clusterNetwork)
+		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
 	}
 	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(clusterNetwork, "", "  ")
+		j, _ := json.MarshalIndent(resource, "", "  ")
 		fmt.Println(string(j))
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(clusterNetwork, jsonPathTemplate)
+		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
 	}
 	return false
 }

@@ -66,8 +66,17 @@ func getConfigMaps(currentContextPath string, namespace string, resourceName str
 		}
 
 		for _, ConfigMap := range _Items.Items {
-			// configmap path
+			labels := helpers.ExtractLabels(ConfigMap.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != ConfigMap.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_ConfigMapsList.Items = append(_ConfigMapsList.Items, ConfigMap)
+				fmt.Println("configmap/" + ConfigMap.Name)
 				continue
 			}
 
@@ -96,8 +105,7 @@ func getConfigMaps(currentContextPath string, namespace string, resourceName str
 
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/core/configmaps.yaml", ConfigMap.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(ConfigMap.GetLabels())
+
 			_list := []string{ConfigMap.Namespace, ConfigMapName, configmapData, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 4, _list)
 
@@ -183,7 +191,7 @@ func getConfigMaps(currentContextPath string, namespace string, resourceName str
 
 var ConfigMap = &cobra.Command{
 	Use:     "configmap",
-	Aliases: []string{"cm"},
+	Aliases: []string{"cm", "configmaps"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

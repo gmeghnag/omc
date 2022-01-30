@@ -59,7 +59,17 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 			n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, _ClusterServiceVersion)
 		}
 		for _, ClusterServiceVersion := range n_ClusterServiceVersionList.Items {
+			labels := helpers.ExtractLabels(ClusterServiceVersion.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != ClusterServiceVersion.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_ClusterServiceVersionList.Items = append(n_ClusterServiceVersionList.Items, ClusterServiceVersion)
+				fmt.Println("clusterserviceversion.operators.coreos.com/" + ClusterServiceVersion.Name)
 				continue
 			}
 
@@ -92,7 +102,6 @@ func GetClusterServiceVersion(currentContextPath string, namespace string, resou
 			//phase
 			phase := string(ClusterServiceVersion.Status.Phase)
 
-			labels := helpers.ExtractLabels(ClusterServiceVersion.GetLabels())
 			_list := []string{ClusterServiceVersion.Namespace, ClusterServiceVersionName, display, version, replaces, phase}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 

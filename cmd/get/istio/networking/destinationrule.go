@@ -61,7 +61,17 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 			n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, _DestinationRule)
 		}
 		for _, DestRule := range n_DestinationRulesList.Items {
+			labels := helpers.ExtractLabels(DestRule.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != DestRule.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, DestRule)
+				fmt.Println("destinationrule.networking.istio.io/" + DestRule.Name)
 				continue
 			}
 
@@ -90,7 +100,7 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 			DestinationRuleHost := DestRule.Spec.Host
 
 			age := helpers.GetAge(CurrentNamespacePath+"/networking.istio.io/destinationrules/"+DestinationRuleName+".yaml", DestRule.GetCreationTimestamp())
-			labels := helpers.ExtractLabels(DestRule.GetLabels())
+
 			_list := []string{DestRule.Namespace, DestinationRuleName, DestinationRuleHost, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 4, _list)
 
@@ -165,7 +175,7 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 
 var DestinationRule = &cobra.Command{
 	Use:     "destinationrule",
-	Aliases: []string{"dr", "destinationrules"},
+	Aliases: []string{"dr", "destinationrules", "destinationrule.networking.istio.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

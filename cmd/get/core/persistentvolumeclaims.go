@@ -64,7 +64,17 @@ func getPersistentVolumeClaims(currentContextPath string, namespace string, reso
 		}
 
 		for _, PersistentVolumeClaim := range _Items.Items {
+			labels := helpers.ExtractLabels(PersistentVolumeClaim.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != PersistentVolumeClaim.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_PersistentVolumeClaimsList.Items = append(_PersistentVolumeClaimsList.Items, PersistentVolumeClaim)
+				fmt.Println("persistentvolumeclaim/" + PersistentVolumeClaim.Name)
 				continue
 			}
 
@@ -127,8 +137,6 @@ func getPersistentVolumeClaims(currentContextPath string, namespace string, reso
 				volumeMode = "Block"
 			}
 
-			//labels
-			labels := helpers.ExtractLabels(PersistentVolumeClaim.GetLabels())
 			_list := []string{PersistentVolumeClaim.Namespace, name, status, volume, capacity, accessMode, storageClass, age, volumeMode}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 8, _list)
 

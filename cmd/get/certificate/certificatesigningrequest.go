@@ -50,7 +50,16 @@ func getCertificateSigningRequests(currentContextPath string, namespace string, 
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != CertificateSigningRequest.Name {
+			continue
+		}
+		if outputFlag == "name" {
+			_CertificateSigningRequestsList.Items = append(_CertificateSigningRequestsList.Items, CertificateSigningRequest)
+			fmt.Println("certificates.k8s.io/" + CertificateSigningRequest.Name)
 			continue
 		}
 
@@ -105,7 +114,6 @@ func getCertificateSigningRequests(currentContextPath string, namespace string, 
 				}
 			}
 		}
-		labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
 		_list := []string{certificatesigningrequestName, age, signername, requestor, condition}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 5, _list)
 	}
@@ -150,7 +158,7 @@ func getCertificateSigningRequests(currentContextPath string, namespace string, 
 
 var CertificateSigningRequest = &cobra.Command{
 	Use:     "certificatesigningrequest",
-	Aliases: []string{"certificatesigningrequest", "csr"},
+	Aliases: []string{"certificatesigningrequests", "csr", "certificates.k8s.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

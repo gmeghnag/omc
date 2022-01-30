@@ -49,7 +49,17 @@ func getInfrastructures(currentContextPath string, namespace string, resourceNam
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(infrastructure.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != infrastructure.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_InfrastructuresList.Items = append(_InfrastructuresList.Items, infrastructure)
+			fmt.Println("infrastructure.config.openshift.io/" + infrastructure.Name)
 			continue
 		}
 
@@ -59,7 +69,6 @@ func getInfrastructures(currentContextPath string, namespace string, resourceNam
 		infrastructureName := infrastructure.Name
 		age := helpers.GetAge(infrastructureYamlPath, infrastructure.GetCreationTimestamp())
 
-		labels := helpers.ExtractLabels(infrastructure.GetLabels())
 		_list := []string{infrastructureName, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 2, _list)
 	}

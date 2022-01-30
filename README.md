@@ -7,66 +7,6 @@ Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` you can
 The `omc` tool does not simply parse yaml files, it uses the official Kubernetes and OpenShift golang types to decode yaml files to their respective OpenShift resources.
 
 ---
-### Supported resources and flags
-
-To date, the `omc get` command supports the following resources:
-
-- apps.DaemonSet
-- apps.Deployment
-- apps.ReplicaSet
-- apps.DeploymentConfig
-- batch.CronJob
-- batch.Job
-- build.Build
-- build.BuildConfig
-- certificate.CertificateSigningRequest
-- config.ClusterOperator
-- config.ClusterVersion
-- config.Proxy
-- config.Infrastructure
-- config.Network
-- config.DNS
-- core.ConfigMap
-- core.Endpoint
-- core.Event
-- core.Namespace
-- core.Node
-- core.PersistentVolume
-- core.PersistentVolumeClaim
-- core.Pod
-- core.ReplicationController
-- core.Secret
-- core.Service
-- image.ImageStream
-- machine.Machine
-- machine.MachineSet
-- machineconfiguration.MachineConfig
-- machineconfiguration.MachineConfigPool
-- maistra.ServiceMeshControlPlane
-- maistra.ServiceMeshMemberRoll
-- networking.DestinationRule
-- networking.Gateway
-- networking.VirtualService
-- operators.ClusterServiceVersion
-- operators.InstallPlan
-- operators.Subscription
-- route.Route
-- storage.StorageClass
-
-and the following flags:
-- -A, --all-namespaces
-- -n, --namespace
-- -o, --output [ json | yaml | wide | jsonpath=... ]
-- --show-labels
-
-To date, the `omc logs` command supports the following resources:
-
-- Pods
-
-and the following flags:
-- -p, --previous
-- --all-containers
-
 ### Usage
 Point it to an extracted must-gather:
 ```
@@ -74,19 +14,26 @@ $ omc use </path/to/must-gather/>
 ```
 Use it like oc:
 ```
-$ omc get clusterVersion
-$ omc get clusterOperators
-$ omc project openshift-ingress
-$ omc get pods -o wide
+$ omc get clusterversion
+$ omc get pods -o wide -l app=etcd -n openshift-etcd
 ```
-#### Example
-```  
-$ omc use TEST/must-gather.local.1861325122907966446 -i 00000017
 
-$ omc get mg                                                    
-CURRENT   ID         PATH                                                                              NAMESPACE   
-*         00000017   /Users/gmeghnag/Documents/GOLANG/omc/TEST/must-gather.local.1861325122907966446   default 
+### Example
+```
+$ omc get node -l node-role.kubernetes.io/master= -o name   
+node/ip-10-0-132-49.eu-central-1.compute.internal
+node/ip-10-0-178-163.eu-central-1.compute.internal
+node/ip-10-0-202-187.eu-central-1.compute.internal
 
-$ omc get nodes -o jsonpath="{range .items[*]}{.metadata.name}{'   '}{end}{'\n'}"
-ip-10-0-130-107.eu-central-1.compute.internal   ip-10-0-138-105.eu-central-1.compute.internal   ip-10-0-170-202.eu-central-1.compute.internal   ip-10-0-191-105.eu-central-1.compute.internal   ip-10-0-192-202.eu-central-1.compute.internal   ip-10-0-216-17.eu-central-1.compute.internal
+$ omc get pod -l app=etcd -o jsonpath="{.items[?(@.spec.nodeName=='ip-10-0-132-49.eu-central-1.compute.internal')].metadata.name}"
+etcd-ip-10-0-132-49.eu-central-1.compute.internal
+
+$ omc etcd status
++---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+|         ENDPOINT          |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
++---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+| https://10.0.202.187:2379 | 9f38784f0a8ae43  | 3.4.14  | 147 MB  | false     | false      |        24 |    5682273 |            5682273 |        |
+| https://10.0.132.49:2379  | 83b81478d4b02409 | 3.4.14  | 148 MB  | false     | false      |        24 |    5682423 |            5682423 |        |
+| https://10.0.178.163:2379 | dd17c7ce8efc0349 | 3.4.14  | 147 MB  | true      | false      |        24 |    5682537 |            5682537 |        |
++---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 ```

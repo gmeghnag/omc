@@ -64,7 +64,17 @@ func GetRoutes(currentContextPath string, namespace string, resourceName string,
 		}
 
 		for _, Route := range _Items.Items {
+			labels := helpers.ExtractLabels(Route.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != Route.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				_RoutesList.Items = append(_RoutesList.Items, Route)
+				fmt.Println("route.route.openshift.io/" + Route.Name)
 				continue
 			}
 
@@ -115,8 +125,7 @@ func GetRoutes(currentContextPath string, namespace string, resourceName string,
 
 			//wildcard
 			wildcard := string(Route.Spec.WildcardPolicy)
-			//labels
-			labels := helpers.ExtractLabels(Route.GetLabels())
+
 			_list := []string{Route.Namespace, RouteName, hostPort, path, services, port, termination, wildcard}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 8, _list)
 

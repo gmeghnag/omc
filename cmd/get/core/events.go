@@ -64,7 +64,17 @@ func getEvents(currentContextPath string, namespace string, resourceName string,
 		}
 
 		for _, Event := range _Items.Items {
+			labels := helpers.ExtractLabels(Event.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Event.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_EventsList.Items = append(_EventsList.Items, Event)
+				fmt.Println("event/" + Event.Name)
 				continue
 			}
 
@@ -96,10 +106,7 @@ func getEvents(currentContextPath string, namespace string, resourceName string,
 			message := Event.Message
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/core/events.yaml", Event.GetCreationTimestamp())
-			//containers
 
-			//labels
-			labels := helpers.ExtractLabels(Event.GetLabels())
 			_list := []string{Event.Namespace, lastSeenDiffTimeString, eventType, reason, object, message, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 

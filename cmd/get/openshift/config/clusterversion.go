@@ -56,7 +56,17 @@ func getClusterVersion(currentContextPath string, namespace string, resourceName
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(ClusterVersion.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != ClusterVersion.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_ClusterVersionsList.Items = append(_ClusterVersionsList.Items, ClusterVersion)
+			fmt.Println("clusterversion.config.openshift.io/" + ClusterVersion.Name)
 			continue
 		}
 
@@ -120,7 +130,7 @@ func getClusterVersion(currentContextPath string, namespace string, resourceName
 			}
 		}
 		since := helpers.GetAge(clusterversionYamlPath, lastTransitionTime)
-		labels := helpers.ExtractLabels(ClusterVersion.GetLabels())
+
 		_list := []string{clusterOperatorName, version, available, progressing, since, status}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 6, _list)
 	}
@@ -163,7 +173,7 @@ func getClusterVersion(currentContextPath string, namespace string, resourceName
 
 var ClusterVersion = &cobra.Command{
 	Use:     "clusterversion",
-	Aliases: []string{"clusterversions"},
+	Aliases: []string{"clusterversions", "clusterversion.config.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

@@ -53,7 +53,17 @@ func getNodes(currentContextPath string, namespace string, resourceName string, 
 			os.Exit(1)
 		}
 
+		labels := helpers.ExtractLabels(Node.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != Node.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_NodesList.Items = append(_NodesList.Items, Node)
+			fmt.Println("node/" + Node.Name)
 			continue
 		}
 
@@ -116,7 +126,6 @@ func getNodes(currentContextPath string, namespace string, resourceName string, 
 				externalAddress = add.Address
 			}
 		}
-		labels := helpers.ExtractLabels(Node.GetLabels())
 		_list := []string{Node.Name, NodeStatus, NodeRole, age, Node.Status.NodeInfo.KubeletVersion, internalAddress, externalAddress, Node.Status.NodeInfo.OSImage, Node.Status.NodeInfo.KernelVersion, Node.Status.NodeInfo.ContainerRuntimeVersion}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 5, _list)
 	}

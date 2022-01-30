@@ -61,7 +61,17 @@ func GetServiceMeshMemberRoll(currentContextPath string, namespace string, resou
 			n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, _ServiceMeshMemberRoll)
 		}
 		for _, ServiceMeshMemberRoll := range n_ServiceMeshMemberRollsList.Items {
+			labels := helpers.ExtractLabels(ServiceMeshMemberRoll.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != ServiceMeshMemberRoll.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_ServiceMeshMemberRollsList.Items = append(n_ServiceMeshMemberRollsList.Items, ServiceMeshMemberRoll)
+				fmt.Println("servicemeshmemberroll.maistra.io/" + ServiceMeshMemberRoll.Name)
 				continue
 			}
 
@@ -103,7 +113,6 @@ func GetServiceMeshMemberRoll(currentContextPath string, namespace string, resou
 				ServiceMeshMemberRollMembers = "[" + strings.Join(ServiceMeshMemberRoll.Status.Members, ", ") + "]"
 			}
 
-			labels := helpers.ExtractLabels(ServiceMeshMemberRoll.GetLabels())
 			_list := []string{ServiceMeshMemberRoll.Namespace, ServiceMeshMemberRollName, ready, status, age, ServiceMeshMemberRollMembers}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
@@ -178,7 +187,7 @@ func GetServiceMeshMemberRoll(currentContextPath string, namespace string, resou
 
 var ServiceMeshMemberRoll = &cobra.Command{
 	Use:     "servicemeshmemberroll",
-	Aliases: []string{"smmr", "servicemeshmemberrolls"},
+	Aliases: []string{"smmr", "servicemeshmemberrolls", "servicemeshmemberroll.maistra.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

@@ -65,7 +65,17 @@ func GetImageStreams(currentContextPath string, namespace string, resourceName s
 		}
 
 		for _, ImageStream := range _Items.Items {
+			labels := helpers.ExtractLabels(ImageStream.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != ImageStream.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_ImageStreamsList.Items = append(_ImageStreamsList.Items, ImageStream)
+				fmt.Println("imagestream.image.openshift.io/" + ImageStream.Name)
 				continue
 			}
 
@@ -99,8 +109,7 @@ func GetImageStreams(currentContextPath string, namespace string, resourceName s
 			tags = strings.TrimRight(tags, ",")
 			//updated
 			updated := helpers.GetAge(CurrentNamespacePath+"/image.openshift.io/imagestreams.yaml", ImageStream.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(ImageStream.GetLabels())
+
 			_list := []string{ImageStream.Namespace, ImageStreamName, imageRepository, tags, updated}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
@@ -176,7 +185,7 @@ func GetImageStreams(currentContextPath string, namespace string, resourceName s
 
 var ImageStream = &cobra.Command{
 	Use:     "imagestream",
-	Aliases: []string{"imagestreams", "is", "imagestream.imagestream.openshift.io"},
+	Aliases: []string{"imagestreams", "is", "imagestream.image.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

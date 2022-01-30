@@ -54,7 +54,17 @@ func getDNS(currentContextPath string, namespace string, resourceName string, al
 
 	for _, DNS := range DNSList.Items {
 
+		labels := helpers.ExtractLabels(DNS.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != DNS.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_dnsesList.Items = append(_dnsesList.Items, DNS)
+			fmt.Println("dns.config.openshift.io/" + DNS.Name)
 			continue
 		}
 
@@ -62,7 +72,6 @@ func getDNS(currentContextPath string, namespace string, resourceName string, al
 
 		DNSName := DNS.Name
 		since := helpers.GetAge(dnsesYamlPath, DNS.GetCreationTimestamp())
-		labels := helpers.ExtractLabels(DNS.GetLabels())
 		_list := []string{DNSName, since}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 2, _list)
 	}

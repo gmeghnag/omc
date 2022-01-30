@@ -66,8 +66,17 @@ func getEndpoints(currentContextPath string, namespace string, resourceName stri
 		}
 
 		for _, Endpoint := range _Items.Items {
-			// endpoint path
+			labels := helpers.ExtractLabels(Endpoint.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != Endpoint.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_EndpointsList.Items = append(_EndpointsList.Items, Endpoint)
+				fmt.Println("endpoints/" + Endpoint.Name)
 				continue
 			}
 
@@ -111,8 +120,6 @@ func getEndpoints(currentContextPath string, namespace string, resourceName stri
 			}
 			//age
 			age := helpers.GetAge(CurrentNamespacePath+"/core/endpoints.yaml", Endpoint.GetCreationTimestamp())
-			//labels
-			labels := helpers.ExtractLabels(Endpoint.GetLabels())
 			_list := []string{Endpoint.Namespace, EndpointName, endpoints, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 4, _list)
 

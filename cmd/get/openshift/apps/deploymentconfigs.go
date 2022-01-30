@@ -66,7 +66,17 @@ func GetDeploymentConfigs(currentContextPath string, namespace string, resourceN
 		}
 
 		for _, DeploymentConfig := range _Items.Items {
+			labels := helpers.ExtractLabels(DeploymentConfig.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
 			if resourceName != "" && resourceName != DeploymentConfig.Name {
+				continue
+			}
+
+			if outputFlag == "name" {
+				_DeploymentConfigsList.Items = append(_DeploymentConfigsList.Items, DeploymentConfig)
+				fmt.Println("deploymentconfig.apps.openshift.io/" + DeploymentConfig.Name)
 				continue
 			}
 
@@ -108,8 +118,7 @@ func GetDeploymentConfigs(currentContextPath string, namespace string, resourceN
 				}
 			}
 			triggeredBy = strings.TrimRight(triggeredBy, ",")
-			//labels
-			labels := helpers.ExtractLabels(DeploymentConfig.GetLabels())
+
 			_list := []string{DeploymentConfig.Namespace, DeploymentConfigName, revision, desiredReplicas, currentReplicas, triggeredBy}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 6, _list)
 

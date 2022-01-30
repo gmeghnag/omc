@@ -41,8 +41,13 @@ func projectDefault(omcConfigFile string, projDefault string) {
 	contexts = omcConfigJson.Contexts
 	for _, c := range contexts {
 		if c.Current == "*" {
-			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
-			fmt.Println("Now using project \"" + projDefault + "\" on must-gather \"" + c.Path + "\".")
+			if projDefault == "" {
+				fmt.Println("Using project \"" + c.Project + "\" on must-gather \"" + c.Path + "\".")
+				NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
+			} else {
+				NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
+				fmt.Println("Now using project \"" + projDefault + "\" on must-gather \"" + c.Path + "\".")
+			}
 		} else {
 			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
 		}
@@ -61,7 +66,7 @@ var ProjectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Switch to another project",
 	Run: func(cmd *cobra.Command, args []string) {
-		projDefault := "default"
+		projDefault := ""
 		if len(args) > 1 {
 			fmt.Println("Expect one arguemnt, found: ", len(args))
 			os.Exit(1)

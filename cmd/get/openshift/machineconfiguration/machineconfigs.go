@@ -51,7 +51,18 @@ func getMachineConfig(currentContextPath string, namespace string, resourceName 
 			fmt.Println("Error when trying to unmarshal file: " + machineconfigYamlPath)
 			os.Exit(1)
 		}
+
+		labels := helpers.ExtractLabels(MachineConfig.GetLabels())
+		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+			continue
+		}
 		if resourceName != "" && resourceName != MachineConfig.Name {
+			continue
+		}
+
+		if outputFlag == "name" {
+			_MachineConfigsList.Items = append(_MachineConfigsList.Items, MachineConfig)
+			fmt.Println("machineconfig.machineconfiguration.openshift.io/" + MachineConfig.Name)
 			continue
 		}
 
@@ -88,7 +99,6 @@ func getMachineConfig(currentContextPath string, namespace string, resourceName 
 		ignitionversion := fmt.Sprint(ignMap["version"])
 		//age
 		age := helpers.GetAge(machineconfigYamlPath, MachineConfig.GetCreationTimestamp())
-		labels := helpers.ExtractLabels(MachineConfig.GetLabels())
 		_list := []string{MachineConfigName, generatedbycontroller, ignitionversion, age}
 		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 4, _list)
 	}
@@ -132,7 +142,7 @@ func getMachineConfig(currentContextPath string, namespace string, resourceName 
 
 var MachineConfig = &cobra.Command{
 	Use:     "machineconfig",
-	Aliases: []string{"machineconfigs", "mc"},
+	Aliases: []string{"machineconfigs", "mc", "machineconfig.machineconfiguration.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""

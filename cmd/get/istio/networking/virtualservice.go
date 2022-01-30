@@ -61,7 +61,17 @@ func GetVirtualService(currentContextPath string, namespace string, resourceName
 			n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, _VirtualService)
 		}
 		for _, VService := range n_VirtualServicesList.Items {
+			labels := helpers.ExtractLabels(VService.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
+			}
+
 			if resourceName != "" && resourceName != VService.Name {
+				continue
+			}
+			if outputFlag == "name" {
+				n_VirtualServicesList.Items = append(n_VirtualServicesList.Items, VService)
+				fmt.Println("virtualservice.networking.istio.io/" + VService.Name)
 				continue
 			}
 
@@ -98,7 +108,7 @@ func GetVirtualService(currentContextPath string, namespace string, resourceName
 			}
 
 			age := helpers.GetAge(CurrentNamespacePath+"/networking.istio.io/virtualservices/"+VirtualServiceName+".yaml", VService.GetCreationTimestamp())
-			labels := helpers.ExtractLabels(VService.GetLabels())
+
 			_list := []string{VService.Namespace, VirtualServiceName, VirtualServiceGateways, VirtualServiceHosts, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
 
@@ -173,7 +183,7 @@ func GetVirtualService(currentContextPath string, namespace string, resourceName
 
 var VirtualService = &cobra.Command{
 	Use:     "virtualservice",
-	Aliases: []string{"vs", "virtualservices"},
+	Aliases: []string{"vs", "virtualservices", "virtualservice.networking.istio.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
