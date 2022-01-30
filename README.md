@@ -36,4 +36,11 @@ $ omc etcd status
 | https://10.0.132.49:2379  | 83b81478d4b02409 | 3.4.14  | 148 MB  | false     | false      |        24 |    5682423 |            5682423 |        |
 | https://10.0.178.163:2379 | dd17c7ce8efc0349 | 3.4.14  | 147 MB  | true      | false      |        24 |    5682537 |            5682537 |        |
 +---------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
+
+$ omc alert rule -s firing,pending -o wide
+GROUP                        RULE                                 STATE     AGE   ALERTS   ACTIVE SINCE
+cluster-version              UpdateAvailable                      firing    11s   1        27 Jan 22 14:32 UTC
+logging_fluentd.alerts       FluentdQueueLengthIncreasing         pending   27s   1        29 Jan 22 11:48 UTC
+general.rules                Watchdog                             firing    11s   1        25 Jan 22 08:50 UTC
+openshift-kubernetes.rules   AlertmanagerReceiversNotConfigured   firing    5s    1        25 Jan 22 08:51 UTC
 ```
