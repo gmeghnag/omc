@@ -29,11 +29,11 @@ jobs:
           HASH=$(git log -n1 --pretty=format:%h)
           echo ${TAG} ${HASH}
           export PATH=$PATH:/usr/local/go/bin \
-          && env GOOS=linux GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && env GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
           && tar -cvzf omc-${TAG}_Linux_x86_64.tar.gz omc && rm -rf omc \
-          && env GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && env GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
           && tar -cvzf omc-${TAG}_Darwin_x86_64.tar.gz omc && rm -rf omc \
-          && env GOOS=windows GOARCH=amd64 go build -ldflags "-X 'omc/vars.OMCVersionTag=${TAG}' -X omc/vars.OMCVersionHash=${HASH}" -o omc.exe \
+          && env GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc.exe \
           && zip omc-${TAG}_Windows_x86_64.zip omc.exe \
           && md5sum omc-${TAG}_Linux_x86_64.tar.gz | tee -a checksums.txt \
           && md5sum omc-${TAG}_Darwin_x86_64.tar.gz | tee -a checksums.txt \
