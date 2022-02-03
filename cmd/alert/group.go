@@ -30,14 +30,14 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func GetAlertGroups(resourcesNames []string, outputFlag string, groupFile string) {
+func GetAlertGroups(resourcesNames []string, outputFlag string, groupFile string, alertsFilePath string) {
 	_headers := []string{"group", "filename", "age"}
 	var data [][]string
 	var filteredGroups []RuleGroup
 	var _Alerts alerts
-	_file, _ := ioutil.ReadFile(vars.MustGatherRootPath + "/monitoring/alerts.json")
+	_file, _ := ioutil.ReadFile(alertsFilePath)
 	if err := yaml.Unmarshal([]byte(_file), &_Alerts); err != nil {
-		fmt.Println("Error when trying to unmarshal file " + vars.MustGatherRootPath + "/monitoring/alerts.json")
+		fmt.Println("Error when trying to unmarshal file " + alertsFilePath)
 		os.Exit(1)
 	}
 
@@ -57,7 +57,7 @@ func GetAlertGroups(resourcesNames []string, outputFlag string, groupFile string
 		}
 
 		//fmt.Println(al.Name, filename)
-		ResourceFile, _ := os.Stat(vars.MustGatherRootPath + "/monitoring/alerts.json")
+		ResourceFile, _ := os.Stat(alertsFilePath)
 		t2 := ResourceFile.ModTime()
 		diffTime := t2.Sub(group.LastEvaluation).String()
 		d, _ := time.ParseDuration(diffTime)
@@ -93,7 +93,22 @@ var GroupSubCmd = &cobra.Command{
 	Aliases: []string{"groups"},
 	Run: func(cmd *cobra.Command, args []string) {
 		resourcesNames := args
-		GetAlertGroups(resourcesNames, vars.OutputStringVar, GroupFilename)
+		monitoringExist, _ := helpers.Exists(vars.MustGatherRootPath + "/monitoring")
+		if !monitoringExist {
+			fmt.Println("Path '" + vars.MustGatherRootPath + "/monitoring' does not exist.")
+			os.Exit(1)
+		}
+		alertsFilePath := vars.MustGatherRootPath + "/monitoring/alerts.json"
+		alertsFilePathExist, _ := helpers.Exists(alertsFilePath)
+		if !alertsFilePathExist {
+			alertsFilePath = vars.MustGatherRootPath + "/monitoring/prometheus/rules.json"
+			alertsFilePathExist, _ := helpers.Exists(alertsFilePath)
+			if !alertsFilePathExist {
+				fmt.Println("Prometheus rules not found in must-gather.")
+				os.Exit(1)
+			}
+		}
+		GetAlertGroups(resourcesNames, vars.OutputStringVar, GroupFilename, alertsFilePath)
 	},
 }
 

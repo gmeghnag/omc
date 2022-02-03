@@ -31,15 +31,15 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames string, rulesStates string) {
+func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames string, rulesStates string, alertsFilePath string) {
 	_headers := []string{"group", "rule", "state", "age", "alerts", "active since"}
 	var data [][]string
 	var filteredRules []Rule
 	var filteredRulesList FilteredRulesList
 	var _Alerts alerts
-	_file, _ := ioutil.ReadFile(vars.MustGatherRootPath + "/monitoring/alerts.json")
+	_file, _ := ioutil.ReadFile(alertsFilePath)
 	if err := yaml.Unmarshal([]byte(_file), &_Alerts); err != nil {
-		fmt.Println("Error when trying to unmarshal file " + vars.MustGatherRootPath + "/monitoring/alerts.json")
+		fmt.Println("Error when trying to unmarshal file " + alertsFilePath)
 		os.Exit(1)
 	}
 	searchingGroups := []string{}
@@ -99,7 +99,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 			}
 			ruleLastEvaluation := fmt.Sprint(rule["lastEvaluation"])
 			ruleLastEvaluationTime, _ := time.Parse(time.RFC3339Nano, ruleLastEvaluation)
-			ResourceFile, _ := os.Stat(vars.MustGatherRootPath + "/monitoring/alerts.json")
+			ResourceFile, _ := os.Stat(alertsFilePath)
 			t2 := ResourceFile.ModTime()
 			diffTime := t2.Sub(ruleLastEvaluationTime).String()
 			d, _ := time.ParseDuration(diffTime)
@@ -147,7 +147,22 @@ var RuleSubCmd = &cobra.Command{
 	Aliases: []string{"rules"},
 	Run: func(cmd *cobra.Command, args []string) {
 		resourcesNames := args
-		GetAlertRules(resourcesNames, vars.OutputStringVar, GroupName, RuleState)
+		monitoringExist, _ := helpers.Exists(vars.MustGatherRootPath + "/monitoring")
+		if !monitoringExist {
+			fmt.Println("Path '" + vars.MustGatherRootPath + "/monitoring' does not exist.")
+			os.Exit(1)
+		}
+		alertsFilePath := vars.MustGatherRootPath + "/monitoring/alerts.json"
+		alertsFilePathExist, _ := helpers.Exists(alertsFilePath)
+		if !alertsFilePathExist {
+			alertsFilePath = vars.MustGatherRootPath + "/monitoring/prometheus/rules.json"
+			alertsFilePathExist, _ := helpers.Exists(alertsFilePath)
+			if !alertsFilePathExist {
+				fmt.Println("Prometheus rules not found in must-gather.")
+				os.Exit(1)
+			}
+		}
+		GetAlertRules(resourcesNames, vars.OutputStringVar, GroupName, RuleState, alertsFilePath)
 	},
 }
 
