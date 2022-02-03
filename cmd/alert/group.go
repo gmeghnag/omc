@@ -67,7 +67,7 @@ func GetAlertGroups(resourcesNames []string, outputFlag string, groupFile string
 	}
 
 	var headers []string
-	if outputFlag == "" {
+	if outputFlag == "" || outputFlag == "wide" {
 		headers = _headers[0:3]
 		if len(data) == 0 {
 			fmt.Println("No alertgroups found.")
