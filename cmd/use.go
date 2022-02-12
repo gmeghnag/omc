@@ -92,6 +92,10 @@ var UseCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
+		if len(args) == 0 && idFlag == "" {
+			fmt.Printf("must-gather: \"%s\"\nnamespace: \"%s\"\n", vars.MustGatherRootPath, vars.Namespace)
+			os.Exit(0)
+		}
 		if len(args) > 1 {
 			fmt.Println("Expect one arguemnt, found: ", len(args))
 			os.Exit(1)
