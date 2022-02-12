@@ -30,8 +30,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+var DeleteAll bool
+
 func DeleteContext(path string, omcConfigFile string, idFlag string) {
 	// read json omcConfigFile
+
+	if DeleteAll {
+		file, _ := json.MarshalIndent(types.Config{}, "", " ")
+		_ = ioutil.WriteFile(omcConfigFile, file, 0644)
+		os.Exit(0)
+	}
+
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
@@ -82,4 +91,5 @@ var DeleteCmd = &cobra.Command{
 
 func init() {
 	DeleteCmd.Flags().StringVarP(&vars.Id, "id", "i", "", "Id string for the must-gather. If two must-gather has the same id the first one will be used.")
+	DeleteCmd.Flags().BoolVarP(&DeleteAll, "all", "a", false, "Delete all referenced must-gathers.")
 }
