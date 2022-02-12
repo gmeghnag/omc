@@ -29,6 +29,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/get/openshift/build"
 	"github.com/gmeghnag/omc/cmd/get/openshift/config"
 	"github.com/gmeghnag/omc/cmd/get/openshift/image"
+	"github.com/gmeghnag/omc/cmd/get/openshift/logging"
 	"github.com/gmeghnag/omc/cmd/get/openshift/machine"
 	"github.com/gmeghnag/omc/cmd/get/openshift/machineconfiguration"
 	"github.com/gmeghnag/omc/cmd/get/openshift/network"
@@ -129,6 +130,8 @@ func init() {
 		networking.VirtualService,
 		local.All,
 		local.MustGather,
+		logging.ClusterLogForwarder,
+		logging.ClusterLogging,
 		operators.ClusterServiceVersion,
 		operators.InstallPlan,
 		operators.Subscription,
