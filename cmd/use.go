@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
@@ -39,6 +40,16 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	//	}
 	//}
 	// read json omcConfigFile
+	if path != "" {
+		_path, err := findMustGatherIn(path)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		l := strings.Split(_path, "/")
+		path = strings.Join(l[0:(len(l)-1)], "/")
+	}
+
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
@@ -79,6 +90,34 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	file, _ = json.MarshalIndent(config, "", " ")
 	_ = ioutil.WriteFile(omcConfigFile, file, 0644)
 
+}
+
+func findMustGatherIn(path string) (string, error) {
+	numDirs := 0
+	dirName := ""
+	retPath := path
+	var retErr error
+	namespacesFolderFound := false
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return "", err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			dirName = file.Name()
+			numDirs = numDirs + 1
+		}
+		if file.IsDir() && file.Name() == "namespaces" {
+			namespacesFolderFound = true
+		}
+	}
+	if !namespacesFolderFound && (numDirs > 1 || numDirs == 0) {
+		return path, fmt.Errorf("Expected one directory in path: \"%s\", found: %s.", path, strconv.Itoa(numDirs))
+	}
+	if !namespacesFolderFound && numDirs == 1 {
+		retPath, retErr = findMustGatherIn(path + "/" + dirName)
+	}
+	return retPath, retErr
 }
 
 // useCmd represents the use command
