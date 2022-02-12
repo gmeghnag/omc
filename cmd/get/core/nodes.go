@@ -169,7 +169,7 @@ func getNodes(currentContextPath string, namespace string, resourceName string, 
 
 var Node = &cobra.Command{
 	Use:     "node",
-	Aliases: []string{"nodes"},
+	Aliases: []string{"nodes", "no"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		resourceName := ""
