@@ -26,7 +26,7 @@ import (
 )
 
 func getResources(output string) error {
-	resp, err := http.Get("https://github.com/gmeghnag/omc/blob/main/api-resources.yaml")
+	resp, err := http.Get("https://raw.githubusercontent.com/gmeghnag/omc/main/api-resources.yaml")
 	if err != nil {
 		return err
 	}
