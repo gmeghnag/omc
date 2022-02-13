@@ -18,6 +18,7 @@ package get
 import (
 	"fmt"
 
+	"github.com/gmeghnag/omc/cmd/get/apiextensions"
 	"github.com/gmeghnag/omc/cmd/get/apps"
 	"github.com/gmeghnag/omc/cmd/get/batch"
 	"github.com/gmeghnag/omc/cmd/get/certificate"
@@ -92,6 +93,7 @@ func init() {
 	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
 	GetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 	GetCmd.AddCommand(
+		apiextensions.CustomResourceDefinition,
 		apps.DaemonSet,
 		apps.Deployment,
 		apps.ReplicaSet,
