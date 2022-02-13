@@ -1,0 +1,9 @@
+resources:
+  - kind: CustomResourceDefinition
+    apiVersion: v1
+    name: customresourcedefinitions
+    namespaced: false
+    shortNames:
+      - crd
+      - crds
+    supportedSince: v1.4.0
