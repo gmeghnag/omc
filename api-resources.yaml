@@ -195,6 +195,20 @@ resources:
   shortNames:
   - is
   supportedSince: v1.3.0
+- kind: ClusterLogForwarder
+  apiVersion: logging.openshift.io/v1 
+  name: clusterlogforwarders
+  namespaced: true
+  shortNames:
+  - clf
+  supportedSince: v1.4.0
+- kind: ClusterLogging
+  apiVersion: logging.openshift.io/v1 
+  name: clusterloggings
+  namespaced: true
+  shortNames:
+  - cl
+  supportedSince: v1.4.0
 - kind: MachineConfigPool
   apiVersion: machineconfiguration.openshift.io/v1
   name: machineconfigpools
