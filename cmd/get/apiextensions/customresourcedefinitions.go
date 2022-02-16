@@ -46,7 +46,7 @@ func getCustomResourceDefinitions(currentContextPath string, namespace string, r
 	_CustomResourceDefinitionsList := CustomResourceDefinitionsItems{ApiVersion: "v1"}
 	for _, f := range _customresourcedefinitions {
 		customresourcedefinitionYamlPath := customresourcedefinitionsFolderPath + f.Name()
-		_file := helpers.ReadYaml(customresourcedefinitionYamlPath)
+		_file, _ := ioutil.ReadFile(customresourcedefinitionYamlPath)
 		CustomResourceDefinition := apiextensionsv1.CustomResourceDefinition{}
 		if err := yaml.Unmarshal([]byte(_file), &CustomResourceDefinition); err != nil {
 			fmt.Println("Error when trying to unmarshal file: " + customresourcedefinitionYamlPath)
