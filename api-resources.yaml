@@ -1,9 +1,297 @@
+---
 resources:
-  - kind: CustomResourceDefinition
-    apiVersion: v1
-    name: customresourcedefinitions
-    namespaced: false
-    shortNames:
-      - crd
-      - crds
-    supportedSince: v1.4.0
+- kind: ConfigMap
+  apiVersion: v1
+  name: configmaps
+  namespaced: true
+  shortNames:
+  - cm
+  supportedSince: v1.3.0
+- kind: Endpoints
+  apiVersion: v1
+  name: endpoints
+  namespaced: true
+  shortNames:
+  - ep
+  supportedSince: v1.3.0
+- kind: Event
+  apiVersion: v1
+  name: events
+  namespaced: true
+  shortNames:
+  - ev
+  supportedSince: v1.3.0
+- kind: Namespace
+  apiVersion: v1
+  name: namespaces
+  namespaced: false
+  shortNames:
+  - ns
+  supportedSince: v1.3.0
+- kind: Node
+  apiVersion: v1
+  name: nodes
+  namespaced: false
+  shortNames:
+  - 'no'
+  supportedSince: v1.3.0
+- kind: PersistentVolumeClaim
+  apiVersion: v1
+  name: persistentvolumeclaims
+  namespaced: true
+  shortNames:
+  - pvc
+  supportedSince: v1.3.0
+- kind: Pod
+  apiVersion: v1
+  name: pods
+  namespaced: true
+  shortNames:
+  - po
+  supportedSince: v1.3.0
+- kind: ReplicationController
+  apiVersion: v1
+  name: replicationcontrollers
+  namespaced: true
+  shortNames:
+  - rc
+  supportedSince: v1.3.0
+- kind: Secret
+  apiVersion: v1
+  name: secrets
+  namespaced: true
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Service
+  apiVersion: v1
+  name: services
+  namespaced: true
+  shortNames:
+  - svc
+  supportedSince: v1.3.0
+- kind: CustomResourceDefinition
+  apiVersion: apiextensions.k8s.io/v1
+  name: customresourcedefinitions
+  namespaced: false
+  shortNames:
+  - crd
+  - crds
+  supportedSince: v1.4.0
+- kind: DaemonSet
+  apiVersion: apps/v1
+  name: daemonsets
+  namespaced: true
+  shortNames:
+  - ds
+  supportedSince: v1.3.0
+- kind: Deployment
+  apiVersion: apps/v1
+  name: deployments
+  namespaced: true
+  shortNames:
+  - deploy
+  supportedSince: v1.3.0
+- kind: ReplicaSet
+  apiVersion: apps/v1
+  name: replicasets
+  namespaced: true
+  shortNames:
+  - rs
+  supportedSince: v1.3.0
+- kind: DeploymentConfig
+  apiVersion: apps.openshift.io/v1
+  name: deploymentconfigs
+  namespaced: true
+  shortNames:
+  - dc
+  supportedSince: v1.3.0
+- kind: CronJob
+  apiVersion: batch/v1
+  name: cronjobs
+  namespaced: true
+  shortNames:
+  - cj
+  supportedSince: v1.3.0
+- kind: Job
+  apiVersion: batch/v1
+  name: jobs
+  namespaced: true
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: BuildConfig
+  apiVersion: build.openshift.io/v1
+  name: buildconfigs
+  namespaced: true
+  shortNames:
+  - bc
+  supportedSince: v1.3.0
+- kind: Build
+  apiVersion: build.openshift.io/v1
+  name: builds
+  namespaced: true
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: CertificateSigningRequest
+  apiVersion: certificates.k8s.io/v1
+  name: certificatesigningrequests
+  namespaced: false
+  shortNames:
+  - csr
+  supportedSince: v1.3.0
+- kind: Build
+  apiVersion: config.openshift.io/v1
+  name: builds
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: ClusterOperator
+  apiVersion: config.openshift.io/v1
+  name: clusteroperators
+  namespaced: false
+  shortNames:
+  - co
+  supportedSince: v1.3.0
+- kind: ClusterVersion
+  apiVersion: config.openshift.io/v1
+  name: clusterversions
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: DNS
+  apiVersion: config.openshift.io/v1
+  name: dnses
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Network
+  apiVersion: config.openshift.io/v1
+  name: networks
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Project
+  apiVersion: config.openshift.io/v1
+  name: projects
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Proxy
+  apiVersion: config.openshift.io/v1
+  name: proxies
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Event
+  apiVersion: events.k8s.io/v1
+  name: events
+  namespaced: true
+  shortNames:
+  - ev
+  supportedSince: v1.3.0
+- kind: ImageStream
+  apiVersion: image.openshift.io/v1
+  name: imagestreams
+  namespaced: true
+  shortNames:
+  - is
+  supportedSince: v1.3.0
+- kind: ClusterLogForwarder
+  apiVersion: logging.openshift.io/v1 
+  name: clusterlogforwarders
+  namespaced: true
+  shortNames:
+  - clf
+  supportedSince: v1.4.0
+- kind: ClusterLogging
+  apiVersion: logging.openshift.io/v1 
+  name: clusterloggings
+  namespaced: true
+  shortNames:
+  - cl
+  supportedSince: v1.4.0
+- kind: MachineConfigPool
+  apiVersion: machineconfiguration.openshift.io/v1
+  name: machineconfigpools
+  namespaced: false
+  shortNames:
+  - mcp
+  supportedSince: v1.3.0
+- kind: MachineConfig
+  apiVersion: machineconfiguration.openshift.io/v1
+  name: machineconfigs
+  namespaced: false
+  shortNames:
+  - mc
+  supportedSince: v1.3.0
+- kind: NodeMetrics
+  apiVersion: metrics.k8s.io/v1beta1
+  name: nodes
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: PodMetrics
+  apiVersion: metrics.k8s.io/v1beta1
+  name: pods
+  namespaced: true
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: ClusterNetwork
+  apiVersion: network.openshift.io/v1
+  name: clusternetworks
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: DNS
+  apiVersion: operator.openshift.io/v1
+  name: dnses
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Network
+  apiVersion: operator.openshift.io/v1
+  name: networks
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: ClusterServiceVersion
+  apiVersion: operators.coreos.com/v1alpha1
+  name: clusterserviceversions
+  namespaced: true
+  shortNames:
+  - csv
+  - csvs
+  supportedSince: v1.3.0
+- kind: InstallPlan
+  apiVersion: operators.coreos.com/v1alpha1
+  name: installplans
+  namespaced: true
+  shortNames:
+  - ip
+  supportedSince: v1.3.0
+- kind: Subscription
+  apiVersion: operators.coreos.com/v1alpha1
+  name: subscriptions
+  namespaced: true
+  shortNames:
+  - sub
+  - subs
+  supportedSince: v1.3.0
+- kind: Project
+  apiVersion: project.openshift.io/v1
+  name: projects
+  namespaced: false
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: Route
+  apiVersion: route.openshift.io/v1
+  name: routes
+  namespaced: true
+  shortNames: []
+  supportedSince: v1.3.0
+- kind: StorageClass
+  apiVersion: storage.k8s.io/v1
+  name: storageclasses
+  namespaced: false
+  shortNames:
+  - sc
+  supportedSince: v1.3.0
