@@ -21,12 +21,11 @@ import (
 	"os"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
-
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
-func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, allContainersFlag bool) {
+func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, allContainersFlag bool, logLevels []string) {
 	var logFile string
 	if previousFlag {
 		logFile = "previous.log"
@@ -57,7 +56,11 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		} else {
 			if allContainersFlag {
 				for _, c := range Pod.Spec.Containers {
-					helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs/" + logFile)
+					if len(logLevels) > 0 {
+						FilterCatLogs(CurrentNamespacePath+"/pods/"+Pod.Name+"/"+c.Name+"/"+c.Name+"/logs/"+logFile, logLevels)
+					} else {
+						helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs/" + logFile)
+					}
 				}
 				return
 			} else {
@@ -85,8 +88,11 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 				fmt.Println("error: a container name must be specified for pod "+Pod.Name+", choose one of:", containers)
 			}
 		} else {
-			//fmt.Println("found :", CurrentNamespacePath+"/pods/"+Pod.Name+"/"+containerMatch+"/"+containerMatch+"/logs/"+logFile)
-			helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/" + logFile)
+			if len(logLevels) > 0 {
+				FilterCatLogs(CurrentNamespacePath+"/pods/"+Pod.Name+"/"+containerMatch+"/"+containerMatch+"/logs/"+logFile, logLevels)
+			} else {
+				helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/" + logFile)
+			}
 		}
 	}
 	if podMatch == "" {

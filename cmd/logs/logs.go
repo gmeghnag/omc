@@ -28,6 +28,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var LogLevel string
+
 // logsCmd represents the logs command
 var Logs = &cobra.Command{
 	Use:   "logs",
@@ -64,6 +66,10 @@ var Logs = &cobra.Command{
 		containerName, _ := cmd.Flags().GetString("container")
 		previousFlag, _ := cmd.Flags().GetBool("previous")
 		allContainersFlag, _ := cmd.Flags().GetBool("all-containers")
+		logLevels := []string{}
+		if LogLevel != "" {
+			logLevels = strings.Split(LogLevel, ",")
+		}
 
 		if len(args) == 0 || len(args) > 2 {
 			fmt.Println("error: expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'.")
@@ -78,10 +84,10 @@ var Logs = &cobra.Command{
 					fmt.Println("error: arguments in resource/name form must have a single resource and name")
 					os.Exit(1)
 				}
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag, logLevels)
 			} else {
 				podName = s[0]
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag, logLevels)
 			}
 		}
 		if len(args) == 2 {
@@ -96,7 +102,7 @@ var Logs = &cobra.Command{
 						os.Exit(1)
 					}
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag, logLevels)
 				}
 			} else {
 				if containerName != "" {
@@ -105,7 +111,7 @@ var Logs = &cobra.Command{
 				} else {
 					podName = args[0]
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag, logLevels)
 				}
 			}
 		}
@@ -116,4 +122,5 @@ func init() {
 	Logs.PersistentFlags().StringVarP(&vars.Container, "container", "c", "", "Print the logs of this container")
 	Logs.PersistentFlags().BoolVarP(&vars.Previous, "previous", "p", false, "Print the logs for the previous instance of the container in a pod if it exists.")
 	Logs.PersistentFlags().BoolVarP(&vars.AllContainers, "all-containers", "", false, "Get all containers' logs in the pod(s).")
+	Logs.Flags().StringVarP(&LogLevel, "log-level", "l", "", "Filter logs by level (info|error|worning), you can filter for more concatenating them comma separated.")
 }
