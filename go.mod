@@ -20,7 +20,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.22.1
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/cri-api v0.20.6
 	k8s.io/kubectl v0.22.1
 	maistra.io/api v0.0.0-20210601141927-1cbee4cb8ce8
 	sigs.k8s.io/yaml v1.2.0
