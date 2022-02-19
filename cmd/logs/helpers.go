@@ -58,6 +58,9 @@ func parseCRILog(log []byte, infoLevel bool, warningLevel bool, errorLevel bool)
 		return "", fmt.Errorf("stream type is not found")
 	}
 	stream := string(log[:idx])
+	if len(stream) == 0 {
+		return "", nil
+	}
 	if string(stream[0]) == "I" && infoLevel {
 		return string(log), nil
 	}
