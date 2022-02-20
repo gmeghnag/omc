@@ -115,9 +115,9 @@ func findMustGatherIn(path string) (string, error) {
 		return path, fmt.Errorf("Expected one directory in path: \"%s\", found: %s.", path, strconv.Itoa(numDirs))
 	}
 	if !namespacesFolderFound && numDirs == 1 {
-		retPath, retErr = findMustGatherIn(path + "/" + dirName)
+		retPath, retErr = findMustGatherIn(path + "/" + dirName + "/")
 	}
-	return retPath, retErr
+	return retPath + "/", retErr
 }
 
 // useCmd represents the use command
