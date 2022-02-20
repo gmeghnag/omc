@@ -97,6 +97,7 @@ func init() {
 		apps.DaemonSet,
 		apps.Deployment,
 		apps.ReplicaSet,
+		apps.StatefulSet,
 		appz.DeploymentConfig,
 		batch.CronJob,
 		batch.Job,
