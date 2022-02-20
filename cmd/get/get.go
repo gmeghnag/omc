@@ -26,6 +26,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/get/istio/networking"
 	"github.com/gmeghnag/omc/cmd/get/local"
 	"github.com/gmeghnag/omc/cmd/get/maistra"
+	networkingv1 "github.com/gmeghnag/omc/cmd/get/networking"
 	appz "github.com/gmeghnag/omc/cmd/get/openshift/apps"
 	"github.com/gmeghnag/omc/cmd/get/openshift/build"
 	"github.com/gmeghnag/omc/cmd/get/openshift/config"
@@ -128,6 +129,7 @@ func init() {
 		machineconfiguration.MachineConfigPool,
 		maistra.ServiceMeshControlPlane,
 		maistra.ServiceMeshMemberRoll,
+		networkingv1.Ingress,
 		networking.DestinationRule,
 		networking.Gateway,
 		networking.VirtualService,
