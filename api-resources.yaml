@@ -98,6 +98,13 @@ resources:
   shortNames:
   - rs
   supportedSince: v1.3.0
+- kind: StatefulSet
+  apiVersion: apps/v1
+  name: statefulsets
+  namespaced: true
+  shortNames:
+  - sts
+  supportedSince: v1.4.0
 - kind: DeploymentConfig
   apiVersion: apps.openshift.io/v1
   name: deploymentconfigs
