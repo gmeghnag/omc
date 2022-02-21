@@ -48,6 +48,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 		}
 		l := strings.Split(_path, "/")
 		path = strings.Join(l[0:(len(l)-1)], "/")
+		path = strings.TrimSuffix(path, "/")
 	}
 
 	file, _ := ioutil.ReadFile(omcConfigFile)
@@ -95,8 +96,9 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 func findMustGatherIn(path string) (string, error) {
 	numDirs := 0
 	dirName := ""
-	retPath := path
+	retPath := strings.TrimSuffix(path, "/")
 	var retErr error
+	timeStampFound := false
 	namespacesFolderFound := false
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -106,16 +108,22 @@ func findMustGatherIn(path string) (string, error) {
 		if file.IsDir() {
 			dirName = file.Name()
 			numDirs = numDirs + 1
+			if file.Name() == "namespaces" {
+				namespacesFolderFound = true
+			}
 		}
-		if file.IsDir() && file.Name() == "namespaces" {
-			namespacesFolderFound = true
+		if !file.IsDir() && file.Name() == "timestamp" {
+			timeStampFound = true
 		}
 	}
-	if !namespacesFolderFound && (numDirs > 1 || numDirs == 0) {
+	if timeStampFound && (numDirs > 1 || numDirs == 0) {
 		return path, fmt.Errorf("Expected one directory in path: \"%s\", found: %s.", path, strconv.Itoa(numDirs))
 	}
-	if !namespacesFolderFound && numDirs == 1 {
-		retPath, retErr = findMustGatherIn(path + "/" + dirName + "/")
+	if !timeStampFound && numDirs == 1 {
+		retPath, retErr = findMustGatherIn(path + "/" + dirName)
+	}
+	if namespacesFolderFound {
+		return retPath + "/", retErr
 	}
 	return retPath + "/", retErr
 }
