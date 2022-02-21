@@ -52,12 +52,12 @@ func parseCRILog(log []byte, infoLevel bool, warningLevel bool, errorLevel bool)
 	}
 
 	// Parse stream type
-	log = log[idx+1:]
-	idx = bytes.Index(log, delimiter)
+	_log := log[idx+1:]
+	idx = bytes.Index(_log, delimiter)
 	if idx < 0 {
 		return "", fmt.Errorf("stream type is not found")
 	}
-	stream := string(log[:idx])
+	stream := string(_log[:idx])
 	if len(stream) == 0 {
 		return "", nil
 	}
