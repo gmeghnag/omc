@@ -130,6 +130,7 @@ func init() {
 		maistra.ServiceMeshControlPlane,
 		maistra.ServiceMeshMemberRoll,
 		networkingv1.Ingress,
+		networkingv1.IngressController,
 		networking.DestinationRule,
 		networking.Gateway,
 		networking.VirtualService,
