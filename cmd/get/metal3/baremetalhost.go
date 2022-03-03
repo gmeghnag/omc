@@ -71,6 +71,11 @@ func getBareMetalHosts(currentContextPath string, namespace string, resourceName
 
 			bareMetalHostsList.Items = append(bareMetalHostsList.Items, *BareMetalHost)
 
+			if outputFlag == "name" {
+				fmt.Println("baremetalhost.metal3.io/" + BareMetalHost.Name)
+				continue
+			}
+
 			//age
 			age := helpers.GetAge(bmhYamlPath, BareMetalHost.GetCreationTimestamp())
 
