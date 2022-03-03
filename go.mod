@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/dustin/go-humanize v1.0.0
+	github.com/metal3-io/baremetal-operator/apis v0.0.0-20220216092208-3612e86973f1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/openshift/api v0.0.0-20210906075240-3611f00b94fd
 	github.com/openshift/cluster-logging-operator v0.0.0-20220210123959-75ad691d9e57
@@ -34,3 +35,5 @@ replace (
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
 	sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20210302164104-8498241fa4bd
 )
+
+replace github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220216092208-3612e86973f1
