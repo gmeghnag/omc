@@ -302,3 +302,10 @@ resources:
   shortNames:
   - sc
   supportedSince: v1.3.0
+- kind: BareMetalHost
+  apiVersion: metal3.io/v1alpha1
+  name: baremetalhost
+  namespaced: true
+  shortNames:
+  - bmh
+  supportedSince: v1.4.1

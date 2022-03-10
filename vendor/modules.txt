@@ -98,6 +98,11 @@ github.com/mailru/easyjson/jwriter
 github.com/mattn/go-runewidth
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
+# github.com/metal3-io/baremetal-operator/apis v0.0.0-20220216092208-3612e86973f1
+## explicit
+github.com/metal3-io/baremetal-operator/apis/metal3.io/v1alpha1
+# github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0 => github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220216092208-3612e86973f1
+github.com/metal3-io/baremetal-operator/pkg/hardwareutils/bmc
 # github.com/mitchellh/mapstructure v1.4.1
 github.com/mitchellh/mapstructure
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -795,3 +800,4 @@ sigs.k8s.io/yaml
 # sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210121023454-5ffc5f422a80
 # sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
 # sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20210302164104-8498241fa4bd
+# github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0-20220216092208-3612e86973f1
