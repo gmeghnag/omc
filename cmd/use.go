@@ -116,15 +116,16 @@ func findMustGatherIn(path string) (string, error) {
 			timeStampFound = true
 		}
 	}
+	if namespacesFolderFound {
+		return retPath + "/", retErr
+	}
 	if timeStampFound && (numDirs > 1 || numDirs == 0) {
 		return path, fmt.Errorf("Expected one directory in path: \"%s\", found: %s.", path, strconv.Itoa(numDirs))
 	}
 	if !timeStampFound && numDirs == 1 {
 		retPath, retErr = findMustGatherIn(path + "/" + dirName)
 	}
-	if namespacesFolderFound {
-		return retPath + "/", retErr
-	}
+
 	return retPath + "/", retErr
 }
 
