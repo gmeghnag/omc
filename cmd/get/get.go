@@ -26,8 +26,9 @@ import (
 	"github.com/gmeghnag/omc/cmd/get/istio/networking"
 	"github.com/gmeghnag/omc/cmd/get/local"
 	"github.com/gmeghnag/omc/cmd/get/maistra"
-	"github.com/gmeghnag/omc/cmd/get/metal3"
+	baremetalhost "github.com/gmeghnag/omc/cmd/get/metal3"
 	networkingv1 "github.com/gmeghnag/omc/cmd/get/networking"
+	"github.com/gmeghnag/omc/cmd/get/openshift/apiserver"
 	appz "github.com/gmeghnag/omc/cmd/get/openshift/apps"
 	"github.com/gmeghnag/omc/cmd/get/openshift/build"
 	"github.com/gmeghnag/omc/cmd/get/openshift/config"
@@ -96,6 +97,7 @@ func init() {
 	GetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 	GetCmd.AddCommand(
 		apiextensions.CustomResourceDefinition,
+		apiserver.APIRequestCount,
 		apps.DaemonSet,
 		apps.Deployment,
 		apps.ReplicaSet,

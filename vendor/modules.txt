@@ -116,6 +116,7 @@ github.com/monochromegane/go-gitignore
 github.com/olekukonko/tablewriter
 # github.com/openshift/api v0.0.0-20210906075240-3611f00b94fd
 ## explicit
+github.com/openshift/api/apiserver/v1
 github.com/openshift/api/apps/v1
 github.com/openshift/api/build/v1
 github.com/openshift/api/config/v1
