@@ -1,6 +1,7 @@
 # `omc`: OpenShift Must-Gather Client
 
 [![GitHub Actions Build Status](https://github.com/gmeghnag/omc/actions/workflows/build.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ABuild)
+![Downloads](https://img.shields.io/github/downloads/gmeghnag/omc/total)
 
 Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` we can inspect a must-gather in the same way as we inspect a cluster with the oc command.
 
