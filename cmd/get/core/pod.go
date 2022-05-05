@@ -120,6 +120,10 @@ func GetPods(currentContextPath string, namespace string, resourceName string, a
 			if status == "Succeeded" {
 				status = "Completed"
 			}
+			if Pod.DeletionTimestamp != nil {
+				status = "Terminating"
+			}
+
 			if len(Pod.Status.ContainerStatuses) == 1 && Pod.Status.ContainerStatuses[0].Ready == false {
 				if Pod.Status.ContainerStatuses[0].State.Waiting != nil {
 					status = Pod.Status.ContainerStatuses[0].State.Waiting.Reason
