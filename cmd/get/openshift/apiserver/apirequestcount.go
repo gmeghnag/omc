@@ -37,7 +37,7 @@ type ApiRequestCountsItems struct {
 	Items      []v1.APIRequestCount `json:"items"`
 }
 
-func getAPIRequestCount(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+func getAPIRequestCount(currentContextPath string, namespace string, resourcesNames []string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
 
 	apirequestcountsFolderPath := currentContextPath + "/cluster-scoped-resources/apiserver.openshift.io/apirequestcounts/"
 	_apirequestcounts, _ := ioutil.ReadDir(apirequestcountsFolderPath)
@@ -59,7 +59,7 @@ func getAPIRequestCount(currentContextPath string, namespace string, resourceNam
 		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
 			continue
 		}
-		if resourceName != "" && resourceName != APIRequestCount.Name {
+		if len(resourcesNames) != 0 && !helpers.StringInSlice(APIRequestCount.Name, resourcesNames) {
 			continue
 		}
 
@@ -120,11 +120,7 @@ func getAPIRequestCount(currentContextPath string, namespace string, resourceNam
 		return false
 	}
 	var resource interface{}
-	if resourceName != "" {
-		resource = _ApiRequestCountsList.Items[0]
-	} else {
-		resource = _ApiRequestCountsList
-	}
+	resource = _ApiRequestCountsList
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
@@ -144,11 +140,8 @@ var APIRequestCount = &cobra.Command{
 	Aliases: []string{"apirequestcounts", "apirequestcount.apiserver.openshift.io"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
-		resourceName := ""
-		if len(args) == 1 {
-			resourceName = args[0]
-		}
+		resourcesNames := args
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getAPIRequestCount(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate)
+		getAPIRequestCount(vars.MustGatherRootPath, vars.Namespace, resourcesNames, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate)
 	},
 }
