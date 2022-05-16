@@ -159,7 +159,7 @@ var UseCmd = &cobra.Command{
 			path, _ = filepath.Abs(path)
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
-				fmt.Println("Error: " + path + " is not a direcotry.")
+				fmt.Println("Error: " + path + " is not a directory.")
 				os.Exit(1)
 			}
 		}
