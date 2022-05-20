@@ -15,6 +15,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
 	go.etcd.io/etcd/api/v3 v3.5.0
+	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/client-go v0.0.0-20210503213042-e6eb157f0d81
 	k8s.io/api v0.22.2
