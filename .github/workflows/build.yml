@@ -44,7 +44,7 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
             checksums.txt
-            omc-${{ env.RELEASE_TAG }}_Linux_x86_64.tar.gz 
-            omc-${{ env.RELEASE_TAG }}_Darwin_x86_64.tar.gz
-            omc-${{ env.RELEASE_TAG }}_Windows_x86_64.zip
+            omc_Linux_x86_64.tar.gz 
+            omc_Darwin_x86_64.tar.gz
+            omc_Windows_x86_64.zip
           name: "${{ env.RELEASE_TAG }} release"
