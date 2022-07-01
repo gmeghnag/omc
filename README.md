@@ -8,6 +8,25 @@ Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` we can 
 The `omc` tool does not simply parse yaml files, it uses the official Kubernetes and OpenShift golang types to decode yaml files to their respective OpenShift resources.
 
 ---
+### Installation
+
+#### Download the latest binary
+
+```
+VERSION=latest  # or choose a release (e.g. v1.5.0)
+OS=Linux        # or Darwin
+curl -sL https://github.com/gmeghnag/omc/releases/${VERSION}/download/omc_${OS}_x86_64.tar.gz| tar xzf - omc
+chmod +x ./omc
+```
+
+#### Build from source
+
+```
+$ git clone https://github.com/gmeghnag/omc.git
+$ cd omc/
+$ go install
+```
+
 ### Usage
 Point it to an extracted must-gather:
 ```
