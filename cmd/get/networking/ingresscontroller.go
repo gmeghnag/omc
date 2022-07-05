@@ -63,7 +63,6 @@ func GetIngressControllers(currentContextPath string, namespace string, resource
 				fmt.Println("Error when trying to unmarshal file: " + icsYamlPath)
 				os.Exit(1)
 			}
-			IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
 
 			labels := helpers.ExtractLabels(IngressController.GetLabels())
 			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
