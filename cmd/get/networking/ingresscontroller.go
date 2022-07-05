@@ -79,20 +79,20 @@ func GetIngressControllers(currentContextPath string, namespace string, resource
 				continue
 			}
 
-			//if outputFlag == "yaml" {
-			//	IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
-			//	continue
-			//}
+			if outputFlag == "yaml" {
+				IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
+				continue
+			}
 
-			//if outputFlag == "json" {
-			//	IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
-			//	continue
-			//}
+			if outputFlag == "json" {
+				IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
+				continue
+			}
 
-			//if strings.HasPrefix(outputFlag, "jsonpath=") {
-			//	IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
-			//	continue
-			//}
+			if strings.HasPrefix(outputFlag, "jsonpath=") {
+				IngressControllerList.Items = append(IngressControllerList.Items, IngressController)
+				continue
+			}
 
 			age := helpers.GetAge(icsYamlPath, IngressController.GetCreationTimestamp())
 
