@@ -145,6 +145,8 @@ func init() {
 		operators.ClusterServiceVersion,
 		operators.InstallPlan,
 		operators.Subscription,
+		operators.CatalogSource,
+		operators.OperatorGroup,
 		route.Route,
 		storage.StorageClass,
 		network.ClusterNetwork,

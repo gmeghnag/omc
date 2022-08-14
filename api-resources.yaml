@@ -309,3 +309,17 @@ resources:
   shortNames:
   - bmh
   supportedSince: v1.4.1
+- kind: OperatorGroup
+  apiVersion: operators.coreos.com/v1
+  name: operatorgroups
+  namespaced: true
+  shortNames:
+  - og
+  supportedSince: v1.5.1
+- kind: CatalogSource
+  apiVersion: operators.coreos.com/v1alpha1
+  name: catalogsources
+  namespaced: true
+  shortNames:
+  - catsrc
+  supportedSince: v1.5.1
