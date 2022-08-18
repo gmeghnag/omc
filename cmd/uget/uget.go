@@ -163,6 +163,9 @@ func UGet(objectsPath string, objectsName []string) {
 						}
 						resourceData = append(resourceData, v)
 					}
+					if vars.ShowLabelsBoolVar {
+						resourceData = append(resourceData, helpers.ExtractLabels(unstruct.GetLabels()))
+					}
 					if len(resourceData) != 0 {
 						data = append(data, resourceData)
 					}
