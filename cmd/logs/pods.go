@@ -64,7 +64,10 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 				}
 				return
 			} else {
-				for _, c := range Pod.Spec.Containers {
+				var containerSlice []v1.Container
+				containerSlice = append(containerSlice, Pod.Spec.Containers...)
+				containerSlice = append(containerSlice, Pod.Spec.InitContainers...)
+				for _, c := range containerSlice {
 					if containerName == c.Name {
 						containerMatch = containerName
 						break
