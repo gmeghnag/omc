@@ -27,6 +27,7 @@ type AdditionalPrinterColumn struct {
 
 var data [][]string
 var headers []string
+
 var returnObjects = uget.UnstrctList{ApiVersion: "v1", Kind: "List"}
 
 func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
@@ -66,6 +67,11 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	if crd.Spec.Versions[0].AdditionalPrinterColumns == nil {
 		headers = append(headers, "Age")
 	}
+	for _, column := range crd.Spec.Versions[0].AdditionalPrinterColumns {
+		if column.Priority == 0 || vars.OutputStringVar == "wide" {
+			headers = append(headers, column.Name)
+		}
+	}
 	if crd.Spec.Scope == "Cluster" {
 		resourcesPath := vars.MustGatherRootPath + "/cluster-scoped-resources/" + crd.Spec.Group + "/" + crd.Spec.Names.Plural + "/"
 		bole, _ := Exists(resourcesPath)
@@ -97,7 +103,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	if !BoolReturn {
 		return BoolReturn
 	}
-	if vars.OutputStringVar == "" {
+	if vars.OutputStringVar == "" || vars.OutputStringVar == "wide" {
 		if len(data) == 0 {
 			fmt.Println("No resources found.")
 			os.Exit(1)
@@ -152,7 +158,6 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 	}
 	var JSONPaths []apiextensionsv1.CustomResourceColumnDefinition
 	for _, column := range crd.Spec.Versions[0].AdditionalPrinterColumns {
-		headers = append(headers, column.Name)
 		JSONPaths = append(JSONPaths, column)
 	}
 	resources, _ := ioutil.ReadDir(resourcePath)
@@ -180,7 +185,7 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 				if resource.GetKind() == crd.Spec.Names.Kind {
 					labels := helpers.ExtractLabels(unstruct.GetLabels())
 					if helpers.MatchLabels(labels, vars.LabelSelectorStringVar) && (len(objectNames) == 0 || helpers.StringInSlice(resourceName, objectNames)) {
-						if vars.OutputStringVar == "" {
+						if vars.OutputStringVar == "" || vars.OutputStringVar == "wide" {
 							if vars.AllNamespaceBoolVar && crd.Spec.Scope != "Cluster" {
 								resourceData = append(resourceData, resource.GetNamespace())
 							}
@@ -195,11 +200,13 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 								resourceData = append(resourceData, v)
 							} else {
 								for _, column := range crd.Spec.Versions[0].AdditionalPrinterColumns {
-									v := getFromJsonPath(resource.Object, "{"+column.JSONPath+"}")
-									if column.Type == "date" {
-										v = helpers.GetAge(resourceYamlPath, unstruct.GetCreationTimestamp())
+									if column.Priority == 0 || vars.OutputStringVar == "wide" {
+										v := getFromJsonPath(resource.Object, "{"+column.JSONPath+"}")
+										if column.Type == "date" {
+											v = helpers.GetAge(resourceYamlPath, unstruct.GetCreationTimestamp())
+										}
+										resourceData = append(resourceData, v)
 									}
-									resourceData = append(resourceData, v)
 								}
 							}
 							if vars.ShowLabelsBoolVar {
@@ -218,17 +225,19 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 				resourceName := unstruct.GetName()
 				labels := helpers.ExtractLabels(unstruct.GetLabels())
 				if helpers.MatchLabels(labels, vars.LabelSelectorStringVar) && (len(objectNames) == 0 || helpers.StringInSlice(resourceName, objectNames)) {
-					if vars.OutputStringVar == "" {
+					if vars.OutputStringVar == "" || vars.OutputStringVar == "wide" {
 						if vars.AllNamespaceBoolVar && crd.Spec.Scope != "Cluster" {
 							resourceData = append(resourceData, unstruct.GetNamespace())
 						}
 						resourceData = append(resourceData, resourceName)
 						for _, jpath := range JSONPaths {
-							v := getFromJsonPath(unstruct.Object, "{"+jpath.JSONPath+"}")
-							if jpath.Type == "date" {
-								v = helpers.GetAge(resourceYamlPath, unstruct.GetCreationTimestamp())
+							if jpath.Priority == 0 || vars.OutputStringVar == "wide" {
+								v := getFromJsonPath(unstruct.Object, "{"+jpath.JSONPath+"}")
+								if jpath.Type == "date" {
+									v = helpers.GetAge(resourceYamlPath, unstruct.GetCreationTimestamp())
+								}
+								resourceData = append(resourceData, v)
 							}
-							resourceData = append(resourceData, v)
 						}
 						if crd.Spec.Versions[0].AdditionalPrinterColumns == nil {
 							age := helpers.GetAge(resourceYamlPath, unstruct.GetCreationTimestamp())
