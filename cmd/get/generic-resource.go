@@ -33,7 +33,7 @@ var returnObjects = uget.UnstrctList{ApiVersion: "v1", Kind: "List"}
 func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	var crd *apiextensionsv1.CustomResourceDefinition
 	crdsPath := vars.MustGatherRootPath + "/cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/"
-	BoolReturn := false
+	crdExists := false
 	if strings.HasSuffix(crdName, ".config") {
 		crdName = strings.Replace(crdName, ".config", ".config.openshift.io", -1)
 	}
@@ -52,12 +52,12 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 			os.Exit(1)
 		}
 		if strings.ToLower(_crd.Name) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Plural) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Singular) == strings.ToLower(crdName) || helpers.StringInSlice(crdName, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == strings.ToLower(crdName) {
-			BoolReturn = true
+			crdExists = true
 			crd = _crd
 			break
 		}
 	}
-	if BoolReturn == false {
+	if !crdExists {
 		return false
 	}
 	if vars.AllNamespaceBoolVar && crd.Spec.Scope != "Cluster" {
@@ -99,9 +99,6 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 			}
 			gatherObjects(resourcesPath, crd, objectNames)
 		}
-	}
-	if !BoolReturn {
-		return BoolReturn
 	}
 	if vars.OutputStringVar == "" || vars.OutputStringVar == "wide" {
 		if len(data) == 0 {
@@ -147,7 +144,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 			}
 		}
 	}
-	return BoolReturn
+	return true
 }
 
 func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefinition, objectNames []string) {
