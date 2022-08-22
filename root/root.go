@@ -30,7 +30,6 @@ import (
 	"github.com/gmeghnag/omc/cmd/get"
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/logs"
-	"github.com/gmeghnag/omc/cmd/resources"
 	"github.com/gmeghnag/omc/cmd/uget"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
@@ -76,7 +75,6 @@ func init() {
 		describe.DescribeCmd,
 		etcd.Etcd,
 		logs.Logs,
-		resources.ApiResourcesCmd,
 	)
 	loadBooleanConfigs()
 }
