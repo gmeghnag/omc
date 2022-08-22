@@ -17,6 +17,7 @@ package root
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -87,21 +88,28 @@ func initConfig() {
 		// Find home directory.
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
-		exist, _ := helpers.Exists(home + "/.omc.json")
+
+		exist, _ := helpers.Exists(home + "/.omc/omc.json")
 		if !exist {
-			homePath, _ := os.UserHomeDir()
-			helpers.CreateConfigFile(homePath)
+			if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
+				err := os.Mkdir(home+"/.omc", os.ModePerm)
+				if err != nil {
+					cobra.CheckErr(err)
+				}
+			}
+			helpers.CreateConfigFile(home + "/.omc/omc.json")
 		}
 		// Search config in home directory with name ".omc" (without extension).
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(home + "/.omc/")
 		viper.SetConfigType("json")
-		viper.SetConfigName(".omc")
+		viper.SetConfigName("omc")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("err is nill")
 		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		omcConfigJson := types.Config{}
 		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
@@ -142,8 +150,19 @@ func initConfig() {
 			}
 		}
 	} else {
-		homePath, _ := os.UserHomeDir()
-		helpers.CreateConfigFile(homePath)
-		// TODO create the config file
+		fmt.Println("err is not nill")
+		home, _ := os.UserHomeDir()
+		exist, _ := helpers.Exists(home + "/.omc/omc.json")
+		fmt.Println(exist)
+		if !exist {
+			if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
+				err := os.Mkdir(home+"/.omc", os.ModePerm)
+				fmt.Println("directory exist")
+				if err != nil {
+					cobra.CheckErr(err)
+				}
+			}
+			helpers.CreateConfigFile(home + "/.omc/omc.json")
+		}
 	}
 }

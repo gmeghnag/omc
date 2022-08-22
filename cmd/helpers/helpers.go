@@ -113,11 +113,14 @@ func ExecuteJsonPath(data interface{}, jsonPathTemplate string) {
 	fmt.Print(buf)
 }
 
-func CreateConfigFile(homePath string) {
+func CreateConfigFile(cfgFilePath string) {
 	config := types.Config{}
 	file, _ := json.MarshalIndent(config, "", " ")
-	cfgFilePath := homePath + "/.omc.json"
-	_ = ioutil.WriteFile(cfgFilePath, file, 0644)
+	err := ioutil.WriteFile(cfgFilePath, file, 0644)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func GetData(data [][]string, allNamespacesFlag bool, showLabels bool, labels string, outputFlag string, column int32, _list []string) [][]string {
