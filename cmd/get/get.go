@@ -117,16 +117,16 @@ var GetCmd = &cobra.Command{
 					if c.Use != "get" {
 						os.Args = append([]string{os.Args[0], "get", crdAlias}, "")
 						c.Execute()
+						fmt.Println("")
 					} else {
-
 						isValidResource := getGenericResourceFromCRD(crdAlias, emptyslice)
 						if !isValidResource {
 							fmt.Println("Invalid object type:", crdAlias)
 							os.Exit(1)
 						}
+						fmt.Println("")
 					}
 				}
-				fmt.Println("")
 			} else {
 				c, _, err := cmd.Find([]string{args[0]})
 				if err != nil {
