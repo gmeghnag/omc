@@ -24,6 +24,7 @@ import (
 
 	"github.com/gmeghnag/omc/cmd"
 	"github.com/gmeghnag/omc/cmd/alert"
+	"github.com/gmeghnag/omc/cmd/config"
 	"github.com/gmeghnag/omc/cmd/describe"
 	"github.com/gmeghnag/omc/cmd/etcd"
 	"github.com/gmeghnag/omc/cmd/get"
@@ -69,6 +70,7 @@ func init() {
 		cmd.DeleteCmd,
 		cmd.ProjectCmd,
 		cmd.UseCmd,
+		config.ConfigCmd,
 		get.GetCmd,
 		uget.UGetCmd,
 		describe.DescribeCmd,
@@ -76,6 +78,7 @@ func init() {
 		logs.Logs,
 		resources.ApiResourcesCmd,
 	)
+	loadBooleanConfigs()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -99,70 +102,65 @@ func initConfig() {
 			}
 			helpers.CreateConfigFile(home + "/.omc/omc.json")
 		}
+		if _, err := os.Stat(home + "/.omc/customresourcedefinitions"); errors.Is(err, os.ErrNotExist) {
+			err := os.Mkdir(home+"/.omc/customresourcedefinitions", os.ModePerm)
+			if err != nil {
+				cobra.CheckErr(err)
+			}
+		}
 		// Search config in home directory with name ".omc" (without extension).
 		viper.AddConfigPath(home + "/.omc/")
 		viper.SetConfigType("json")
 		viper.SetConfigName("omc")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("err is nill")
-		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-		omcConfigJson := types.Config{}
-		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
-		_ = json.Unmarshal([]byte(file), &omcConfigJson)
-		var contexts []types.Context
-		contexts = omcConfigJson.Contexts
-		for _, context := range contexts {
-			if context.Current == "*" {
-				vars.MustGatherRootPath = context.Path
-				if vars.Namespace == "" {
-					vars.Namespace = context.Project
+		// If a config file is found, read it in.
+		if err := viper.ReadInConfig(); err == nil {
+			//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+			omcConfigJson := types.Config{}
+			file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
+			_ = json.Unmarshal([]byte(file), &omcConfigJson)
+			var contexts []types.Context
+			contexts = omcConfigJson.Contexts
+			for _, context := range contexts {
+				if context.Current == "*" {
+					vars.MustGatherRootPath = context.Path
+					if vars.Namespace == "" {
+						vars.Namespace = context.Project
+					}
+					break
 				}
-				break
 			}
-		}
-		if vars.MustGatherRootPath != "" {
-			exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
-			if !exist {
-				files, err := ioutil.ReadDir(vars.MustGatherRootPath)
-				if err != nil {
-					fmt.Println(err)
-					cmd.DeleteContext(vars.MustGatherRootPath, viper.ConfigFileUsed(), "")
-					fmt.Println("Cleaning", viper.ConfigFileUsed())
-				} else {
-					baseDir := ""
-					for _, f := range files {
-						if f.IsDir() {
-							baseDir = f.Name()
-							vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
-							break
+			if vars.MustGatherRootPath != "" {
+				exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
+				if !exist {
+					files, err := ioutil.ReadDir(vars.MustGatherRootPath)
+					if err != nil {
+						fmt.Println(err)
+						cmd.DeleteContext(vars.MustGatherRootPath, viper.ConfigFileUsed(), "")
+						fmt.Println("Cleaning", viper.ConfigFileUsed())
+					} else {
+						baseDir := ""
+						for _, f := range files {
+							if f.IsDir() {
+								baseDir = f.Name()
+								vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
+								break
+							}
+						}
+						if baseDir == "" {
+							fmt.Println("Some error occurred, wrong must-gather file composition")
+							os.Exit(1)
 						}
 					}
-					if baseDir == "" {
-						fmt.Println("Some error occurred, wrong must-gather file composition")
-						os.Exit(1)
-					}
 				}
 			}
-		}
-	} else {
-		fmt.Println("err is not nill")
-		home, _ := os.UserHomeDir()
-		exist, _ := helpers.Exists(home + "/.omc/omc.json")
-		fmt.Println(exist)
-		if !exist {
-			if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
-				err := os.Mkdir(home+"/.omc", os.ModePerm)
-				fmt.Println("directory exist")
-				if err != nil {
-					cobra.CheckErr(err)
-				}
-			}
-			helpers.CreateConfigFile(home + "/.omc/omc.json")
 		}
 	}
+}
+
+func loadBooleanConfigs() {
+	home, _ := os.UserHomeDir()
+	file, _ := ioutil.ReadFile(home + "/.omc/omc.json")
+	omcConfigJson := types.Config{}
+	_ = json.Unmarshal([]byte(file), &omcConfigJson)
+	vars.UseLocalCRDs = omcConfigJson.UseLocalCRDs
 }

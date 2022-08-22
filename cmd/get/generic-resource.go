@@ -48,13 +48,40 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 		crdByte, _ := ioutil.ReadFile(crdYamlPath)
 		_crd := &apiextensionsv1.CustomResourceDefinition{}
 		if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
-			fmt.Println("Error when trying to unmarshal file ")
+			fmt.Println("Error when trying to unmarshal file", crdYamlPath)
 			os.Exit(1)
 		}
 		if strings.ToLower(_crd.Name) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Plural) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Singular) == strings.ToLower(crdName) || helpers.StringInSlice(crdName, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == strings.ToLower(crdName) {
 			crdExists = true
 			crd = _crd
 			break
+		}
+	}
+	if !crdExists && vars.UseLocalCRDs {
+		home, _ := os.UserHomeDir()
+		crdsPath := home + "/.omc/customresourcedefinitions/"
+		if strings.HasSuffix(crdName, ".config") {
+			crdName = strings.Replace(crdName, ".config", ".config.openshift.io", -1)
+		}
+		_, err := Exists(crdsPath)
+		if err != nil {
+			fmt.Printf(err.Error())
+			os.Exit(1)
+		}
+		crds, _ := ioutil.ReadDir(crdsPath)
+		for _, f := range crds {
+			crdYamlPath := crdsPath + f.Name()
+			crdByte, _ := ioutil.ReadFile(crdYamlPath)
+			_crd := &apiextensionsv1.CustomResourceDefinition{}
+			if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
+				fmt.Println("Error when trying to unmarshal file", crdYamlPath)
+				os.Exit(1)
+			}
+			if strings.ToLower(_crd.Name) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Plural) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Singular) == strings.ToLower(crdName) || helpers.StringInSlice(crdName, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == strings.ToLower(crdName) {
+				crdExists = true
+				crd = _crd
+				break
+			}
 		}
 	}
 	if !crdExists {

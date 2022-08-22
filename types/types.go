@@ -10,8 +10,9 @@ type Context struct {
 }
 
 type Config struct {
-	Id       string    `json:"id,omitempty"`
-	Contexts []Context `json:"contexts,omitempty"`
+	Id           string    `json:"id,omitempty"`
+	Contexts     []Context `json:"contexts,omitempty"`
+	UseLocalCRDs bool      `json:"use_local_crds,omitempty"`
 }
 
 type DescribeClient struct {
