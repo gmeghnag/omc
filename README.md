@@ -3,9 +3,7 @@
 [![GitHub Actions Build Status](https://github.com/gmeghnag/omc/actions/workflows/build.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ABuild)
 ![Downloads](https://img.shields.io/github/downloads/gmeghnag/omc/total)
 
-Inspired by [omg tool](https://github.com/kxr/o-must-gather), with `omc` we can inspect a must-gather in the same way as we inspect a cluster with the oc command.
-
-The `omc` tool does not simply parse yaml files, it uses the official Kubernetes and OpenShift golang types to decode yaml files to their respective OpenShift resources.
+`omc` tool has been created to allow engineers to inspect resources from a must-gather in the same way as they are retrieved with the oc command.
 
 ---
 ### Installation
