@@ -103,7 +103,7 @@ var GetCmd = &cobra.Command{
 				}
 			}
 		}
-		if len(args) == 1 {
+		if len(args) == 1 && !strings.Contains(args[0], "/") {
 			if strings.Contains(args[0], ",") {
 				commaSeparatedResources := strings.TrimSuffix(args[0], ",")
 				commaSeparatedResources = strings.TrimPrefix(commaSeparatedResources, ",")
