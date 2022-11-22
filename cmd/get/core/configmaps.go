@@ -57,8 +57,21 @@ func getConfigMaps(currentContextPath string, namespace string, resourceName str
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/configmaps.yaml")
 		if err != nil && !allNamespacesFlag {
-			fmt.Println("No resources found in " + _namespace + " namespace.")
-			os.Exit(1)
+			_cm, _ := ioutil.ReadDir(CurrentNamespacePath + "/core/configmaps/")
+			for _, f := range _cm {
+				cmYamlPath := CurrentNamespacePath + "/core/configmaps/" + f.Name()
+				_file := helpers.ReadYaml(cmYamlPath)
+				ConfigMap := corev1.ConfigMap{}
+				if err := yaml.Unmarshal([]byte(_file), &ConfigMap); err != nil {
+					fmt.Println("Error when trying to unmarshal file: " + cmYamlPath)
+					os.Exit(1)
+				}
+				_Items.Items = append(_Items.Items, &ConfigMap)
+			}
+			if len(_cm) == 0 {
+				fmt.Println("No resources found in " + _namespace + " namespace.")
+				os.Exit(1)
+			}
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
 			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/core/configmaps.yaml")
@@ -104,7 +117,7 @@ func getConfigMaps(currentContextPath string, namespace string, resourceName str
 			configmapData := strconv.Itoa(len(ConfigMap.Data))
 
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/core/configmaps.yaml", ConfigMap.GetCreationTimestamp())
+			age := helpers.GetAge(CurrentNamespacePath+"/core/", ConfigMap.GetCreationTimestamp())
 
 			_list := []string{ConfigMap.Namespace, ConfigMapName, configmapData, age}
 			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 4, _list)
