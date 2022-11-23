@@ -31,6 +31,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/uget"
+	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -75,6 +76,7 @@ func init() {
 		describe.DescribeCmd,
 		etcd.Etcd,
 		logs.Logs,
+		upgrade.Upgrade,
 	)
 	loadBooleanConfigs()
 }
