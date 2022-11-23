@@ -33,7 +33,7 @@ import (
 type Releases []Release
 type Release map[string]interface{}
 
-func updateOmcExecutable(omcExecutablePath string, url string) (err error) {
+func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion string) (err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -59,7 +59,7 @@ func updateOmcExecutable(omcExecutablePath string, url string) (err error) {
 	defer f.Close()
 
 	//bar := progressbar.Default(-1, "")
-	bar := CustomBytes(
+	bar := CustomBytes(desiredVersion,
 		resp.ContentLength,
 		"upgrading",
 	)
@@ -104,7 +104,7 @@ func checkReleases(repoName string) {
 	}
 }
 
-func CustomBytes(maxBytes int64, description ...string) *progressbar.ProgressBar {
+func CustomBytes(desiredVersion string, maxBytes int64, description ...string) *progressbar.ProgressBar {
 	desc := ""
 	if len(description) > 0 {
 		desc = description[0]
@@ -118,7 +118,7 @@ func CustomBytes(maxBytes int64, description ...string) *progressbar.ProgressBar
 		progressbar.OptionThrottle(65*time.Millisecond),
 		progressbar.OptionShowCount(),
 		progressbar.OptionOnCompletion(func() {
-			fmt.Fprint(os.Stderr, "\rDone!                                                                         \n")
+			fmt.Fprint(os.Stderr, "\romc upgraded to "+desiredVersion+"                                                                        \n")
 		}),
 		progressbar.OptionSpinnerType(14),
 		//progressbar.OptionFullWidth(),

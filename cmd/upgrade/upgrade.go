@@ -39,31 +39,41 @@ func upgradeBinary(repoName string) {
 		checkReleases(repoName)
 		os.Exit(0)
 	}
-	if string(DesiredVersion[0]) != "v" {
+	if DesiredVersion != "latest" && string(DesiredVersion[0]) != "v" {
 		fmt.Println("error: --to must be a semantic version (e.g. v4.0.5): No Major.Minor.Patch elements found")
 		os.Exit(1)
 	}
-	desiredReleaseVer := semver.New(DesiredVersion[1:])
-	if vars.OMCVersionTag == "" {
-		vars.OMCVersionTag = "v2.0.1"
-	}
-	currentVer := semver.New(vars.OMCVersionTag[1:])
-	if desiredReleaseVer.LessThan(*currentVer) {
-		fmt.Println("error: The update " + DesiredVersion + " is not one of the available updates (check them by running \"omc upgrade\")")
-		os.Exit(1)
+	if DesiredVersion != "latest" {
+		desiredReleaseVer := semver.New(DesiredVersion[1:])
+		if vars.OMCVersionTag == "" {
+			vars.OMCVersionTag = "v2.0.1"
+		}
+		currentVer := semver.New(vars.OMCVersionTag[1:])
+		if desiredReleaseVer.LessThan(*currentVer) {
+			fmt.Println("error: The update " + DesiredVersion + " is not one of the available updates (check them by running \"omc upgrade\")")
+			os.Exit(1)
+		}
 	}
 	switch operatingSystem {
 	case "windows":
 		fmt.Println("This command is not available for windows.")
 		fmt.Println("Open an issue on the GitHub repo https://github.com/gmeghnag/omc if you want it impemented.")
 	case "darwin":
-		err = updateOmcExecutable(omcExecutablePath, "https://github.com/"+repoName+"/releases/download/"+DesiredVersion+"/omc_Darwin_x86_64")
+		omcUrl := "https://github.com/" + repoName + "/releases/download/" + DesiredVersion + "/omc_Darwin_x86_64"
+		if DesiredVersion == "latest" {
+			omcUrl = "https://github.com/" + repoName + "/releases/" + DesiredVersion + "/download/omc_Darwin_x86_64"
+		}
+		err = updateOmcExecutable(omcExecutablePath, omcUrl, DesiredVersion)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "linux":
-		err = updateOmcExecutable(omcExecutablePath, "https://github.com/"+repoName+"/releases/download/"+DesiredVersion+"/omc_Linux_x86_64")
+		omcUrl := "https://github.com/" + repoName + "/releases/download/" + DesiredVersion + "/omc_Linux_x86_64"
+		if DesiredVersion == "latest" {
+			omcUrl = "https://github.com/" + repoName + "/releases/" + DesiredVersion + "/download/omc_Linux_x86_64"
+		}
+		err = updateOmcExecutable(omcExecutablePath, omcUrl, DesiredVersion)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
