@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/google/go-cmp v0.5.6
 	github.com/metal3-io/baremetal-operator/apis v0.0.0-20220216092208-3612e86973f1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/openshift/api v0.0.0-20210906075240-3611f00b94fd
@@ -47,6 +46,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.2.0 // indirect
