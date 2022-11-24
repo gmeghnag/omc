@@ -80,7 +80,7 @@ func init() {
 		machineconfig.MachineConfig,
 		upgrade.Upgrade,
 	)
-	loadBooleanConfigs()
+	loadOmcConfigs()
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -159,10 +159,11 @@ func initConfig() {
 	}
 }
 
-func loadBooleanConfigs() {
+func loadOmcConfigs() {
 	home, _ := os.UserHomeDir()
 	file, _ := ioutil.ReadFile(home + "/.omc/omc.json")
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	vars.UseLocalCRDs = omcConfigJson.UseLocalCRDs
+	vars.DiffCmd = omcConfigJson.DiffCmd
 }

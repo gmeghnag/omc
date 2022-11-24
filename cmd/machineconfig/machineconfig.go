@@ -23,7 +23,6 @@ import (
 
 var MachineConfig = &cobra.Command{
 	Use:     "machine-config",
-	Hidden:  true,
 	Aliases: []string{"mc"},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()

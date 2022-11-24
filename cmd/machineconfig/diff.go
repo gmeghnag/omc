@@ -17,28 +17,35 @@ package machineconfig
 
 import (
 	"fmt"
-	"io/ioutil"
+	"log"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"github.com/gmeghnag/omc/vars"
-	"github.com/google/go-cmp/cmp"
 	"github.com/spf13/cobra"
 )
 
 func checkMachineConfigDiff(first string, second string) {
 	firstMachineConfigPath := vars.MustGatherRootPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/" + first + ".yaml"
 	secondMachineConfigPath := vars.MustGatherRootPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/" + second + ".yaml"
-	firstMachineConfigContent, err := ioutil.ReadFile(firstMachineConfigPath)
-	if err != nil {
-		fmt.Println(err)
+	if vars.DiffCmd == "" {
+		vars.DiffCmd = "vimdiff"
 	}
-	secondMachineConfigContent, err := ioutil.ReadFile(secondMachineConfigPath)
+	_, err := exec.LookPath(vars.DiffCmd)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
-	x := cmp.Diff(firstMachineConfigContent, secondMachineConfigContent)
-	fmt.Println(x)
+	cmd := exec.Command(vars.DiffCmd, firstMachineConfigPath, secondMachineConfigPath)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 var Diff = &cobra.Command{
