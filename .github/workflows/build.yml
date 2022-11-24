@@ -24,15 +24,15 @@ jobs:
           HASH=$(git log -n1 --pretty=format:%h)
           echo ${TAG} ${HASH}
           export PATH=$PATH:/usr/local/go/bin \
-          && env GOOS=linux GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && env GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
           && cp omc omc_Linux_x86_64 && tar -cvzf omc_Linux_x86_64.tar.gz omc && rm -rf omc \
-          && env GOOS=linux GOARCH=arm64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && env GOOS=linux CGO_ENABLED=0 GOARCH=arm64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
           && tar -cvzf omc_Linux_arm64.tar.gz omc && cp omc_Linux_arm64.tar.gz omc_Linux_aarch64.tar.gz && rm -rf omc \
-          && env GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && env GOOS=darwin CGO_ENABLED=0 GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
           && cp omc omc_Darwin_x86_64 && tar -cvzf omc_Darwin_x86_64.tar.gz omc && rm -rf omc \
-          && env GOOS=darwin GOARCH=arm64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
+          && env GOOS=darwin CGO_ENABLED=0 GOARCH=arm64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc \
           && tar -cvzf omc_Darwin_arm64.tar.gz omc && cp omc_Darwin_arm64.tar.gz omc_Darwin_aarch64.tar.gz && rm -rf omc \
-          && env GOOS=windows GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc.exe \
+          && env GOOS=windows CGO_ENABLED=0 GOARCH=amd64 go build -ldflags "-X 'github.com/gmeghnag/omc/vars.OMCVersionTag=${TAG}' -X github.com/gmeghnag/omc/vars.OMCVersionHash=${HASH}" -o omc.exe \
           && zip omc_Windows_x86_64.zip omc.exe \
           && md5sum omc_Linux_x86_64.tar.gz | tee -a checksums.txt \
           && md5sum omc_Linux_arm64.tar.gz | tee -a checksums.txt \
