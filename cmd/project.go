@@ -22,14 +22,20 @@ import (
 	"log"
 	"os"
 
+	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/types"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 func projectDefault(omcConfigFile string, projDefault string) {
-	// read json omcConfigFile
+	var namespaces []string
+	_namespaces, _ := ioutil.ReadDir(vars.MustGatherRootPath + "/namespaces/")
+	for _, f := range _namespaces {
+		namespaces = append(namespaces, f.Name())
+	}
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
@@ -45,6 +51,10 @@ func projectDefault(omcConfigFile string, projDefault string) {
 				fmt.Println("Using project \"" + c.Project + "\" on must-gather \"" + c.Path + "\".")
 				NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
 			} else {
+				if !helpers.StringInSlice(projDefault, namespaces) {
+					fmt.Println("Error: namespace " + projDefault + " does not exists in must-gather \"" + c.Path + "\".")
+					os.Exit(1)
+				}
 				NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
 				fmt.Println("Now using project \"" + projDefault + "\" on must-gather \"" + c.Path + "\".")
 			}
