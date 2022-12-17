@@ -28,7 +28,7 @@ func getFromJsonPath(data interface{}, jsonPathTemplate string) string {
 	jPath.EnableJSONOutput(false)
 	err := jPath.Parse(jsonPathTemplate)
 	if err != nil {
-		fmt.Println("error: error parsing jsonpath " + jsonPathTemplate + ", " + err.Error())
+		fmt.Fprintln(os.Stderr, "error: error parsing jsonpath "+jsonPathTemplate+", "+err.Error())
 		os.Exit(1)
 	}
 	jPath.Execute(buf, data)

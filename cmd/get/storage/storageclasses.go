@@ -49,7 +49,7 @@ func getStorageClasses(currentContextPath string, namespace string, resourceName
 		_file := helpers.ReadYaml(storageclassYamlPath)
 		StorageClass := storagev1.StorageClass{}
 		if err := yaml.Unmarshal([]byte(_file), &StorageClass); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + storageclassYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+storageclassYamlPath)
 			os.Exit(1)
 		}
 

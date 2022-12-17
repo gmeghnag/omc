@@ -28,7 +28,7 @@ func EndpointStatus(etcdFolderPath string) {
 	_file, _ := ioutil.ReadFile(etcdFolderPath + "endpoint_status.json")
 	var Endpoints []Endpoint
 	if err := json.Unmarshal([]byte(_file), &Endpoints); err != nil {
-		fmt.Println("Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
 		os.Exit(1)
 	}
 	var rows [][]string
@@ -58,7 +58,7 @@ func EndpointHealth(etcdFolderPath string) {
 	_file, _ := ioutil.ReadFile(etcdFolderPath + "endpoint_health.json")
 	var healthList []epHealth
 	if err := json.Unmarshal([]byte(_file), &healthList); err != nil {
-		fmt.Println("Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
 		os.Exit(1)
 	}
 	var rows [][]string

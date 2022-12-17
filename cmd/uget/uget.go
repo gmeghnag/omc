@@ -38,7 +38,7 @@ var UGetCmd = &cobra.Command{
 	Aliases: []string{"dget"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if objectFilePath == "" {
-			fmt.Println("The path for the object(s) to inspect needs to be defined with the flag --path")
+			fmt.Fprintln(os.Stderr, "The path for the object(s) to inspect needs to be defined with the flag --path")
 			os.Exit(1)
 		}
 		UGet(objectFilePath, args)
@@ -59,11 +59,11 @@ func UGet(objectsPath string, objectsName []string) {
 	defaultColumns := false
 	returnObjects := UnstrctList{ApiVersion: "v1", Kind: "List"}
 	if !PathExists(objectsPath) {
-		fmt.Printf("Path %v does not exist.\n", objectsPath)
+		fmt.Fprintf(os.Stderr, "Path %v does not exist.\n", objectsPath)
 		os.Exit(1)
 	}
 	if additionalColumnsPath != "" && !PathExists(additionalColumnsPath) {
-		fmt.Printf("File %v does not exist.\n", additionalColumnsPath)
+		fmt.Fprintf(os.Stderr, "File %v does not exist.\n", additionalColumnsPath)
 		os.Exit(1)
 	}
 	var data [][]string
@@ -76,7 +76,7 @@ func UGet(objectsPath string, objectsName []string) {
 	columnsByte, _ := ioutil.ReadFile(additionalColumnsPath)
 	AdditionalColumnsStruct := AdditionalColumns{}
 	if err := yaml.Unmarshal([]byte(columnsByte), &AdditionalColumnsStruct); err != nil {
-		fmt.Println(err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
@@ -109,14 +109,14 @@ func UGet(objectsPath string, objectsName []string) {
 		resourceByte, _ := ioutil.ReadFile(resourceYamlPath)
 		unstruct := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resourceByte), &unstruct); err != nil {
-			fmt.Println("File:", resourceYamlPath, " does not contain a valid k8s object,", err.Error())
+			fmt.Fprintln(os.Stderr, "File:", resourceYamlPath, " does not contain a valid k8s object,", err.Error())
 			os.Exit(1)
 		}
 		if unstruct.IsList() {
 			unstructList := &unstructured.UnstructuredList{}
 			err := yaml.Unmarshal([]byte(resourceByte), &unstructList)
 			if err != nil {
-				fmt.Println("File:", resourceYamlPath, " does not contain a valid k8s object,", err.Error())
+				fmt.Fprintln(os.Stderr, "File:", resourceYamlPath, " does not contain a valid k8s object,", err.Error())
 				os.Exit(1)
 			}
 			for _, resource := range unstructList.Items {
@@ -177,7 +177,7 @@ func UGet(objectsPath string, objectsName []string) {
 	}
 	if vars.OutputStringVar == "" {
 		if len(data) == 0 {
-			fmt.Println("No resources found.")
+			fmt.Fprintln(os.Stderr, "No resources found.")
 			os.Exit(1)
 		} else {
 			if vars.ShowLabelsBoolVar {
@@ -187,7 +187,7 @@ func UGet(objectsPath string, objectsName []string) {
 		}
 	} else {
 		if len(returnObjects.Items) == 0 {
-			fmt.Println("No resources found.")
+			fmt.Fprintln(os.Stderr, "No resources found.")
 			os.Exit(1)
 		}
 		if vars.OutputStringVar == "json" {

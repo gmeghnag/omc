@@ -53,7 +53,7 @@ func getClusterOperators(currentContextPath string, namespace string, resourceNa
 		_file, _ := ioutil.ReadFile(clusteroperatorYamlPath)
 		ClusterOperator := configv1.ClusterOperator{}
 		if err := yaml.Unmarshal([]byte(_file), &ClusterOperator); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + clusteroperatorYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+clusteroperatorYamlPath)
 			os.Exit(1)
 		}
 

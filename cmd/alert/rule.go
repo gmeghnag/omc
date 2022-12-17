@@ -39,7 +39,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 	var _Alerts alerts
 	_file, _ := ioutil.ReadFile(alertsFilePath)
 	if err := yaml.Unmarshal([]byte(_file), &_Alerts); err != nil {
-		fmt.Println("Error when trying to unmarshal file " + alertsFilePath)
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+alertsFilePath)
 		os.Exit(1)
 	}
 	searchingGroups := []string{}
@@ -77,7 +77,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 			alertsList := []PromAlert{}
 			b, err := json.Marshal(alerts)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
 			json.Unmarshal(b, &alertsList)
@@ -149,7 +149,7 @@ var RuleSubCmd = &cobra.Command{
 		resourcesNames := args
 		monitoringExist, _ := helpers.Exists(vars.MustGatherRootPath + "/monitoring")
 		if !monitoringExist {
-			fmt.Println("Path '" + vars.MustGatherRootPath + "/monitoring' does not exist.")
+			fmt.Fprintln(os.Stderr, "Path '"+vars.MustGatherRootPath+"/monitoring' does not exist.")
 			os.Exit(1)
 		}
 		alertsFilePath := vars.MustGatherRootPath + "/monitoring/alerts.json"
@@ -158,7 +158,7 @@ var RuleSubCmd = &cobra.Command{
 			alertsFilePath = vars.MustGatherRootPath + "/monitoring/prometheus/rules.json"
 			alertsFilePathExist, _ := helpers.Exists(alertsFilePath)
 			if !alertsFilePathExist {
-				fmt.Println("Prometheus rules not found in must-gather.")
+				fmt.Fprintln(os.Stderr, "Prometheus rules not found in must-gather.")
 				os.Exit(1)
 			}
 		}

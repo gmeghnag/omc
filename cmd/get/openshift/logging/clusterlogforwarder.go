@@ -37,7 +37,7 @@ func getClusterLogForwarders(currentContextPath string, namespace string, resour
 	_file := helpers.ReadYaml(clusterlogforwarderYamlPath)
 	ClusterLogForwarder := logging.ClusterLogForwarder{}
 	if err := yaml.Unmarshal([]byte(_file), &ClusterLogForwarder); err != nil {
-		fmt.Println("Error when trying to unmarshal file: " + clusterlogforwarderYamlPath)
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+clusterlogforwarderYamlPath)
 		os.Exit(1)
 	}
 

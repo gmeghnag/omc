@@ -35,7 +35,7 @@ func describeNode(currentContextPath string, namespace string, resourceName stri
 	Node := corev1.Node{}
 	_file := helpers.ReadYaml(nodePath)
 	if err := yaml.Unmarshal([]byte(_file), &Node); err != nil {
-		fmt.Println("Error when trying to unmarshal file " + nodePath)
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+nodePath)
 		os.Exit(1)
 	}
 	fake := fake.NewSimpleClientset(&Node)

@@ -49,7 +49,7 @@ func getCustomResourceDefinitions(currentContextPath string, namespace string, r
 		_file, _ := ioutil.ReadFile(customresourcedefinitionYamlPath)
 		CustomResourceDefinition := apiextensionsv1.CustomResourceDefinition{}
 		if err := yaml.Unmarshal([]byte(_file), &CustomResourceDefinition); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + customresourcedefinitionYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+customresourcedefinitionYamlPath)
 			os.Exit(1)
 		}
 

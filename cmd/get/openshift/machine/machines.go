@@ -54,7 +54,7 @@ func getMachines(currentContextPath string, namespace string, resourceName strin
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_machines, err := ioutil.ReadDir(CurrentNamespacePath + "/machine.openshift.io/machines/")
 		if err != nil && !allNamespacesFlag {
-			fmt.Println("No resources found in " + _namespace + " namespace.")
+			fmt.Fprintln(os.Stderr, "No resources found in "+_namespace+" namespace.")
 			os.Exit(1)
 		}
 		for _, f := range _machines {
@@ -62,7 +62,7 @@ func getMachines(currentContextPath string, namespace string, resourceName strin
 			_file := helpers.ReadYaml(machineYamlPath)
 			Machine := machineapi.Machine{}
 			if err := yaml.Unmarshal([]byte(_file), &Machine); err != nil {
-				fmt.Println("Error when trying to unmarshal file " + machineYamlPath)
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+machineYamlPath)
 				os.Exit(1)
 			}
 

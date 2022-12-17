@@ -52,7 +52,7 @@ func getClusterVersionV2(currentContextPath string, namespace string, resourceNa
 		_file, _ := ioutil.ReadFile(clusterversionYamlPath)
 		ClusterVersion := configv1.ClusterVersion{}
 		if err := yaml.Unmarshal([]byte(_file), &ClusterVersion); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + clusterversionYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+clusterversionYamlPath)
 			os.Exit(1)
 		}
 
@@ -179,7 +179,7 @@ func getClusterVersionV1(currentContextPath string, namespace string, resourceNa
 	if clusterversionsFileExist {
 		_file, _ := ioutil.ReadFile(clusterversionsYamlPath)
 		if err := yaml.Unmarshal([]byte(_file), &clusterversions); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + clusterversionsYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+clusterversionsYamlPath)
 			os.Exit(1)
 		}
 	}

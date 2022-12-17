@@ -68,7 +68,7 @@ var GetCmd = &cobra.Command{
 			for _, resourceAndObjectArg := range args {
 				resourceAndObjectArg = strings.ToLower(resourceAndObjectArg)
 				if len(strings.Split(resourceAndObjectArg, "/")) != 2 {
-					fmt.Println("error: there is no need to specify a resource type as a separate argument when passing arguments in resource/name form (e.g. 'oc get resource/<resource_name>' instead of 'oc get resource resource/<resource_name>'")
+					fmt.Fprintln(os.Stderr, "error: there is no need to specify a resource type as a separate argument when passing arguments in resource/name form (e.g. 'oc get resource/<resource_name>' instead of 'oc get resource resource/<resource_name>'")
 					os.Exit(1)
 				}
 				seg := strings.Split(resourceAndObjectArg, "/")
@@ -89,7 +89,7 @@ var GetCmd = &cobra.Command{
 			for _, resourceAndObject := range resourcesAndObjects {
 				c, _, err := cmd.Find([]string{resourceAndObject[0]})
 				if err != nil {
-					fmt.Println("err", err.Error())
+					fmt.Fprintln(os.Stderr, "err", err.Error())
 					os.Exit(1)
 				}
 				if c.Use != "get" {
@@ -98,7 +98,7 @@ var GetCmd = &cobra.Command{
 				} else {
 					isValidResource := getGenericResourceFromCRD(resourceAndObject[0], resourceAndObject[1:])
 					if !isValidResource {
-						fmt.Println("Invalid object type:", resourceAndObject[0])
+						fmt.Fprintln(os.Stderr, "Invalid object type:", resourceAndObject[0])
 						os.Exit(1)
 					}
 				}
@@ -112,7 +112,7 @@ var GetCmd = &cobra.Command{
 				for _, crdAlias := range crdAliases {
 					c, _, err := cmd.Find([]string{crdAlias})
 					if err != nil {
-						fmt.Println("err", err.Error())
+						fmt.Fprintln(os.Stderr, "err", err.Error())
 						os.Exit(1)
 					}
 					if c.Use != "get" {
@@ -122,7 +122,7 @@ var GetCmd = &cobra.Command{
 					} else {
 						isValidResource := getGenericResourceFromCRD(crdAlias, emptyslice)
 						if !isValidResource {
-							fmt.Println("Invalid object type:", crdAlias)
+							fmt.Fprintln(os.Stderr, "Invalid object type:", crdAlias)
 							os.Exit(1)
 						}
 						fmt.Println("")
@@ -131,7 +131,7 @@ var GetCmd = &cobra.Command{
 			} else {
 				c, _, err := cmd.Find([]string{args[0]})
 				if err != nil {
-					fmt.Println("err", err.Error())
+					fmt.Fprintln(os.Stderr, "err", err.Error())
 					os.Exit(1)
 				}
 				if c.Use != "get" {
@@ -140,7 +140,7 @@ var GetCmd = &cobra.Command{
 				} else {
 					isValidResource := getGenericResourceFromCRD(args[0], emptyslice)
 					if !isValidResource {
-						fmt.Println("Invalid object type:", args[0])
+						fmt.Fprintln(os.Stderr, "Invalid object type:", args[0])
 						os.Exit(1)
 					}
 				}
@@ -148,7 +148,7 @@ var GetCmd = &cobra.Command{
 		} else if len(args) > 1 {
 			c, _, err := cmd.Find([]string{args[0]})
 			if err != nil {
-				fmt.Println("err", err.Error())
+				fmt.Fprintln(os.Stderr, "err", err.Error())
 				os.Exit(1)
 			}
 			if c.Use != "get" {
@@ -157,7 +157,7 @@ var GetCmd = &cobra.Command{
 			} else {
 				isValidResource := getGenericResourceFromCRD(args[0], args[1:])
 				if !isValidResource {
-					fmt.Println("Invalid object type:", args[0])
+					fmt.Fprintln(os.Stderr, "Invalid object type:", args[0])
 					os.Exit(1)
 				}
 			}

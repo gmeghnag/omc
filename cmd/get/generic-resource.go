@@ -39,7 +39,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	}
 	_, err := Exists(crdsPath)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	crds, _ := ioutil.ReadDir(crdsPath)
@@ -48,7 +48,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 		crdByte, _ := ioutil.ReadFile(crdYamlPath)
 		_crd := &apiextensionsv1.CustomResourceDefinition{}
 		if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
-			fmt.Println("Error when trying to unmarshal file", crdYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file", crdYamlPath)
 			os.Exit(1)
 		}
 		if strings.ToLower(_crd.Name) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Plural) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Singular) == strings.ToLower(crdName) || helpers.StringInSlice(crdName, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == strings.ToLower(crdName) {
@@ -65,7 +65,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 		}
 		_, err := Exists(crdsPath)
 		if err != nil {
-			fmt.Printf(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 		crds, _ := ioutil.ReadDir(crdsPath)
@@ -74,7 +74,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 			crdByte, _ := ioutil.ReadFile(crdYamlPath)
 			_crd := &apiextensionsv1.CustomResourceDefinition{}
 			if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
-				fmt.Println("Error when trying to unmarshal file", crdYamlPath)
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file", crdYamlPath)
 				os.Exit(1)
 			}
 			if strings.ToLower(_crd.Name) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Plural) == strings.ToLower(crdName) || strings.ToLower(_crd.Spec.Names.Singular) == strings.ToLower(crdName) || helpers.StringInSlice(crdName, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == strings.ToLower(crdName) {
@@ -129,7 +129,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	}
 	if vars.OutputStringVar == "" || vars.OutputStringVar == "wide" {
 		if len(data) == 0 {
-			fmt.Println("No resources found.")
+			fmt.Fprintln(os.Stderr, "No resources found.")
 			os.Exit(1)
 		} else {
 			if vars.ShowLabelsBoolVar {
@@ -139,7 +139,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 		}
 	} else {
 		if len(returnObjects.Items) == 0 {
-			fmt.Println("No resources found.")
+			fmt.Fprintln(os.Stderr, "No resources found.")
 			os.Exit(1)
 		}
 		if vars.OutputStringVar == "json" {
@@ -177,7 +177,7 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefinition, objectNames []string) {
 	_, err := Exists(resourcePath)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	var JSONPaths []apiextensionsv1.CustomResourceColumnDefinition
@@ -193,14 +193,14 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 		resourceByte, _ := ioutil.ReadFile(resourceYamlPath)
 		unstruct := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resourceByte), &unstruct); err != nil {
-			fmt.Println(err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 		if unstruct.IsList() {
 			unstructList := &unstructured.UnstructuredList{}
 			err := yaml.Unmarshal([]byte(resourceByte), &unstructList)
 			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
 			for _, resource := range unstructList.Items {
@@ -217,7 +217,7 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 							if crd.Spec.Versions[0].AdditionalPrinterColumns == nil {
 								unstruct := &unstructured.Unstructured{}
 								if err := yaml.Unmarshal([]byte(resourceByte), &unstruct); err != nil {
-									fmt.Println("File:", resourcePath, " does not contain a valid k8s object,", err.Error())
+									fmt.Fprintln(os.Stderr, "File:", resourcePath, " does not contain a valid k8s object,", err.Error())
 									os.Exit(1)
 								}
 								v := helpers.GetAge(resourceYamlPath, unstruct.GetCreationTimestamp())
@@ -287,7 +287,7 @@ func getFromJsonPath(data interface{}, jsonPathTemplate string) string {
 	jPath.EnableJSONOutput(false)
 	err := jPath.Parse(jsonPathTemplate)
 	if err != nil {
-		fmt.Println("error: error parsing jsonpath " + jsonPathTemplate + ", " + err.Error())
+		fmt.Fprintln(os.Stderr, "error: error parsing jsonpath "+jsonPathTemplate+", "+err.Error())
 		os.Exit(1)
 	}
 	jPath.Execute(buf, data)

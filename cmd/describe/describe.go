@@ -34,7 +34,7 @@ var DescribeCmd = &cobra.Command{
 			cmd.Help()
 			os.Exit(0)
 		}
-		fmt.Println("Invalid object type:", args[0])
+		fmt.Fprintln(os.Stderr, "Invalid object type:", args[0])
 		os.Exit(1)
 	},
 }

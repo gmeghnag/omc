@@ -36,7 +36,7 @@ var Logs = &cobra.Command{
 	Short: "Print the logs for a container in a pod",
 	Run: func(cmd *cobra.Command, args []string) {
 		if vars.MustGatherRootPath == "" {
-			fmt.Println("There are no must-gather resources defined.")
+			fmt.Fprintln(os.Stderr, "There are no must-gather resources defined.")
 			os.Exit(1)
 		}
 		exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
@@ -54,7 +54,7 @@ var Logs = &cobra.Command{
 				}
 			}
 			if QuayString == "" {
-				fmt.Println("Some error occurred, wrong must-gather file composition")
+				fmt.Fprintln(os.Stderr, "Some error occurred, wrong must-gather file composition")
 				os.Exit(1)
 			}
 		}
@@ -72,16 +72,16 @@ var Logs = &cobra.Command{
 		}
 
 		if len(args) == 0 || len(args) > 2 {
-			fmt.Println("error: expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'.")
-			fmt.Println("POD or TYPE/NAME is a required argument for the logs command")
-			fmt.Println("See 'omc logs -h' for help and examples")
+			fmt.Fprintln(os.Stderr, "error: expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'.")
+			fmt.Fprintln(os.Stderr, "POD or TYPE/NAME is a required argument for the logs command")
+			fmt.Fprintln(os.Stderr, "See 'omc logs -h' for help and examples")
 			os.Exit(1)
 		}
 		if len(args) == 1 {
 			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
 				podName = s[1]
 				if podName == "" {
-					fmt.Println("error: arguments in resource/name form must have a single resource and name")
+					fmt.Fprintln(os.Stderr, "arguments in resource/name form must have a single resource and name")
 					os.Exit(1)
 				}
 				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, allContainersFlag, logLevels)
@@ -93,12 +93,12 @@ var Logs = &cobra.Command{
 		if len(args) == 2 {
 			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
 				if containerName != "" {
-					fmt.Println("error: only one of -c or an inline [CONTAINER] arg is allowed")
+					fmt.Fprintln(os.Stderr, "error: only one of -c or an inline [CONTAINER] arg is allowed")
 					os.Exit(1)
 				} else {
 					podName = s[1]
 					if podName == "" {
-						fmt.Println("error: arguments in resource/name form must have a single resource and name")
+						fmt.Fprintln(os.Stderr, "error: arguments in resource/name form must have a single resource and name")
 						os.Exit(1)
 					}
 					containerName = args[1]
@@ -106,7 +106,7 @@ var Logs = &cobra.Command{
 				}
 			} else {
 				if containerName != "" {
-					fmt.Println("error: only one of -c or an inline [CONTAINER] arg is allowed")
+					fmt.Fprintln(os.Stderr, "error: only one of -c or an inline [CONTAINER] arg is allowed")
 					os.Exit(1)
 				} else {
 					podName = args[0]

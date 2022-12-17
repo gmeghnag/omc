@@ -40,7 +40,7 @@ func upgradeBinary(repoName string) {
 		os.Exit(0)
 	}
 	if DesiredVersion != "latest" && string(DesiredVersion[0]) != "v" {
-		fmt.Println("error: --to must be a semantic version (e.g. v4.0.5): No Major.Minor.Patch elements found")
+		fmt.Fprintln(os.Stderr, "error: --to must be a semantic version (e.g. v4.0.5): No Major.Minor.Patch elements found")
 		os.Exit(1)
 	}
 	if DesiredVersion != "latest" {
@@ -50,7 +50,7 @@ func upgradeBinary(repoName string) {
 		}
 		currentVer := semver.New(vars.OMCVersionTag[1:])
 		if desiredReleaseVer.LessThan(*currentVer) {
-			fmt.Println("error: The update " + DesiredVersion + " is not one of the available updates (check them by running \"omc upgrade\")")
+			fmt.Fprintln(os.Stderr, "error: The update "+DesiredVersion+" is not one of the available updates (check them by running \"omc upgrade\")")
 			os.Exit(1)
 		}
 	}
@@ -65,7 +65,7 @@ func upgradeBinary(repoName string) {
 		}
 		err = updateOmcExecutable(omcExecutablePath, omcUrl, DesiredVersion)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	case "linux":
@@ -75,7 +75,7 @@ func upgradeBinary(repoName string) {
 		}
 		err = updateOmcExecutable(omcExecutablePath, omcUrl, DesiredVersion)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	default:

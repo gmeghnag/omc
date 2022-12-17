@@ -48,7 +48,7 @@ func getMachineConfig(currentContextPath string, namespace string, resourceName 
 		_file, _ := ioutil.ReadFile(machineconfigYamlPath)
 		MachineConfig := configv1.MachineConfig{}
 		if err := yaml.Unmarshal([]byte(_file), &MachineConfig); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + machineconfigYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+machineconfigYamlPath)
 			os.Exit(1)
 		}
 

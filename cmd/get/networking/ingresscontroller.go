@@ -60,7 +60,7 @@ func GetIngressControllers(currentContextPath string, namespace string, resource
 			}
 			IngressController := &operatorv1.IngressController{}
 			if err := yaml.Unmarshal([]byte(_file), &IngressController); err != nil {
-				fmt.Println("Error when trying to unmarshal file: " + icsYamlPath)
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+icsYamlPath)
 				os.Exit(1)
 			}
 

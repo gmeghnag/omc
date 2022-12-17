@@ -45,7 +45,7 @@ func getProxies(currentContextPath string, namespace string, resourceName string
 		_file, _ := ioutil.ReadFile(proxyYamlPath)
 		Proxy := configv1.Proxy{}
 		if err := yaml.Unmarshal([]byte(_file), &Proxy); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + proxyYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+proxyYamlPath)
 			os.Exit(1)
 		}
 

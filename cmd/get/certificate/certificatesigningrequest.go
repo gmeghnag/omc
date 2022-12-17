@@ -46,7 +46,7 @@ func getCertificateSigningRequests(currentContextPath string, namespace string, 
 		_file := helpers.ReadYaml(certificatesigningrequestYamlPath)
 		CertificateSigningRequest := v1.CertificateSigningRequest{}
 		if err := yaml.Unmarshal([]byte(_file), &CertificateSigningRequest); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + certificatesigningrequestYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+certificatesigningrequestYamlPath)
 			os.Exit(1)
 		}
 

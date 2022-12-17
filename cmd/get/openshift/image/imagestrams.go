@@ -56,11 +56,11 @@ func GetImageStreams(currentContextPath string, namespace string, resourceName s
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
 		if err != nil && !allNamespacesFlag {
-			fmt.Println("No resources found in " + _namespace + " namespace.")
+			fmt.Fprintln(os.Stderr, "No resources found in "+_namespace+" namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/image.openshift.io/imagestreams.yaml")
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/image.openshift.io/imagestreams.yaml")
 			os.Exit(1)
 		}
 

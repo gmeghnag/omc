@@ -49,7 +49,7 @@ func getBareMetalHosts(currentContextPath string, namespace string, resourceName
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_baremetalhosts, err := ioutil.ReadDir(CurrentNamespacePath + "/metal3.io/baremetalhosts/")
 		if err != nil && !allNamespacesFlag {
-			fmt.Println("No resources found in " + _namespace + " namespace.")
+			fmt.Fprintln(os.Stderr, "No resources found in "+_namespace+" namespace.")
 			os.Exit(1)
 		}
 		for _, f := range _baremetalhosts {
@@ -57,7 +57,7 @@ func getBareMetalHosts(currentContextPath string, namespace string, resourceName
 			_file := helpers.ReadYaml(bmhYamlPath)
 			BareMetalHost := &metal3v1alpha1.BareMetalHost{}
 			if err := yaml.Unmarshal([]byte(_file), &BareMetalHost); err != nil {
-				fmt.Println("Error when trying to unmarshal file " + bmhYamlPath)
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+bmhYamlPath)
 				os.Exit(1)
 			}
 

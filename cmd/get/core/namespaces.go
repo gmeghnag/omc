@@ -55,7 +55,7 @@ func getNamespaces(currentContextPath string, defaultConfigNamespace string, res
 		_file := helpers.ReadYaml(namespaceYamlPath)
 		Namespace := corev1.Namespace{}
 		if err := yaml.Unmarshal([]byte(_file), &Namespace); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + namespaceYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+namespaceYamlPath)
 			os.Exit(1)
 		}
 

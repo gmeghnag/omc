@@ -88,12 +88,12 @@ func FilterCatLogs(filePath string, logLevels []string) {
 		}
 	}
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Println("error: file " + filePath + " does not exist")
+		fmt.Fprintln(os.Stderr, "error: file "+filePath+" does not exist")
 		os.Exit(1)
 	}
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("error: can't open file " + filePath)
+		fmt.Fprintln(os.Stderr, "error: can't open file "+filePath)
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -103,7 +103,7 @@ func FilterCatLogs(filePath string, logLevels []string) {
 	for scanner.Scan() {
 		log, err := parseCRILog(scanner.Bytes(), infoLevel, warningLevel, errorLevel)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		if log != "" {

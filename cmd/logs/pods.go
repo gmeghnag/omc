@@ -36,11 +36,11 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
 	_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
 	if err != nil {
-		fmt.Println("error: namespace " + defaultConfigNamespace + " not found.")
+		fmt.Fprintln(os.Stderr, "error: namespace "+defaultConfigNamespace+" not found.")
 		os.Exit(1)
 	}
 	if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-		fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/core/pods.yaml")
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/core/pods.yaml")
 		os.Exit(1)
 	}
 	podMatch := ""
@@ -86,9 +86,11 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		}
 		if containerMatch == "" {
 			if containerName != "" {
-				fmt.Println("error: container " + containerName + " is not valid for pod " + Pod.Name)
+				fmt.Fprintln(os.Stderr, "error: container "+containerName+" is not valid for pod "+Pod.Name)
+				os.Exit(1)
 			} else {
-				fmt.Println("error: a container name must be specified for pod "+Pod.Name+", choose one of:", containers)
+				fmt.Fprintln(os.Stderr, "error: a container name must be specified for pod "+Pod.Name+", choose one of:", containers)
+				os.Exit(1)
 			}
 		} else {
 			if len(logLevels) > 0 {
@@ -99,6 +101,7 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		}
 	}
 	if podMatch == "" {
-		fmt.Println("error: pods " + podName + " not found")
+		fmt.Fprintln(os.Stderr, "error: pods "+podName+" not found")
+		os.Exit(1)
 	}
 }

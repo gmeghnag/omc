@@ -63,18 +63,18 @@ func getConfigMaps(currentContextPath string, namespace string, resourceName str
 				_file := helpers.ReadYaml(cmYamlPath)
 				ConfigMap := corev1.ConfigMap{}
 				if err := yaml.Unmarshal([]byte(_file), &ConfigMap); err != nil {
-					fmt.Println("Error when trying to unmarshal file: " + cmYamlPath)
+					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+cmYamlPath)
 					os.Exit(1)
 				}
 				_Items.Items = append(_Items.Items, &ConfigMap)
 			}
 			if len(_cm) == 0 {
-				fmt.Println("No resources found in " + _namespace + " namespace.")
+				fmt.Fprintln(os.Stderr, "No resources found in "+_namespace+" namespace.")
 				os.Exit(1)
 			}
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/core/configmaps.yaml")
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/core/configmaps.yaml")
 			os.Exit(1)
 		}
 

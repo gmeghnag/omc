@@ -52,7 +52,7 @@ func projectDefault(omcConfigFile string, projDefault string) {
 				NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: c.Project})
 			} else {
 				if !helpers.StringInSlice(projDefault, namespaces) {
-					fmt.Println("Error: namespace " + projDefault + " does not exists in must-gather \"" + c.Path + "\".")
+					fmt.Fprintln(os.Stderr, "Error: namespace "+projDefault+" does not exists in must-gather \""+c.Path+"\".")
 					os.Exit(1)
 				}
 				NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: c.Current, Project: projDefault})
@@ -78,7 +78,7 @@ var ProjectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		projDefault := ""
 		if len(args) > 1 {
-			fmt.Println("Expect one arguemnt, found: ", len(args))
+			fmt.Fprintln(os.Stderr, "Expect one arguemnt, found: ", len(args))
 			os.Exit(1)
 		}
 		if len(args) == 1 {

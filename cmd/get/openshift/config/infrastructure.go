@@ -45,7 +45,7 @@ func getInfrastructures(currentContextPath string, namespace string, resourceNam
 		_file, _ := ioutil.ReadFile(infrastructureYamlPath)
 		infrastructure := configv1.Infrastructure{}
 		if err := yaml.Unmarshal([]byte(_file), &infrastructure); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + infrastructureYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+infrastructureYamlPath)
 			os.Exit(1)
 		}
 

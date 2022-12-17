@@ -43,7 +43,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	if path != "" {
 		_path, err := findMustGatherIn(path)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		l := strings.Split(_path, "/")
@@ -145,7 +145,7 @@ var UseCmd = &cobra.Command{
 			os.Exit(0)
 		}
 		if len(args) > 1 {
-			fmt.Println("Expect one arguemnt, found: ", len(args))
+			fmt.Fprintln(os.Stderr, "Expect one arguemnt, found: ", len(args))
 			os.Exit(1)
 		}
 		if len(args) == 1 {
@@ -159,7 +159,7 @@ var UseCmd = &cobra.Command{
 			path, _ = filepath.Abs(path)
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
-				fmt.Println("Error: " + path + " is not a directory.")
+				fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory.")
 				os.Exit(1)
 			}
 		}

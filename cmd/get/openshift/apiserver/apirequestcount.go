@@ -51,7 +51,7 @@ func getAPIRequestCount(currentContextPath string, namespace string, resourcesNa
 		_file, _ := ioutil.ReadFile(apirequestcountYamlPath)
 		APIRequestCount := v1.APIRequestCount{}
 		if err := yaml.Unmarshal([]byte(_file), &APIRequestCount); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + apirequestcountYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+apirequestcountYamlPath)
 			os.Exit(1)
 		}
 

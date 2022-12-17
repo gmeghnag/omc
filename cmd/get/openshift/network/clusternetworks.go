@@ -45,7 +45,7 @@ func getClusterNetwork(currentContextPath string, namespace string, resourceName
 		_file, _ := ioutil.ReadFile(clusterNetworkYamlPath)
 		ClusterNetwork := networkv1.ClusterNetwork{}
 		if err := yaml.Unmarshal([]byte(_file), &ClusterNetwork); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + clusterNetworkYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+clusterNetworkYamlPath)
 			os.Exit(1)
 		}
 

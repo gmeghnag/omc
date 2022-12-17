@@ -35,7 +35,7 @@ func describePod(currentContextPath string, defaultConfigNamespace string, resou
 	Pod := corev1.Pod{}
 	_file := helpers.ReadYaml(podPath)
 	if err := yaml.Unmarshal([]byte(_file), &Pod); err != nil {
-		fmt.Println("Error when trying to unmarshal file " + podPath)
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podPath)
 		os.Exit(1)
 	}
 	fake := fake.NewSimpleClientset(&Pod)

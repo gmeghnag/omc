@@ -55,7 +55,7 @@ func GetDestinationRule(currentContextPath string, namespace string, resourceNam
 			_file := helpers.ReadYaml(smcpYamlPath)
 			_DestinationRule := v1alpha3.DestinationRule{}
 			if err := yaml.Unmarshal([]byte(_file), &_DestinationRule); err != nil {
-				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+smcpYamlPath)
 				os.Exit(1)
 			}
 			n_DestinationRulesList.Items = append(n_DestinationRulesList.Items, _DestinationRule)

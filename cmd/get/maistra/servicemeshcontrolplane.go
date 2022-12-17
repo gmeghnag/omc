@@ -55,7 +55,7 @@ func GetServiceMeshControlPlane(currentContextPath string, namespace string, res
 			_file := helpers.ReadYaml(smcpYamlPath)
 			_ServiceMeshControlPlane := v2.ServiceMeshControlPlane{}
 			if err := yaml.Unmarshal([]byte(_file), &_ServiceMeshControlPlane); err != nil {
-				fmt.Println("Error when trying to unmarshal file: " + smcpYamlPath)
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+smcpYamlPath)
 				os.Exit(1)
 			}
 			n_ServiceMeshControlPlanesList.Items = append(n_ServiceMeshControlPlanesList.Items, _ServiceMeshControlPlane)

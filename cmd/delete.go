@@ -75,7 +75,7 @@ var DeleteCmd = &cobra.Command{
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
 		if len(args) > 1 {
-			fmt.Println("Expect one arguemnt, found: ", len(args))
+			fmt.Fprintln(os.Stderr, "Expect one arguemnt, found: ", len(args))
 			os.Exit(1)
 		}
 		if len(args) == 1 {

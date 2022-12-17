@@ -57,11 +57,11 @@ func GetBuildConfigs(currentContextPath string, namespace string, resourceName s
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
 		if err != nil && !allNamespacesFlag {
-			fmt.Println("No resources found in " + _namespace + " namespace.")
+			fmt.Fprintln(os.Stderr, "No resources found in "+_namespace+" namespace.")
 			os.Exit(1)
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-			fmt.Println("Error when trying to unmarshal file " + CurrentNamespacePath + "/build.openshift.io/buildconfigs.yaml")
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/build.openshift.io/buildconfigs.yaml")
 			os.Exit(1)
 		}
 

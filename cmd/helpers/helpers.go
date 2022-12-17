@@ -106,7 +106,7 @@ func ExecuteJsonPath(data interface{}, jsonPathTemplate string) {
 	jPath.EnableJSONOutput(false)
 	err := jPath.Parse(jsonPathTemplate)
 	if err != nil {
-		fmt.Println("error: error parsing jsonpath " + jsonPathTemplate + ", " + err.Error())
+		fmt.Fprintln(os.Stderr, "error: error parsing jsonpath "+jsonPathTemplate+", "+err.Error())
 		os.Exit(1)
 	}
 	jPath.Execute(buf, data)
@@ -118,7 +118,7 @@ func CreateConfigFile(cfgFilePath string) {
 	file, _ := json.MarshalIndent(config, "", " ")
 	err := ioutil.WriteFile(cfgFilePath, file, 0644)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -264,12 +264,12 @@ func PrintOutput(resource interface{}, columns int16, outputFlag string, resourc
 
 func Cat(filePath string) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Println("error: file " + filePath + " does not exist")
+		fmt.Fprintln(os.Stderr, "error: file "+filePath+" does not exist")
 		os.Exit(1)
 	}
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("error: can't open file " + filePath)
+		fmt.Fprintln(os.Stderr, "error: can't open file "+filePath)
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -287,7 +287,7 @@ func GetJsonTemplate(outputStringVar string) string {
 	if strings.HasPrefix(outputStringVar, "jsonpath=") {
 		s := outputStringVar[9:]
 		if len(s) < 1 {
-			fmt.Println("error: template format specified but no template given")
+			fmt.Fprintln(os.Stderr, "error: template format specified but no template given")
 			os.Exit(1)
 		}
 		jsonPathTemplate = s

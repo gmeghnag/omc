@@ -37,7 +37,7 @@ func getClusterLoggings(currentContextPath string, namespace string, resourceNam
 	_file := helpers.ReadYaml(ClusterloggingYamlPath)
 	ClusterLogging := logging.ClusterLogging{}
 	if err := yaml.Unmarshal([]byte(_file), &ClusterLogging); err != nil {
-		fmt.Println("Error when trying to unmarshal file: " + ClusterloggingYamlPath)
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+ClusterloggingYamlPath)
 		os.Exit(1)
 	}
 

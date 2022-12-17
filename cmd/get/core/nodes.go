@@ -49,7 +49,7 @@ func getNodes(currentContextPath string, namespace string, resourceName string, 
 		_file := helpers.ReadYaml(nodeYamlPath)
 		Node := corev1.Node{}
 		if err := yaml.Unmarshal([]byte(_file), &Node); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + nodeYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+nodeYamlPath)
 			os.Exit(1)
 		}
 

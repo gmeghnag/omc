@@ -45,7 +45,7 @@ func getAuthentications(currentContextPath string, namespace string, resourceNam
 		_file, _ := ioutil.ReadFile(authenticationsYamlPath)
 		Authentication := operatorv1.Authentication{}
 		if err := yaml.Unmarshal([]byte(_file), &Authentication); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + authenticationsYamlPath)
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+authenticationsYamlPath)
 			os.Exit(1)
 		}
 

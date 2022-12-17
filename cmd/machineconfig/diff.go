@@ -53,7 +53,7 @@ var Diff = &cobra.Command{
 	Aliases: []string{"compare"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
-			fmt.Println("error: two arguments expected, found ", strconv.Itoa(len(args)))
+			fmt.Fprintln(os.Stderr, "error: two arguments expected, found ", strconv.Itoa(len(args)))
 			os.Exit(1)
 		}
 		checkMachineConfigDiff(args[0], args[1])

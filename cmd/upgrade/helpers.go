@@ -49,7 +49,7 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 
 	err = os.Remove(omcExecutablePath)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	f, err := os.OpenFile(omcExecutablePath, os.O_CREATE|os.O_WRONLY, 0777)
