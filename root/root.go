@@ -148,8 +148,8 @@ func initConfig() {
 								break
 							}
 						}
-						if baseDir == "" {
-							fmt.Fprintln(os.Stderr, "Some error occurred, wrong must-gather file composition")
+						if baseDir == "" && !helpers.StringInSlice("use", os.Args) {
+							fmt.Fprintln(os.Stderr, "wrong must-gather file composition for", vars.MustGatherRootPath)
 							os.Exit(1)
 						}
 					}
