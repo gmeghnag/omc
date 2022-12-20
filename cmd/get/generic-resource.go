@@ -10,7 +10,6 @@ import (
 	"bytes"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
-	"github.com/gmeghnag/omc/cmd/uget"
 	"github.com/gmeghnag/omc/vars"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,17 +27,13 @@ type AdditionalPrinterColumn struct {
 var data [][]string
 var headers []string
 
-var returnObjects = uget.UnstrctList{ApiVersion: "v1", Kind: "List"}
-
-type testObjects struct {
+type genericObjectList struct {
 	ApiVersion string                   `json:"apiVersion"`
 	Kind       string                   `json:"kind"`
 	Items      []map[string]interface{} `json:"items"`
 }
 
-var tObjects = testObjects{ApiVersion: "v1", Kind: "List"}
-
-var unObjects = unstructured.UnstructuredList{}
+var objectList = genericObjectList{ApiVersion: "v1", Kind: "List"}
 
 func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	var crd *apiextensionsv1.CustomResourceDefinition
@@ -148,42 +143,36 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 			helpers.PrintTable(headers, data)
 		}
 	} else {
-		if len(returnObjects.Items) == 0 {
+		if len(objectList.Items) == 0 {
 			fmt.Fprintln(os.Stderr, "No resources found.")
 			os.Exit(1)
 		}
 		if vars.OutputStringVar == "json" {
-			if len(returnObjects.Items) == 1 {
-				j, _ := json.MarshalIndent(unObjects.Items[0].Object, "", "  ")
+			if len(objectList.Items) == 1 {
+				j, _ := json.MarshalIndent(objectList.Items[0], "", "  ")
 				fmt.Println(string(j))
 			} else {
-				returnObjects.Items = unObjects.Items
-				j, _ := json.MarshalIndent(returnObjects, "", "  ")
+				j, _ := json.MarshalIndent(objectList, "", "  ")
 				fmt.Println(string(j))
 			}
 		} else if vars.OutputStringVar == "yaml" {
-			if len(returnObjects.Items) == 1 {
-				y, _ := yaml.Marshal(unObjects.Items[0].Object)
+			if len(objectList.Items) == 1 {
+				y, _ := yaml.Marshal(objectList.Items[0])
 				fmt.Println(string(y))
 			} else {
-				returnObjects.Items = unObjects.Items
-				y, _ := yaml.Marshal(returnObjects)
+				y, _ := yaml.Marshal(objectList)
 				fmt.Println(string(y))
 			}
 		} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
 			jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-			if len(returnObjects.Items) == 1 {
-				helpers.ExecuteJsonPath(returnObjects.Items[0].Object, jsonPathTemplate)
+			if len(objectList.Items) == 1 {
+				helpers.ExecuteJsonPath(objectList.Items[0], jsonPathTemplate)
 			} else {
-				for _, i := range returnObjects.Items {
-					tObjects.Items = append(tObjects.Items, i.Object)
-				}
-				returnObjects.Items = unObjects.Items
-				helpers.ExecuteJsonPath(tObjects, jsonPathTemplate)
+				helpers.ExecuteJsonPath(objectList, jsonPathTemplate)
 			}
 		} else if vars.OutputStringVar == "name" {
-			for _, obj := range returnObjects.Items {
-				fmt.Println(strings.ToLower(obj.GetKind()) + "/" + obj.GetName())
+			for _, obj := range objectList.Items {
+				fmt.Println(strings.ToLower(obj["kind"].(string)) + "/" + obj["metadata"].(map[string]interface{})["name"].(string))
 			}
 		}
 	}
@@ -253,8 +242,7 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 								resourceData = append(resourceData, labels)
 							}
 						} else {
-							returnObjects.Items = append(returnObjects.Items, resource)
-							unObjects.Items = append(unObjects.Items, resource)
+							objectList.Items = append(objectList.Items, resource.Object)
 						}
 					}
 				}
@@ -289,8 +277,7 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 						}
 						data = append(data, resourceData)
 					} else {
-						returnObjects.Items = append(returnObjects.Items, *unstruct)
-						unObjects.Items = append(unObjects.Items, *unstruct)
+						objectList.Items = append(objectList.Items, unstruct.Object)
 					}
 				}
 			}
