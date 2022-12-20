@@ -30,6 +30,16 @@ var headers []string
 
 var returnObjects = uget.UnstrctList{ApiVersion: "v1", Kind: "List"}
 
+type testObjects struct {
+	ApiVersion string                   `json:"apiVersion"`
+	Kind       string                   `json:"kind"`
+	Items      []map[string]interface{} `json:"items"`
+}
+
+var tObjects = testObjects{ApiVersion: "v1", Kind: "List"}
+
+var unObjects = unstructured.UnstructuredList{}
+
 func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 	var crd *apiextensionsv1.CustomResourceDefinition
 	crdsPath := vars.MustGatherRootPath + "/cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/"
@@ -144,17 +154,19 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 		}
 		if vars.OutputStringVar == "json" {
 			if len(returnObjects.Items) == 1 {
-				j, _ := json.MarshalIndent(returnObjects.Items[0].Object, "", "  ")
+				j, _ := json.MarshalIndent(unObjects.Items[0].Object, "", "  ")
 				fmt.Println(string(j))
 			} else {
+				returnObjects.Items = unObjects.Items
 				j, _ := json.MarshalIndent(returnObjects, "", "  ")
 				fmt.Println(string(j))
 			}
 		} else if vars.OutputStringVar == "yaml" {
 			if len(returnObjects.Items) == 1 {
-				y, _ := yaml.Marshal(returnObjects.Items[0].Object)
+				y, _ := yaml.Marshal(unObjects.Items[0].Object)
 				fmt.Println(string(y))
 			} else {
+				returnObjects.Items = unObjects.Items
 				y, _ := yaml.Marshal(returnObjects)
 				fmt.Println(string(y))
 			}
@@ -163,7 +175,11 @@ func getGenericResourceFromCRD(crdName string, objectNames []string) bool {
 			if len(returnObjects.Items) == 1 {
 				helpers.ExecuteJsonPath(returnObjects.Items[0].Object, jsonPathTemplate)
 			} else {
-				helpers.ExecuteJsonPath(returnObjects, jsonPathTemplate)
+				for _, i := range returnObjects.Items {
+					tObjects.Items = append(tObjects.Items, i.Object)
+				}
+				returnObjects.Items = unObjects.Items
+				helpers.ExecuteJsonPath(tObjects, jsonPathTemplate)
 			}
 		} else if vars.OutputStringVar == "name" {
 			for _, obj := range returnObjects.Items {
@@ -237,7 +253,8 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 								resourceData = append(resourceData, labels)
 							}
 						} else {
-							returnObjects.Items = append(returnObjects.Items, *unstruct)
+							returnObjects.Items = append(returnObjects.Items, resource)
+							unObjects.Items = append(unObjects.Items, resource)
 						}
 					}
 				}
@@ -273,6 +290,7 @@ func gatherObjects(resourcePath string, crd *apiextensionsv1.CustomResourceDefin
 						data = append(data, resourceData)
 					} else {
 						returnObjects.Items = append(returnObjects.Items, *unstruct)
+						unObjects.Items = append(unObjects.Items, *unstruct)
 					}
 				}
 			}
