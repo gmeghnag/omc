@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/coreos/go-semver v0.3.0
+	github.com/coreos/ignition/v2 v2.7.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/metal3-io/baremetal-operator/apis v0.0.0-20220216092208-3612e86973f1
 	github.com/olekukonko/tablewriter v0.0.5
@@ -15,6 +16,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.12.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
+	github.com/vincent-petithory/dataurl v0.0.0-20160330182126-9a301d65acbb
 	go.etcd.io/etcd/api/v3 v3.5.0
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/client-go v0.0.0-20210503213042-e6eb157f0d81
@@ -30,19 +32,29 @@ require (
 require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/ajeddeloh/go-json v0.0.0-20170920214419-6a2fe990e083 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/clarketm/json v1.14.1 // indirect
+	github.com/coreos/fcct v0.5.0 // indirect
+	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
+	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
+	github.com/coreos/ign-converter v0.0.0-20201123214124-8dac862888aa // indirect
+	github.com/coreos/ignition v0.35.0 // indirect
+	github.com/coreos/vcontext v0.0.0-20191017033345-260217907eb5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
@@ -89,6 +101,7 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
+	go4.org v0.0.0-20200104003542-c7e774b10ea0 // indirect
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
 	golang.org/x/sys v0.1.0 // indirect

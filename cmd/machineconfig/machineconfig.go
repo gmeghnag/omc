@@ -33,5 +33,6 @@ var MachineConfig = &cobra.Command{
 func init() {
 	MachineConfig.AddCommand(
 		Diff,
+		Extract,
 	)
 }
