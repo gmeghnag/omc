@@ -75,7 +75,7 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 			}
 			if outputFlag == "name" {
 				_SecretsList.Items = append(_SecretsList.Items, Secret)
-				fmt.Println("replicationcontroller/" + Secret.Name)
+				fmt.Println("secret/" + Secret.Name)
 				continue
 			}
 
