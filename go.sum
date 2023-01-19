@@ -2307,6 +2307,7 @@ k8s.io/kube-aggregator v0.18.2/go.mod h1:ijq6FnNUoKinA6kKbkN6svdTacSoQVNtKqmQ1+X
 k8s.io/kube-aggregator v0.19.0/go.mod h1:1Ln45PQggFAG8xOqWPIYMxUq8WNtpPnYsbUJ39DpF/A=
 k8s.io/kube-aggregator v0.20.0/go.mod h1:3Is/gzzWmhhG/rA3CpA1+eVye87lreBQDFGcAGT7gzo=
 k8s.io/kube-aggregator v0.21.0-rc.0/go.mod h1:M+whOmsAeQf8ObJ0/eO9Af1Dz2UQEB9OW9BWmt9b2sU=
+k8s.io/kube-aggregator v0.22.1 h1:hsntyWsnkLiL4ccmoKfqiUVyxnlnqtqPRMuq/mT2wGQ=
 k8s.io/kube-aggregator v0.22.1/go.mod h1:VbmI+8fUeCPkzSvarWTrlIGEgUGEGI/66SFajDQ0Pdc=
 k8s.io/kube-openapi v0.0.0-20190709113604-33be087ad058/go.mod h1:nfDlWeOsu3pUf4yWGL+ERqohP4YsZcBJXWMK+gkzOA4=
 k8s.io/kube-openapi v0.0.0-20190816220812-743ec37842bf/go.mod h1:1TqjTSzOxsLGIKfj0lK8EeCP7K1iUG65v09OM0/WG5E=
