@@ -123,7 +123,11 @@ func findMustGatherIn(path string) (string, error) {
 		return path, fmt.Errorf("Expected one directory in path: \"%s\", found: %s.", path, strconv.Itoa(numDirs))
 	}
 	if !timeStampFound && numDirs == 1 {
-		retPath, retErr = findMustGatherIn(path + "/" + dirName)
+		return findMustGatherIn(path + "/" + dirName)
+	}
+	if !timeStampFound && !namespacesFolderFound {
+		// Case: "path" is an empty directory
+		return path, fmt.Errorf("wrong must-gather file composition for %v", path)
 	}
 
 	return retPath + "/", retErr
