@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,18 +29,24 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+type ClusterLoggingItems struct {
+	ApiVersion string                   `json:"apiVersion"`
+	Items      []logging.ClusterLogging `json:"items"`
+	Kind       string                   `json:"kind"`
+}
+
 func getClusterLoggings(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
-	ClusterloggingYamlPath := currentContextPath + "/cluster-logging/clo/cr"
+	ClusterloggingYamlPath := currentContextPath + "/cluster-logging/clo/clusterlogging_instance.yaml"
 	_headers := []string{"name", "age"}
 	var data [][]string
 
 	_file := helpers.ReadYaml(ClusterloggingYamlPath)
-	ClusterLogging := logging.ClusterLogging{}
-	if err := yaml.Unmarshal([]byte(_file), &ClusterLogging); err != nil {
+	ClusterLoggingList := ClusterLoggingItems{ApiVersion: "v1", Kind: "List"}
+	if err := yaml.Unmarshal([]byte(_file), &ClusterLoggingList); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+ClusterloggingYamlPath)
 		os.Exit(1)
 	}
-
+	ClusterLogging := ClusterLoggingList.Items[0]
 	labels := helpers.ExtractLabels(ClusterLogging.GetLabels())
 	if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
 		return false
