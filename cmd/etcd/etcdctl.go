@@ -32,14 +32,15 @@ func EndpointStatus(etcdFolderPath string) {
 		os.Exit(1)
 	}
 	var rows [][]string
-	var hdr = []string{"endpoint", "ID", "version", "db size", "is leader", "is learner", "raft term",
+	var hdr = []string{"endpoint", "ID", "version", "db size/in use", "not used", "is leader", "is learner", "raft term",
 		"raft index", "raft applied index", "errors"}
 	for _, status := range Endpoints {
 		rows = append(rows, []string{
 			status.Endpoint,
 			fmt.Sprintf("%x", status.Resp.Header.MemberId),
 			status.Resp.Version,
-			humanize.Bytes(uint64(status.Resp.DbSize)),
+			humanize.Bytes(uint64(status.Resp.DbSize)) + "/" + humanize.Bytes(uint64(status.Resp.DbSizeInUse)),
+			fmt.Sprint(100-(status.Resp.DbSizeInUse*100/status.Resp.DbSize)) + "%",
 			fmt.Sprint(status.Resp.Leader == status.Resp.Header.MemberId),
 			fmt.Sprint(status.Resp.IsLearner),
 			fmt.Sprint(status.Resp.RaftTerm),
