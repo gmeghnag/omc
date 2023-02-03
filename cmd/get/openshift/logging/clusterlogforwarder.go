@@ -29,18 +29,26 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+type ClusterLogForwarderItems struct {
+	ApiVersion string                        `json:"apiVersion"`
+	Items      []logging.ClusterLogForwarder `json:"items"`
+	Kind       string                        `json:"kind"`
+}
+
 func getClusterLogForwarders(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
-	clusterlogforwarderYamlPath := currentContextPath + "/cluster-logging/clo/clusterlogforwarder_cr"
+	clusterlogforwarderYamlPath := currentContextPath + "/cluster-logging/clo/clusterlogforwarder_instance.yaml"
 	_headers := []string{"name", "age"}
 	var data [][]string
 
 	_file := helpers.ReadYaml(clusterlogforwarderYamlPath)
-	ClusterLogForwarder := logging.ClusterLogForwarder{}
-	if err := yaml.Unmarshal([]byte(_file), &ClusterLogForwarder); err != nil {
+	ClusterLogForwarderList := ClusterLogForwarderItems{ApiVersion: "v1", Kind: "List"}
+	
+	if err := yaml.Unmarshal([]byte(_file), &ClusterLogForwarderList); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+clusterlogforwarderYamlPath)
 		os.Exit(1)
 	}
 
+	ClusterLogForwarder := ClusterLogForwarderList.Items[0]
 	labels := helpers.ExtractLabels(ClusterLogForwarder.GetLabels())
 	if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
 		return false
