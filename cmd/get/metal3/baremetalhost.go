@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,7 +31,7 @@ import (
 )
 
 func getBareMetalHosts(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "age"}
+	_headers := []string{"namespace", "name", "state", "consumer", "online", "error", "age"}
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -101,9 +101,9 @@ func getBareMetalHosts(currentContextPath string, namespace string, resourceName
 	var headers []string
 	if outputFlag == "" {
 		if allNamespacesFlag == true {
-			headers = _headers[0:3]
+			headers = _headers[0:7]
 		} else {
-			headers = _headers[1:3]
+			headers = _headers[1:7]
 		}
 		if showLabels {
 			headers = append(headers, "labels")
