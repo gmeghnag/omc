@@ -1,0 +1,76 @@
+site_name: "OMC"
+site_url: https://omc.gmeghnag.io/
+site_author: Gabriel Meghnagi
+
+# Repository
+repo_name: gmeghnag/omc
+repo_url: https://github.com/gmeghnag/omc
+plugins:
+- search
+nav:
+  - 'Home': 
+    - Index: index.md
+  - 'Install':
+    - install/install.md
+    - install/upgrade.md
+  - 'Subcommands':
+    - Subcommands: subcmds/subcommands.md
+    - get: subcmds/get.md
+    - alert: subcmds/alert.md
+    - describe: subcmds/describe.md
+    - config: subcmds/config.md
+  - 'Examples':
+    - examples.md
+
+extra_css:
+    - 'css/extra.css'
+
+extra:
+  generator: false
+
+theme:
+  icon:
+    repo: fontawesome/brands/github
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.instant
+    - navigation.sections
+    - content.code.annotate
+    - content.code.copy
+    - navigation.footer
+
+  palette:
+    - scheme: slate
+      primary: yellow
+      accent: yellow
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: default
+      primary: yellow
+      accent: yellow
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+
+  include_sidebar: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true 
+  - toc:
+      permalink: true
+  - tables
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
