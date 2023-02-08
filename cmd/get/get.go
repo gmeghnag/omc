@@ -27,7 +27,6 @@ import (
 	"github.com/gmeghnag/omc/cmd/get/istio/networking"
 	"github.com/gmeghnag/omc/cmd/get/local"
 	"github.com/gmeghnag/omc/cmd/get/maistra"
-	baremetalhost "github.com/gmeghnag/omc/cmd/get/metal3"
 	networkingv1 "github.com/gmeghnag/omc/cmd/get/networking"
 	"github.com/gmeghnag/omc/cmd/get/openshift/apiserver"
 	appz "github.com/gmeghnag/omc/cmd/get/openshift/apps"
@@ -207,7 +206,6 @@ func init() {
 		machine.MachineSet,
 		machineconfiguration.MachineConfig,
 		machineconfiguration.MachineConfigPool,
-		baremetalhost.BareMetalHost,
 		maistra.ServiceMeshControlPlane,
 		maistra.ServiceMeshMemberRoll,
 		networkingv1.Ingress,
