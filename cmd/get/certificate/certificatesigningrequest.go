@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,12 +16,10 @@ limitations under the License.
 package certificate
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
-	"strings"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
@@ -32,15 +30,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func getCertificateSigningRequests(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string) bool {
+func GetCertificateSigningRequests(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]v1.CertificateSigningRequest) {
 
 	certificatesigningrequestsFolderPath := currentContextPath + "/cluster-scoped-resources/certificates.k8s.io/certificatesigningrequests/"
 	_certificatesigningrequests, _ := ioutil.ReadDir(certificatesigningrequestsFolderPath)
 
-	_headers := []string{"name", "age", "signername", "requestor", "condition"}
-	var data [][]string
-
-	_CertificateSigningRequestsList := v1.CertificateSigningRequestList{}
 	for _, f := range _certificatesigningrequests {
 		certificatesigningrequestYamlPath := certificatesigningrequestsFolderPath + f.Name()
 		_file := helpers.ReadYaml(certificatesigningrequestYamlPath)
@@ -50,110 +44,14 @@ func getCertificateSigningRequests(currentContextPath string, namespace string, 
 			os.Exit(1)
 		}
 
-		labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
-		if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
-			continue
-		}
-		if resourceName != "" && resourceName != CertificateSigningRequest.Name {
-			continue
-		}
-		if outputFlag == "name" {
-			_CertificateSigningRequestsList.Items = append(_CertificateSigningRequestsList.Items, CertificateSigningRequest)
-			fmt.Println("certificates.k8s.io/" + CertificateSigningRequest.Name)
-			continue
-		}
-
-		if outputFlag == "yaml" {
-			_CertificateSigningRequestsList.Items = append(_CertificateSigningRequestsList.Items, CertificateSigningRequest)
-			continue
-		}
-
-		if outputFlag == "json" {
-			_CertificateSigningRequestsList.Items = append(_CertificateSigningRequestsList.Items, CertificateSigningRequest)
-			continue
-		}
-
-		if strings.HasPrefix(outputFlag, "jsonpath=") {
-			_CertificateSigningRequestsList.Items = append(_CertificateSigningRequestsList.Items, CertificateSigningRequest)
-			continue
-		}
-		//Name
-		certificatesigningrequestName := CertificateSigningRequest.Name
-		age := helpers.GetAge(certificatesigningrequestYamlPath, CertificateSigningRequest.GetCreationTimestamp())
-
-		//signername
-		signername := CertificateSigningRequest.Spec.SignerName
-		//requestor
-		requestor := CertificateSigningRequest.Spec.Username
-
-		//condition
-		condition := "Unknown"
-		if reflect.DeepEqual(CertificateSigningRequest.Status, v1.CertificateSigningRequestStatus{}) {
-			condition = "Pending"
-		} else {
-			for _, c := range CertificateSigningRequest.Status.Conditions {
-				//Approved
-				if c.Type == "Approved" {
-					condition = "Approved,Issued"
-					break
-				}
-				//Denied
-				if c.Type == "Denied" {
-					condition = "Denied"
-					break
-				}
-				//Failed
-				if c.Type == "Failed" {
-					condition = "Failed"
-					break
-				}
-				//Pending
-				if c.Type == "Pending" {
-					condition = "Pending"
-					break
-				}
+		if vars.LabelSelectorStringVar != "" {
+			labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
+			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+				continue
 			}
 		}
-		_list := []string{certificatesigningrequestName, age, signername, requestor, condition}
-		data = helpers.GetData(data, true, showLabels, labels, outputFlag, 5, _list)
+		*out = append(*out, CertificateSigningRequest)
 	}
-
-	var headers []string
-	if outputFlag == "" {
-		headers = _headers[0:5] // -A
-		if showLabels {
-			headers = append(headers, "labels")
-		}
-		helpers.PrintTable(headers, data)
-		return false
-
-	}
-	if outputFlag == "wide" {
-		headers = _headers // -A -o wide
-		if showLabels {
-			headers = append(headers, "labels")
-		}
-		helpers.PrintTable(headers, data)
-		return false
-	}
-	var resource interface{}
-	if resourceName != "" {
-		resource = _CertificateSigningRequestsList.Items[0]
-	} else {
-		resource = _CertificateSigningRequestsList
-	}
-	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(resource)
-		fmt.Println(string(y))
-	}
-	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(resource, "", "  ")
-		fmt.Println(string(j))
-	}
-	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
-	}
-	return false
 }
 
 var CertificateSigningRequest = &cobra.Command{
@@ -165,7 +63,65 @@ var CertificateSigningRequest = &cobra.Command{
 		if len(args) == 1 {
 			resourceName = args[0]
 		}
+		var resources []v1.CertificateSigningRequest
+		GetCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, &resources)
+		if len(resources) == 0 {
+			fmt.Fprintln(os.Stderr, "No resources found.")
+			os.Exit(0)
+		}
+		_headers := []string{"name", "age", "signername", "requestor", "condition"}
+		var data [][]string
+		for _, CertificateSigningRequest := range resources {
+			labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
+
+			certificatesigningrequestName := CertificateSigningRequest.Name
+			age := helpers.GetAge(vars.MustGatherRootPath+"/cluster-scoped-resources/certificates.k8s.io/certificatesigningrequests/", CertificateSigningRequest.GetCreationTimestamp())
+
+			//signername
+			signername := CertificateSigningRequest.Spec.SignerName
+			//requestor
+			requestor := CertificateSigningRequest.Spec.Username
+
+			//condition
+			condition := "Unknown"
+			if reflect.DeepEqual(CertificateSigningRequest.Status, v1.CertificateSigningRequestStatus{}) {
+				condition = "Pending"
+			} else {
+				for _, c := range CertificateSigningRequest.Status.Conditions {
+					//Approved
+					if c.Type == "Approved" {
+						condition = "Approved,Issued"
+						break
+					}
+					//Denied
+					if c.Type == "Denied" {
+						condition = "Denied"
+						break
+					}
+					//Failed
+					if c.Type == "Failed" {
+						condition = "Failed"
+						break
+					}
+					//Pending
+					if c.Type == "Pending" {
+						condition = "Pending"
+						break
+					}
+				}
+			}
+			_list := []string{certificatesigningrequestName, age, signername, requestor, condition}
+			data = helpers.GetData(data, true, vars.ShowLabelsBoolVar, labels, vars.OutputStringVar, 5, _list)
+		}
+		// ugly hack to get single item out of the slice
+		//  TODO: handle this is helpets.PrintOutput
+		var resourceSliceOrSingle interface{}
+		if resourceName == "" {
+			resourceSliceOrSingle = v1.CertificateSigningRequestList{Items: resources}
+		} else {
+			resourceSliceOrSingle = resources[0]
+		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate)
+		helpers.PrintOutput(resourceSliceOrSingle, 4, vars.OutputStringVar, resourceName, vars.AllNamespaceBoolVar, vars.ShowLabelsBoolVar, _headers, data, jsonPathTemplate)
 	},
 }

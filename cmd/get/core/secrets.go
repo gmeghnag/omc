@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,12 +16,10 @@ limitations under the License.
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
@@ -36,8 +34,7 @@ type SecretsItems struct {
 	Items      []*corev1.Secret `json:"items"`
 }
 
-func getSecrets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, outputFlag string, showLabels bool, jsonPathTemplate string, allResources bool) bool {
-	_headers := []string{"namespace", "name", "type", "data", "age"}
+func GetSecrets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]*corev1.Secret) {
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -49,15 +46,12 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 		namespaces = append(namespaces, namespace)
 	}
 
-	var data [][]string
-	var _SecretsList = SecretsItems{ApiVersion: "v1"}
 	for _, _namespace := range namespaces {
 		var _Items SecretsItems
 		CurrentNamespacePath := currentContextPath + "/namespaces/" + _namespace
 		_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/secrets.yaml")
 		if err != nil && !allNamespacesFlag {
-			fmt.Fprintln(os.Stderr, "No resources found in "+_namespace+" namespace.")
-			os.Exit(1)
+			continue
 		}
 		if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
 			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/core/secrets.yaml")
@@ -66,33 +60,41 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 
 		for _, Secret := range _Items.Items {
 			labels := helpers.ExtractLabels(Secret.GetLabels())
-			if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
-				continue
+			if vars.LabelSelectorStringVar != "" {
+				if !helpers.MatchLabels(labels, vars.LabelSelectorStringVar) {
+					continue
+				}
 			}
 
 			if resourceName != "" && resourceName != Secret.Name {
 				continue
 			}
-			if outputFlag == "name" {
-				_SecretsList.Items = append(_SecretsList.Items, Secret)
-				fmt.Println("secret/" + Secret.Name)
-				continue
-			}
+			*out = append(*out, Secret)
+		}
+	}
+}
 
-			if outputFlag == "yaml" {
-				_SecretsList.Items = append(_SecretsList.Items, Secret)
-				continue
-			}
-
-			if outputFlag == "json" {
-				_SecretsList.Items = append(_SecretsList.Items, Secret)
-				continue
-			}
-
-			if strings.HasPrefix(outputFlag, "jsonpath=") {
-				_SecretsList.Items = append(_SecretsList.Items, Secret)
-				continue
-			}
+var Secret = &cobra.Command{
+	Use:     "secret",
+	Aliases: []string{"secrets"},
+	Hidden:  true,
+	Run: func(cmd *cobra.Command, args []string) {
+		resourceName := ""
+		if len(args) == 1 {
+			resourceName = args[0]
+		}
+		var resources []*corev1.Secret
+		//jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		GetSecrets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, &resources)
+		if len(resources) == 0 {
+			fmt.Fprintln(os.Stderr, "No resources found.")
+			os.Exit(0)
+		}
+		_headers := []string{"namespace", "name", "type", "data", "age"}
+		allResources := false
+		var data [][]string
+		for _, Secret := range resources {
+			labels := helpers.ExtractLabels(Secret.GetLabels())
 
 			//name
 			SecretName := Secret.Name
@@ -105,91 +107,21 @@ func getSecrets(currentContextPath string, namespace string, resourceName string
 			secretData := strconv.Itoa(len(Secret.Data))
 
 			//age
-			age := helpers.GetAge(CurrentNamespacePath+"/core/secrets.yaml", Secret.GetCreationTimestamp())
+			age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+Secret.Namespace+"/core/", Secret.GetCreationTimestamp())
 
 			_list := []string{Secret.Namespace, SecretName, secretType, secretData, age}
-			data = helpers.GetData(data, allNamespacesFlag, showLabels, labels, outputFlag, 5, _list)
-
-			if resourceName != "" && resourceName == SecretName {
-				break
-			}
+			data = helpers.GetData(data, vars.AllNamespaceBoolVar, vars.ShowLabelsBoolVar, labels, vars.OutputStringVar, 5, _list)
 		}
-		if namespace != "" && _namespace == namespace {
-			break
-		}
-	}
-
-	if (outputFlag == "" || outputFlag == "wide") && len(data) == 0 {
-		if !allResources {
-			fmt.Println("No resources found in " + namespace + " namespace.")
-		}
-		return true
-	}
-
-	var headers []string
-	if outputFlag == "" {
-		if allNamespacesFlag == true {
-			headers = _headers[0:5]
+		// ugly hack to get single item out of the slice
+		//  TODO: handle this is helpets.PrintOutput
+		var resourceSliceOrSingle interface{}
+		if resourceName == "" {
+			// for backward-compability print this as a SecretsItems
+			resourceSliceOrSingle = SecretsItems{ApiVersion: "v1", Items: resources}
 		} else {
-			headers = _headers[1:5]
-		}
-		if showLabels {
-			headers = append(headers, "labels")
-		}
-		helpers.PrintTable(headers, data)
-		return false
-	}
-	if outputFlag == "wide" {
-		if allNamespacesFlag == true {
-			headers = _headers
-		} else {
-			headers = _headers[1:]
-		}
-		if showLabels {
-			headers = append(headers, "labels")
-		}
-		helpers.PrintTable(headers, data)
-		return false
-	}
-
-	if len(_SecretsList.Items) == 0 {
-		if !allResources {
-			fmt.Println("No resources found in " + namespace + " namespace.")
-		}
-		return true
-	}
-
-	var resource interface{}
-	if resourceName != "" {
-		resource = _SecretsList.Items[0]
-	} else {
-		resource = _SecretsList
-	}
-	if outputFlag == "yaml" {
-		y, _ := yaml.Marshal(resource)
-		fmt.Println(string(y))
-	}
-	if outputFlag == "json" {
-		j, _ := json.MarshalIndent(resource, "", "  ")
-		fmt.Println(string(j))
-	}
-	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		helpers.ExecuteJsonPath(resource, jsonPathTemplate)
-	}
-
-	return false
-}
-
-var Secret = &cobra.Command{
-	Use:     "secret",
-	Aliases: []string{"secrets"},
-	Hidden:  true,
-	Run: func(cmd *cobra.Command, args []string) {
-		resourceName := ""
-		if len(args) == 1 {
-			resourceName = args[0]
+			resourceSliceOrSingle = resources[0]
 		}
 		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
-		getSecrets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, vars.OutputStringVar, vars.ShowLabelsBoolVar, jsonPathTemplate, false)
+		helpers.PrintOutput(resourceSliceOrSingle, 5, vars.OutputStringVar, resourceName, vars.AllNamespaceBoolVar, vars.ShowLabelsBoolVar, _headers, data, jsonPathTemplate)
 	},
 }
