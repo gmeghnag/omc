@@ -6,7 +6,6 @@ require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/ignition/v2 v2.7.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/metal3-io/baremetal-operator/apis v0.0.0-20220216092208-3612e86973f1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/openshift/api v0.0.0-20210906075240-3611f00b94fd
 	github.com/openshift/cluster-logging-operator v0.0.0-20220210123959-75ad691d9e57
@@ -75,7 +74,6 @@ require (
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/metal3-io/baremetal-operator/pkg/hardwareutils v0.0.0 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
