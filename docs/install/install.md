@@ -1,4 +1,4 @@
-# Installation
+# Install
 
 ## Download the latest binary release :material-github:
 ---

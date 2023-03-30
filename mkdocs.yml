@@ -1,5 +1,5 @@
 site_name: "OMC"
-site_url: https://omc.gmeghnag.io/
+site_url: https://gmeghnag.github.io/omc
 site_author: Gabriel Meghnagi
 
 # Repository
@@ -10,15 +10,15 @@ plugins:
 nav:
   - 'Home': 
     - Index: index.md
-  - 'Install':
+    - Subcommands: subcmds/subcommands.md
+  - Install and upgrade:
     - install/install.md
     - install/upgrade.md
   - 'Subcommands':
-    - Subcommands: subcmds/subcommands.md
-    - get: subcmds/get.md
-    - alert: subcmds/alert.md
-    - describe: subcmds/describe.md
-    - config: subcmds/config.md
+    - omc get: subcmds/get.md
+    - omc alert: subcmds/alert.md
+    - omc describe: subcmds/describe.md
+    - omc config: subcmds/config.md
   - 'Examples':
     - examples.md
 
@@ -39,6 +39,9 @@ theme:
     - content.code.annotate
     - content.code.copy
     - navigation.footer
+    - toc.integrate
+    - toc.follow
+    - navigation.top
 
   palette:
     - scheme: slate
