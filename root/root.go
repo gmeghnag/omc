@@ -24,6 +24,7 @@ import (
 
 	"github.com/gmeghnag/omc/cmd"
 	"github.com/gmeghnag/omc/cmd/alert"
+	"github.com/gmeghnag/omc/cmd/certs"
 	"github.com/gmeghnag/omc/cmd/config"
 	"github.com/gmeghnag/omc/cmd/describe"
 	"github.com/gmeghnag/omc/cmd/etcd"
@@ -80,6 +81,7 @@ func init() {
 		logs.Logs,
 		machineconfig.MachineConfig,
 		upgrade.Upgrade,
+		certs.Certs,
 	)
 	loadOmcConfigs()
 }
