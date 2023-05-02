@@ -16,9 +16,9 @@ import (
 	"github.com/gmeghnag/omc/types"
 
 	"github.com/olekukonko/tablewriter"
-	"gopkg.in/yaml.v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/jsonpath"
+	"sigs.k8s.io/yaml"
 )
 
 // TYPES
@@ -248,6 +248,9 @@ func PrintOutput(resource interface{}, columns int16, outputFlag string, resourc
 		PrintTable(headers, data)
 		return false
 	}
+
+	// TODO: de-slice single-item slice into element
+
 	if outputFlag == "yaml" {
 		y, _ := yaml.Marshal(resource)
 		fmt.Println(string(y))
