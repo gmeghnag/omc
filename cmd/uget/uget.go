@@ -49,7 +49,7 @@ var UGetCmd = &cobra.Command{
 func init() {
 	UGetCmd.PersistentFlags().BoolVarP(&vars.ShowLabelsBoolVar, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
 	UGetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
-	UGetCmd.PersistentFlags().StringVarP(&additionalColumnsPath, "columns", "c", "", "Costum columns file path.")
+	UGetCmd.PersistentFlags().StringVarP(&additionalColumnsPath, "columns", "c", "", "Custom columns file path.")
 	UGetCmd.PersistentFlags().StringVarP(&objectFilePath, "path", "p", "", "Inspect object(s) path.")
 	UGetCmd.PersistentFlags().StringVarP(&kindStringVar, "kind", "k", "", "kind(s) to filter on, single or multiple (comma speratad)")
 	UGetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
