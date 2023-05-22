@@ -17,18 +17,33 @@ package certs
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"github.com/gmeghnag/omc/cmd/get/certificate"
 	"github.com/gmeghnag/omc/cmd/get/core"
+	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
 	"io"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/cert"
 	"os"
 	"strings"
 )
+
+const (
+	missingKeyMsg           = "%s does not contain a key '%s'\n"
+	missingCaContentMsg     = "%s missing content for key '%s'\n"
+	parseFailureMsg         = "Failed to parse %s/%s : %v\n"
+	objConvertionFailureMsg = "Failed to convert to %s: %s"
+)
+
+func getSupportedCaKeyNames() []string {
+	return []string{"ca-bundle.crt", "ca.crt", "service-ca.crt"}
+}
 
 var Inspect = &cobra.Command{
 	Use:   "inspect",
@@ -42,145 +57,71 @@ var Inspect = &cobra.Command{
 	},
 }
 
-func inspectResources(resourceTypes []string) {
-	for _, resourceType := range resourceTypes {
-		switch resourceType {
-		case "cm", "configmap", "configmaps":
-			var configmaps []*corev1.ConfigMap
-			core.GetConfigMaps(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &configmaps)
-			for _, r := range configmaps {
-				if err := certInspect(r); err != nil {
-					fmt.Println(err)
-				}
-			}
-		case "secret", "secrets":
-			var secrets []*corev1.Secret
-			core.GetSecrets(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &secrets)
-			for _, r := range secrets {
-				if err := certInspect(r); err != nil {
-					fmt.Println(err)
-				}
-			}
-		case "csr", "certificatesigningrequest", "certificatesigningrequests":
-			var csrs []certificatesv1.CertificateSigningRequest
-			certificate.GetCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &csrs)
-			for _, r := range csrs {
-				if err := certInspect(r); err != nil {
-					fmt.Println(err)
-				}
-			}
-		}
-	}
+type CertDetail struct {
+	*unstructured.Unstructured
+	CertType string
+	*x509.Certificate
 }
 
-func certInspect(resource interface{}) error {
-	switch castObj := resource.(type) {
-	case *corev1.ConfigMap:
-		inspectConfigMap(os.Stdout, castObj)
-	case *corev1.Secret:
-		inspectSecret(os.Stdout, castObj)
-	case *certificatesv1.CertificateSigningRequest:
-		inspectCSR(os.Stdout, castObj)
-	default:
-		return fmt.Errorf("unhandled resource: %T", castObj)
+func NewCertDetail(obj *unstructured.Unstructured, certType string, certificate *x509.Certificate) *CertDetail {
+	if certificate == nil {
+		return &CertDetail{obj, certType, &x509.Certificate{}}
 	}
-	return nil
+	return &CertDetail{obj, certType, certificate}
 }
 
-func inspectConfigMap(w io.Writer, obj *corev1.ConfigMap) {
-	resourceString := fmt.Sprintf("configmaps/%s[%s]", obj.Name, obj.Namespace)
-	caBundle, ok := obj.Data["ca-bundle.crt"]
-	if !ok {
-		fmt.Fprintf(w, "%s NOT a ca-bundle\n", resourceString)
-		return
-	}
-	if len(caBundle) == 0 {
-		fmt.Fprintf(w, "%s MISSING ca-bundle content\n", resourceString)
-		return
-	}
-
-	fmt.Fprintf(w, "%s - ca-bundle (%v)\n", resourceString, obj.CreationTimestamp.UTC())
-	certificates, err := cert.ParseCertsPEM([]byte(caBundle))
-	if err != nil {
-		fmt.Fprintf(w, "    ERROR - %v\n", err)
-		return
-	}
-	for _, curr := range certificates {
-		fmt.Fprintf(w, "    %s\n", certDetail(curr))
-	}
+// In case a nil certificate (cm/secret/csr not containing a certificate) was provided,
+// forward x509.certificate.IsZero as an indication of a nil-value certificate
+func (c CertDetail) IsZero() bool {
+	return c.NotBefore.IsZero()
 }
 
-func inspectSecret(w io.Writer, obj *corev1.Secret) {
-	resourceString := fmt.Sprintf("secrets/%s[%s]", obj.Name, obj.Namespace)
-	tlsCrt, isTLS := obj.Data["tls.crt"]
-	if isTLS {
-		fmt.Fprintf(w, "%s - tls (%v)\n", resourceString, obj.CreationTimestamp.UTC())
-		if len(tlsCrt) == 0 {
-			fmt.Fprintf(w, "%s MISSING tls.crt content\n", resourceString)
-			return
-		}
-
-		certificates, err := cert.ParseCertsPEM([]byte(tlsCrt))
-		if err != nil {
-			fmt.Fprintf(w, "    ERROR - %v\n", err)
-			return
-		}
-		for _, curr := range certificates {
-			fmt.Fprintf(w, "    %s\n", certDetail(curr))
-		}
+// use ValidFrom/To to prevent name collision with certificate.NotBefore/NotAfter
+func (c CertDetail) ValidFrom() string {
+	if c.NotBefore.IsZero() {
+		return ""
 	}
-
-	caBundle, isCA := obj.Data["ca.crt"]
-	if isCA {
-		fmt.Fprintf(w, "%s - token secret (%v)\n", resourceString, obj.CreationTimestamp.UTC())
-		if len(caBundle) == 0 {
-			fmt.Fprintf(w, "%s MISSING ca.crt content\n", resourceString)
-			return
-		}
-
-		certificates, err := cert.ParseCertsPEM([]byte(caBundle))
-		if err != nil {
-			fmt.Fprintf(w, "    ERROR - %v\n", err)
-			return
-		}
-		for _, curr := range certificates {
-			fmt.Fprintf(w, "    %s\n", certDetail(curr))
-		}
-	}
-
-	if !isTLS && !isCA {
-		fmt.Fprintf(w, "%s NOT a tls secret or token secret\n", resourceString)
-		return
-	}
+	return c.NotBefore.UTC().String()
 }
 
-func inspectCSR(w io.Writer, obj *certificatesv1.CertificateSigningRequest) {
-	resourceString := fmt.Sprintf("csr/%s", obj.Name)
-	if len(obj.Status.Certificate) == 0 {
-		fmt.Fprintf(w, "%s NOT SIGNED\n", resourceString)
-		return
+// use ValidFrom/To to prevent name collision with certificate.NotBefore/NotAfter
+func (c CertDetail) ValidTill() string {
+	if c.NotAfter.IsZero() {
+		return ""
 	}
-
-	fmt.Fprintf(w, "%s - (%v)\n", resourceString, obj.CreationTimestamp.UTC())
-	certificates, err := cert.ParseCertsPEM([]byte(obj.Status.Certificate))
-	if err != nil {
-		fmt.Fprintf(w, "    ERROR - %v\n", err)
-		return
-	}
-	for _, curr := range certificates {
-		fmt.Fprintf(w, "    %s\n", certDetail(curr))
-	}
+	return c.NotAfter.UTC().String()
 }
 
-func certDetail(certificate *x509.Certificate) string {
-	humanName := certificate.Subject.CommonName
-	signerHumanName := certificate.Issuer.CommonName
-	if certificate.Subject.CommonName == certificate.Issuer.CommonName {
-		signerHumanName = "<self>"
+func (c CertDetail) ValidFor() []string {
+	validServingNames := []string{}
+	if c.IsZero() {
+		return validServingNames
 	}
+	for _, ip := range c.IPAddresses {
+		validServingNames = append(validServingNames, ip.String())
+	}
+	for _, dnsName := range c.DNSNames {
+		validServingNames = append(validServingNames, dnsName)
+	}
+	return validServingNames
+}
 
+func (c CertDetail) issuer() string {
+	if c.IsZero() {
+		return ""
+	}
+	if c.Subject.CommonName == c.Issuer.CommonName {
+		return "[self]"
+	}
+	return c.Issuer.CommonName
+}
+
+func (c CertDetail) Usages() []string {
 	usages := []string{}
-	for _, curr := range certificate.ExtKeyUsage {
+	if c.IsZero() {
+		return usages
+	}
+	for _, curr := range c.ExtKeyUsage {
 		if curr == x509.ExtKeyUsageClientAuth {
 			usages = append(usages, "client")
 			continue
@@ -192,23 +133,212 @@ func certDetail(certificate *x509.Certificate) string {
 
 		usages = append(usages, fmt.Sprintf("%d", curr))
 	}
+	return usages
+}
 
-	validServingNames := []string{}
-	for _, ip := range certificate.IPAddresses {
-		validServingNames = append(validServingNames, ip.String())
+func (c CertDetail) subject() string {
+	if c.IsZero() {
+		return ""
 	}
-	for _, dnsName := range certificate.DNSNames {
-		validServingNames = append(validServingNames, dnsName)
+	return c.Subject.String()
+}
+
+func (c CertDetail) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Namespace    string   `json:"namespace"`
+		Name         string   `json:"name"`
+		Kind         string   `json:"kind"`
+		CertType     string   `json:"certType"`
+		Subject      string   `json:"subject"`
+		NotBefore    string   `json:"notBefore"`
+		NotAfter     string   `json:"notAfter"`
+		ValidFor     []string `json:"validFor,omitempty"`
+		Issuer       string   `json:"issuer"`
+		Groups       []string `json:"groups,omitempty"`
+		Usages       []string `json:"usages,omitempty"`
+		CreationDate string   `json:"creationDate"`
+	}{
+		Namespace:    c.GetNamespace(),
+		Name:         c.GetName(),
+		Kind:         c.GetKind(),
+		CertType:     c.CertType,
+		Subject:      c.Subject.String(),
+		NotBefore:    c.ValidFrom(),
+		NotAfter:     c.ValidTill(),
+		ValidFor:     c.ValidFor(),
+		Issuer:       c.issuer(),
+		Groups:       c.Subject.Organization,
+		Usages:       c.Usages(),
+		CreationDate: c.GetCreationTimestamp().String(),
+	})
+}
+
+func printParseFailure(w io.Writer, f string) {
+	if showParseFailure {
+		fmt.Fprintf(w, f)
 	}
-	servingString := ""
-	if len(validServingNames) > 0 {
-		servingString = fmt.Sprintf(" validServingFor=[%s]", strings.Join(validServingNames, ","))
+}
+
+func inspectResources(resourceTypes []string) {
+	var data [][]string
+	var resources []*CertDetail
+	_headers := []string{"namespace", "name", "kind", "age", "certtype", "subject", "notbefore", "notafter", "validfor", "issuer", "groups", "usages"}
+	for _, resourceType := range resourceTypes {
+		switch resourceType {
+		case "cm", "configmap", "configmaps":
+			var configmaps []*unstructured.Unstructured
+			core.GetConfigMaps(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &configmaps)
+			for _, r := range configmaps {
+				resources = append(resources, inspectConfigMap(os.Stdout, r)...)
+			}
+		case "secret", "secrets":
+			var secrets []*unstructured.Unstructured
+			core.GetSecrets(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &secrets)
+			for _, r := range secrets {
+				resources = append(resources, inspectSecret(os.Stdout, r)...)
+			}
+		case "csr", "certificatesigningrequest", "certificatesigningrequests":
+			var csrs []unstructured.Unstructured
+			certificate.GetCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &csrs)
+			for _, r := range csrs {
+				resources = append(resources, inspectCSR(os.Stdout, &r)...)
+			}
+		}
+	}
+	for _, curr := range resources {
+		age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+curr.GetNamespace()+"/core/", curr.GetCreationTimestamp())
+		_list := []string{
+			curr.GetNamespace(),
+			curr.GetName(),
+			curr.GetKind(),
+			age,
+			curr.CertType,
+			curr.subject(),
+			curr.ValidTill(),
+			curr.ValidFrom(),
+			strings.Join(curr.ValidFor(), ","),
+			curr.issuer(),
+			strings.Join(curr.Subject.Organization, ","),
+			strings.Join(curr.Usages(), ","),
+		}
+		data = helpers.GetData(data, vars.AllNamespaceBoolVar, false, "", vars.OutputStringVar, 8, _list)
+	}
+	helpers.PrintOutput(resources, 8, vars.OutputStringVar, "", vars.AllNamespaceBoolVar, false, _headers, data, "")
+}
+
+func inspectConfigMap(w io.Writer, obj *unstructured.Unstructured) []*CertDetail {
+	resourceString := fmt.Sprintf("configmaps/%s[%s]", obj.GetName(), obj.GetNamespace())
+	var cm corev1.ConfigMap
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &cm)
+	if err != nil {
+		fmt.Fprintf(w, objConvertionFailureMsg, obj.GetKind(), err)
+	}
+	var certdetails []*CertDetail
+	for _, caKeyName := range getSupportedCaKeyNames() {
+		caBundle, ok := cm.Data[caKeyName]
+		if !ok {
+			printParseFailure(w, fmt.Sprintf(missingKeyMsg, resourceString, caKeyName))
+			continue
+		}
+		if len(caBundle) == 0 {
+			printParseFailure(w, fmt.Sprintf(missingCaContentMsg, resourceString, caKeyName))
+			continue
+		}
+		certificates, err := cert.ParseCertsPEM([]byte(caBundle))
+		if err != nil {
+			printParseFailure(w, fmt.Sprintf(parseFailureMsg, obj.GetKind(), obj.GetName(), err))
+		}
+		for _, cert := range certificates {
+			certdetails = append(certdetails, NewCertDetail(obj, "ca-bundle", cert))
+		}
 	}
 
-	groupString := ""
-	if len(certificate.Subject.Organization) > 0 {
-		groupString = fmt.Sprintf(" groups=[%s]", strings.Join(certificate.Subject.Organization, ","))
+	// in case no valid data keys are found but we want to list resources anyway
+	if listNonCerts && len(certdetails) == 0 {
+		certdetails = append(certdetails, NewCertDetail(obj, "N/A", nil))
+	}
+	return certdetails
+}
+
+func inspectSecret(w io.Writer, obj *unstructured.Unstructured) []*CertDetail {
+	resourceString := fmt.Sprintf("secret/%s[%s]", obj.GetName(), obj.GetNamespace())
+	var secret corev1.Secret
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &secret)
+	if err != nil {
+		fmt.Fprintf(w, objConvertionFailureMsg, obj.GetKind(), err)
+	}
+	tlsCrt, isTLS := secret.Data["tls.crt"]
+	var certdetails []*CertDetail
+	var isCA bool
+	if isTLS {
+		if len(tlsCrt) == 0 {
+			printParseFailure(w, fmt.Sprintf(missingCaContentMsg, resourceString, "tls.crt"))
+		}
+
+		certificates, err := cert.ParseCertsPEM([]byte(tlsCrt))
+		if err != nil {
+			printParseFailure(w, fmt.Sprintf(parseFailureMsg, obj.GetKind(), obj.GetName(), err))
+		}
+		for _, cert := range certificates {
+			certdetails = append(certdetails, NewCertDetail(obj, "certificate", cert))
+		}
+	} else {
+		printParseFailure(w, fmt.Sprintf(missingKeyMsg, resourceString, "tls.crt"))
 	}
 
-	return fmt.Sprintf("%q [%s]%s%s issuer=%q (%v to %v)", humanName, strings.Join(usages, ","), groupString, servingString, signerHumanName, certificate.NotBefore.UTC(), certificate.NotAfter.UTC())
+	for _, caKeyName := range getSupportedCaKeyNames() {
+		caBundle, ok := secret.Data[caKeyName]
+		if !ok {
+			printParseFailure(w, fmt.Sprintf(missingKeyMsg, resourceString, caKeyName))
+			continue
+		}
+		if len(caBundle) == 0 {
+			printParseFailure(w, fmt.Sprintf(missingCaContentMsg, resourceString, caKeyName))
+			continue
+		}
+		isCA = true
+		certificates, err := cert.ParseCertsPEM([]byte(caBundle))
+		if err != nil {
+			printParseFailure(w, fmt.Sprintf(parseFailureMsg, obj.GetKind(), obj.GetName(), err))
+		}
+		for _, cert := range certificates {
+			certdetails = append(certdetails, NewCertDetail(obj, "ca-bundle", cert))
+		}
+	}
+	if listNonCerts && len(certdetails) == 0 {
+		certdetails = append(certdetails, NewCertDetail(obj, "N/A", nil))
+	}
+
+	if !isTLS && !isCA {
+		printParseFailure(w, fmt.Sprintf("%s NOT a tls secret or token secret\n", resourceString))
+	}
+	return certdetails
+}
+
+func inspectCSR(w io.Writer, obj *unstructured.Unstructured) []*CertDetail {
+	var certdetails []*CertDetail
+	resourceString := fmt.Sprintf("secret/%s[%s]", obj.GetName(), obj.GetNamespace())
+	var csr certificatesv1.CertificateSigningRequest
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, &csr)
+	if err != nil {
+		fmt.Fprintf(w, objConvertionFailureMsg, obj.GetKind(), err)
+	}
+	if len(csr.Status.Certificate) == 0 {
+		printParseFailure(w, fmt.Sprintf("%s NOT SIGNED\n", resourceString))
+		if listNonCerts {
+			certdetails = append(certdetails, NewCertDetail(obj, "csr", nil))
+		}
+	}
+
+	certificates, err := cert.ParseCertsPEM([]byte(csr.Status.Certificate))
+	if err != nil {
+		printParseFailure(w, fmt.Sprintf(parseFailureMsg, obj.GetKind(), obj.GetName(), err))
+		if listNonCerts {
+			certdetails = append(certdetails, NewCertDetail(obj, "csr", nil))
+		}
+	}
+	for _, cert := range certificates {
+		certdetails = append(certdetails, NewCertDetail(obj, "ca-bundle", cert))
+	}
+	return certdetails
 }

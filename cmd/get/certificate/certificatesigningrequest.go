@@ -23,6 +23,8 @@ import (
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/certificates/v1"
@@ -30,7 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func GetCertificateSigningRequests(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]v1.CertificateSigningRequest) {
+func GetCertificateSigningRequests(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]unstructured.Unstructured) {
 
 	certificatesigningrequestsFolderPath := currentContextPath + "/cluster-scoped-resources/certificates.k8s.io/certificatesigningrequests/"
 	_certificatesigningrequests, _ := ioutil.ReadDir(certificatesigningrequestsFolderPath)
@@ -38,7 +40,7 @@ func GetCertificateSigningRequests(currentContextPath string, namespace string, 
 	for _, f := range _certificatesigningrequests {
 		certificatesigningrequestYamlPath := certificatesigningrequestsFolderPath + f.Name()
 		_file := helpers.ReadYaml(certificatesigningrequestYamlPath)
-		CertificateSigningRequest := v1.CertificateSigningRequest{}
+		CertificateSigningRequest := unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(_file), &CertificateSigningRequest); err != nil {
 			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+certificatesigningrequestYamlPath)
 			os.Exit(1)
@@ -63,7 +65,7 @@ var CertificateSigningRequest = &cobra.Command{
 		if len(args) == 1 {
 			resourceName = args[0]
 		}
-		var resources []v1.CertificateSigningRequest
+		var resources []unstructured.Unstructured
 		GetCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, &resources)
 		if len(resources) == 0 {
 			fmt.Fprintln(os.Stderr, "No resources found.")
@@ -74,20 +76,22 @@ var CertificateSigningRequest = &cobra.Command{
 		for _, CertificateSigningRequest := range resources {
 			labels := helpers.ExtractLabels(CertificateSigningRequest.GetLabels())
 
-			certificatesigningrequestName := CertificateSigningRequest.Name
+			certificatesigningrequestName := CertificateSigningRequest.GetName()
 			age := helpers.GetAge(vars.MustGatherRootPath+"/cluster-scoped-resources/certificates.k8s.io/certificatesigningrequests/", CertificateSigningRequest.GetCreationTimestamp())
 
+			var csr v1.CertificateSigningRequest
+			_ = runtime.DefaultUnstructuredConverter.FromUnstructured(CertificateSigningRequest.Object, &csr)
 			//signername
-			signername := CertificateSigningRequest.Spec.SignerName
+			signername := csr.Spec.SignerName
 			//requestor
-			requestor := CertificateSigningRequest.Spec.Username
+			requestor := csr.Spec.Username
 
 			//condition
 			condition := "Unknown"
-			if reflect.DeepEqual(CertificateSigningRequest.Status, v1.CertificateSigningRequestStatus{}) {
+			if reflect.DeepEqual(csr.Status, v1.CertificateSigningRequestStatus{}) {
 				condition = "Pending"
 			} else {
-				for _, c := range CertificateSigningRequest.Status.Conditions {
+				for _, c := range csr.Status.Conditions {
 					//Approved
 					if c.Type == "Approved" {
 						condition = "Approved,Issued"
@@ -117,7 +121,7 @@ var CertificateSigningRequest = &cobra.Command{
 		//  TODO: handle this is helpets.PrintOutput
 		var resourceSliceOrSingle interface{}
 		if resourceName == "" {
-			resourceSliceOrSingle = v1.CertificateSigningRequestList{Items: resources}
+			//resourceSliceOrSingle = v1.CertificateSigningRequestList{Items: resources}
 		} else {
 			resourceSliceOrSingle = resources[0]
 		}

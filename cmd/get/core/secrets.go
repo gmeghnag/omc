@@ -23,6 +23,8 @@ import (
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -30,11 +32,11 @@ import (
 )
 
 type SecretsItems struct {
-	ApiVersion string           `json:"apiVersion"`
-	Items      []*corev1.Secret `json:"items"`
+	ApiVersion string                       `json:"apiVersion"`
+	Items      []*unstructured.Unstructured `json:"items"`
 }
 
-func GetSecrets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]*corev1.Secret) {
+func GetSecrets(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]*unstructured.Unstructured) {
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -66,7 +68,7 @@ func GetSecrets(currentContextPath string, namespace string, resourceName string
 				}
 			}
 
-			if resourceName != "" && resourceName != Secret.Name {
+			if resourceName != "" && resourceName != Secret.GetName() {
 				continue
 			}
 			*out = append(*out, Secret)
@@ -83,7 +85,7 @@ var Secret = &cobra.Command{
 		if len(args) == 1 {
 			resourceName = args[0]
 		}
-		var resources []*corev1.Secret
+		var resources []*unstructured.Unstructured
 		//jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
 		GetSecrets(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, &resources)
 		if len(resources) == 0 {
@@ -97,19 +99,21 @@ var Secret = &cobra.Command{
 			labels := helpers.ExtractLabels(Secret.GetLabels())
 
 			//name
-			SecretName := Secret.Name
+			SecretName := Secret.GetName()
 			if allResources {
 				SecretName = "secret/" + SecretName
 			}
-			//type
-			secretType := string(Secret.Type)
 			//data
-			secretData := strconv.Itoa(len(Secret.Data))
+			var secret corev1.Secret
+			_ = runtime.DefaultUnstructuredConverter.FromUnstructured(Secret.Object, &secret)
+			secretData := strconv.Itoa(len(secret.Data))
+			//type
+			secretType := string(secret.Type)
 
 			//age
-			age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+Secret.Namespace+"/core/", Secret.GetCreationTimestamp())
+			age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+Secret.GetNamespace()+"/core/", Secret.GetCreationTimestamp())
 
-			_list := []string{Secret.Namespace, SecretName, secretType, secretData, age}
+			_list := []string{Secret.GetNamespace(), SecretName, secretType, secretData, age}
 			data = helpers.GetData(data, vars.AllNamespaceBoolVar, vars.ShowLabelsBoolVar, labels, vars.OutputStringVar, 5, _list)
 		}
 		// ugly hack to get single item out of the slice

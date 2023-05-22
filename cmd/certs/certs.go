@@ -21,6 +21,8 @@ import (
 	"os"
 )
 
+var listNonCerts, showParseFailure bool
+
 var Certs = &cobra.Command{
 	Use: "certs",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -34,4 +36,7 @@ func init() {
 		Inspect,
 	)
 	Certs.PersistentFlags().BoolVarP(&vars.AllNamespaceBoolVar, "all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces.")
+	Certs.PersistentFlags().BoolVarP(&listNonCerts, "list-non-certs", "", false, "If present, list resources regardless if it contains a certificate.")
+	Certs.PersistentFlags().BoolVarP(&showParseFailure, "show-parse-failure", "", false, "If present, list the output of parse attempts for resources.")
+	Certs.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide")
 }

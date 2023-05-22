@@ -2,10 +2,13 @@ package certs
 
 import (
 	"bytes"
+	"crypto/x509"
+	"encoding/base64"
+	"fmt"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/cert"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"strings"
 	"testing"
 )
@@ -28,7 +31,6 @@ wlo4f3l3lPaihoLE7F3dk4eDBQTCypFQhoxJf+4OMft5fgcC25134MG2ShYiUA9t
 ZQzAy9dZrLzbfQWZ5km/juWC7z3FgS+WNDTd76WrlzVuGW4qBg+0TJ/j4oLpzjrL
 aXN6uc2j4F2o1XAZQdTkKYvTM4nnwe/+
 -----END CERTIFICATE-----`
-
 	pemCaCert = `-----BEGIN CERTIFICATE-----
 MIICODCCAaGgAwIBAgIUeoMh/N7rDvcV4f3d9i+Y1/d95K4wDQYJKoZIhvcNAQEL
 BQAwLjENMAsGA1UECgwEdGVzdDEMMAoGA1UECwwDT3JnMQ8wDQYDVQQDDAZSb290
@@ -57,38 +59,60 @@ zvRehNf9rzAatHoAQ0hmpppGB24NebQLl2qeDLVkRwtWoaxS3vKrfa+Fhw==
 
 func TestCertInspectConfigMap(t *testing.T) {
 	tests := []struct {
-		name string
-		cm   *corev1.ConfigMap
-		want string
+		name             string
+		cm               *unstructured.Unstructured
+		want             int
+		output           string
+		listNonCerts     bool
+		showParseFailure bool
 	}{
 		{
-			name: "ConfigMap with CA certificate",
-			cm:   getConfigMap(map[string]string{"ca-bundle.crt": pemCaCert}),
-			want: "\"RootCA\" [] groups=[test] issuer=\"<self>\"",
+			name:             "ConfigMap with CA certificate",
+			cm:               getUnstructured("my-configmap", "my-namespace", "ConfigMap", map[string]string{"ca-bundle.crt": pemCaCert}),
+			want:             1,
+			output:           "",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name: "ConfigMap with invalid CA certificate",
-			cm:   getConfigMap(map[string]string{"ca-bundle.crt": "invalid ca"}),
-			want: "ERROR - data does not contain any valid RSA or ECDSA certificates\n",
+			name:             "ConfigMap with invalid CA certificate",
+			cm:               getUnstructured("my-configmap", "my-namespace", "ConfigMap", map[string]string{"ca-bundle.crt": "invalid ca"}),
+			want:             0,
+			output:           "data does not contain any valid RSA or ECDSA certificates",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name: "ConfigMap with empty CA certificate",
-			cm:   getConfigMap(map[string]string{"ca-bundle.crt": ""}),
-			want: "MISSING ca-bundle content",
+			name:             "ConfigMap with empty CA certificate",
+			cm:               getUnstructured("my-configmap", "my-namespace", "ConfigMap", map[string]string{"ca-bundle.crt": ""}),
+			want:             0,
+			output:           "missing content for key",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name: "ConfigMap without ca-bundle.crt key ",
-			cm:   getConfigMap(map[string]string{"invalid key": "invalid ca"}),
-			want: "NOT a ca-bundle",
+			name:             "ConfigMap without valid ca key ",
+			cm:               getUnstructured("my-configmap", "my-namespace", "ConfigMap", map[string]string{"invalid-key": ""}),
+			want:             0,
+			output:           "does not contain a key",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result bytes.Buffer
-			inspectConfigMap(&result, tt.cm)
-			if !strings.Contains(result.String(), tt.want) {
-				t.Errorf("Got: %v \n", result.String())
-				t.Errorf("Want: %v \n", tt.want)
+			var output bytes.Buffer
+			listNonCerts = tt.listNonCerts
+			showParseFailure = tt.showParseFailure
+			res := inspectConfigMap(&output, tt.cm)
+			fmt.Printf("%#v", res)
+			if !strings.Contains(output.String(), tt.output) {
+				t.Errorf("Got: %v \n", output.String())
+				t.Errorf("Want: %v \n", tt.output)
+			}
+			if len(res) != tt.want {
+				t.Errorf("Got: %d certificates\n", len(res))
+				t.Errorf("Want: %d certificates\n", tt.want)
 			}
 		})
 	}
@@ -96,146 +120,161 @@ func TestCertInspectConfigMap(t *testing.T) {
 
 func TestCertInspectSecret(t *testing.T) {
 	tests := []struct {
-		name   string
-		secret *corev1.Secret
-		want   string
+		name             string
+		secret           *unstructured.Unstructured
+		want             int
+		output           string
+		listNonCerts     bool
+		showParseFailure bool
 	}{
 		{
-			name:   "Secret with server certificate",
-			secret: getSecret(map[string][]byte{"tls.crt": []byte(pemServerCert)}),
-			want:   "\"system:nodes:mynode.example.com\" [serving] groups=[system:nodes] validServingFor=[system:nodes:mynode.example.com,192.168.1.1] issuer=\"kube-csr-signer_@123456789\"",
+			name:             "Secret with server certificate",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"tls.crt": string(encodeBase64(pemServerCert))}),
+			want:             1,
+			output:           "",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name:   "Secret with invalid server certificate",
-			secret: getSecret(map[string][]byte{"tls.crt": []byte("invalid pem")}),
-			want:   "ERROR - data does not contain any valid RSA or ECDSA certificates\n",
+			name:             "Secret with invalid server certificate",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"tls.crt": string(encodeBase64("invalid cert"))}),
+			want:             0,
+			output:           "data does not contain any valid RSA or ECDSA certificates",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name:   "Secret with empty server certificate",
-			secret: getSecret(map[string][]byte{"tls.crt": []byte("")}),
-			want:   "MISSING tls.crt content",
+			name:             "Secret with empty server certificate",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"tls.crt": ""}),
+			want:             0,
+			output:           "missing content for key",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name:   "Secret with CA certificate",
-			secret: getSecret(map[string][]byte{"ca.crt": []byte(pemCaCert)}),
-			want:   "\"RootCA\" [] groups=[test] issuer=\"<self>\"",
+			name:             "Secret with CA certificate",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"ca.crt": string(encodeBase64(pemCaCert))}),
+			want:             1,
+			output:           "",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name:   "Secret with invalid CA certificate",
-			secret: getSecret(map[string][]byte{"ca.crt": []byte("invalid ca")}),
-			want:   "ERROR - data does not contain any valid RSA or ECDSA certificates\n",
+			name:             "Secret with invalid CA certificate",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"ca.crt": string(encodeBase64("invalid ca"))}),
+			want:             0,
+			output:           "data does not contain any valid RSA or ECDSA certificates",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name:   "Secret with empty CA certificate",
-			secret: getSecret(map[string][]byte{"ca.crt": []byte("")}),
-			want:   "MISSING ca.crt content",
+			name:             "Secret with empty CA certificate",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"ca.crt": ""}),
+			want:             0,
+			output:           "missing content for key",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name:   "Secret without tls.crt or ca.crt key",
-			secret: getSecret(map[string][]byte{"invalid key": []byte("invalid pem")}),
-			want:   "NOT a tls secret or token secret",
+			name:             "Secret without tls.crt or ca.crt key",
+			secret:           getUnstructured("my-secret", "my-namespace", "Secret", map[string]string{"invalid key": ""}),
+			want:             0,
+			output:           "does not contain a key",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result bytes.Buffer
-			inspectSecret(&result, tt.secret)
-			//			t.Errorf("Get: %s\nNeed:%s\n", result.String(), tt.want)
-			if !strings.Contains(result.String(), tt.want) {
-				t.Errorf("Got: %v \n", result.String())
-				t.Errorf("Want: %v \n", tt.want)
+			var output bytes.Buffer
+			listNonCerts = tt.listNonCerts
+			showParseFailure = tt.showParseFailure
+			res := inspectSecret(&output, tt.secret)
+			if !strings.Contains(output.String(), tt.output) {
+				t.Errorf("Got: %v \n", output.String())
+				t.Errorf("Want: %v \n", tt.output)
+			}
+			if len(res) != tt.want {
+				t.Errorf("Got: %d certificates\n", len(res))
+				t.Errorf("Want: %d certificates\n", tt.want)
 			}
 		})
 	}
 }
 
-func TestCertificateSigningRequest(t *testing.T) {
+func TestCertInspectCSR(t *testing.T) {
 	tests := []struct {
-		name string
-		csr  *certificatesv1.CertificateSigningRequest
-		want string
+		name             string
+		csr              *unstructured.Unstructured
+		want             int
+		output           string
+		listNonCerts     bool
+		showParseFailure bool
 	}{
 		{
-			name: "valid CertificateSigningRequest",
-			csr:  getCertificateSigningRequest([]byte(pemServerCsr), []byte(pemServerCert)),
-			want: "\"system:nodes:mynode.example.com\" [serving] groups=[system:nodes] validServingFor=[system:nodes:mynode.example.com,192.168.1.1] issuer=\"kube-csr-signer_@123456789\"",
+			name:             "CertificateSigningRequest with valid certificate",
+			csr:              getCertificateSigningRequest("my-csr", "my-namespace", []byte(pemServerCsr), []byte(pemServerCert)),
+			want:             1,
+			output:           "",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name: "unsigned CertificateSigningRequest",
-			csr:  getCertificateSigningRequest([]byte(pemServerCsr), []byte("")),
-			want: "NOT SIGNED",
+			name:             "CertificateSigningRequest with invalid certificate",
+			csr:              getCertificateSigningRequest("my-csr", "my-namespace", []byte(pemServerCsr), encodeBase64("invalid cert")),
+			want:             0,
+			output:           "data does not contain any valid RSA or ECDSA certificates",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 		{
-			name: "invalid CertificateSigningRequest",
-			csr:  getCertificateSigningRequest([]byte("invalid"), []byte("abc")),
-			want: "ERROR -",
+			name:             "CertificateSigningRequest with invalid request",
+			csr:              getCertificateSigningRequest("my-csr", "my-namespace", []byte("invalid"), encodeBase64("invalid")),
+			want:             0,
+			output:           "data does not contain any valid RSA or ECDSA certificates",
+			listNonCerts:     false,
+			showParseFailure: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var result bytes.Buffer
-			inspectCSR(&result, tt.csr)
-			if !strings.Contains(result.String(), tt.want) {
-				t.Errorf("Got: %v \n", result.String())
-				t.Errorf("Want: %v \n", tt.want)
+			var output bytes.Buffer
+			listNonCerts = tt.listNonCerts
+			showParseFailure = tt.showParseFailure
+			res := inspectCSR(&output, tt.csr)
+			fmt.Printf("%#v", res)
+			if !strings.Contains(output.String(), tt.output) {
+				t.Errorf("Got: %v \n", output.String())
+				t.Errorf("Want: %v \n", tt.output)
+			}
+			if len(res) != tt.want {
+				t.Errorf("Got: %d certificates\n", len(res))
+				t.Errorf("Want: %d certificates\n", tt.want)
 			}
 		})
 	}
 }
 
-func TestCertDetail(t *testing.T) {
-	tests := []struct {
-		name string
-		cert string
-		want string
-	}{
-		{
-			name: "valid node Certificate",
-			cert: pemServerCert,
-			want: "\"system:nodes:mynode.example.com\" [serving] groups=[system:nodes] validServingFor=[system:nodes:mynode.example.com,192.168.1.1] issuer=\"kube-csr-signer_@123456789\"",
+func getUnstructured(name, namespace, kind string, data map[string]string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       kind,
+			"metadata": map[string]interface{}{
+				"creationTimestamp": nil,
+				"namespace":         name,
+				"name":              namespace,
+			},
+			"data": data,
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parsedCert, err := cert.ParseCertsPEM([]byte(tt.cert))
-			if err != nil {
-				t.Errorf("err: %s", err)
-			}
-			for _, cert := range parsedCert {
-				result := certDetail(cert)
-				if !strings.Contains(result, tt.want) {
-					t.Errorf("Got: %v \n", result)
-					t.Errorf("Want: %v \n", tt.want)
-				}
-			}
-		})
 	}
 }
 
-func getConfigMap(data map[string]string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
+func getCertificateSigningRequest(name, namespace string, data, status []byte) *unstructured.Unstructured {
+	obj := &certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-configmap",
-			Namespace: "my-namespace",
-		},
-		Data: data,
-	}
-}
-
-func getSecret(data map[string][]byte) *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-secret",
-			Namespace: "openshift-config",
-		},
-		Data: data,
-	}
-}
-
-func getCertificateSigningRequest(data, status []byte) *certificatesv1.CertificateSigningRequest {
-	return &certificatesv1.CertificateSigningRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "my-csr",
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: certificatesv1.CertificateSigningRequestSpec{
 			Request: data,
@@ -244,4 +283,17 @@ func getCertificateSigningRequest(data, status []byte) *certificatesv1.Certifica
 			Certificate: status,
 		},
 	}
+	unstructuredObj, _ := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+	return &unstructured.Unstructured{Object: unstructuredObj}
+}
+
+func parsedCertificate(in []byte) *x509.Certificate {
+	c, _ := x509.ParseCertificate(in)
+	return c
+}
+
+func encodeBase64(data string) []byte {
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+	base64.StdEncoding.Encode(dst, []byte(data))
+	return dst
 }
