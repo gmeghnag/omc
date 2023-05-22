@@ -71,28 +71,15 @@ openshift-kubernetes.rules   AlertmanagerReceiversNotConfigured   firing    5s  
 ```
 - Retreive details of any certificate contained in configmaps/secrets/certificatesigningrequests:
 ```
-$ omc certs inspect -n openshift-dns                                                                                                                                      
-configmaps/dns-default[openshift-dns] NOT a ca-bundle
-configmaps/kube-root-ca.crt[openshift-dns] NOT a ca-bundle
-configmaps/openshift-service-ca.crt[openshift-dns] NOT a ca-bundle
-secrets/builder-dockercfg-5vht6[openshift-dns] NOT a tls secret or token secret
-secrets/builder-token-pv84n[openshift-dns] - token secret (2023-05-03 09:24:48 +0000 UTC)
-    "kube-apiserver-lb-signer" [] issuer="<self>" (2023-05-03 08:59:22 +0000 UTC to 2033-04-30 08:59:22 +0000 UTC)
-    "kube-apiserver-localhost-signer" [] issuer="<self>" (2023-05-03 08:59:22 +0000 UTC to 2033-04-30 08:59:22 +0000 UTC)
-    "kube-apiserver-service-network-signer" [] issuer="<self>" (2023-05-03 08:59:22 +0000 UTC to 2033-04-30 08:59:22 +0000 UTC)               
+$ omc certs inspect                                                                                                                   
+NAME                       KIND        AGE   CERTTYPE    SUBJECT                                             NOTBEFORE                       NOTAFTER                             
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2033-04-30 08:59:22 +0000 UTC   2023-05-03 08:59:22 +0000 UTC        
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-localhost-signer,OU=openshift     2033-04-30 08:59:22 +0000 UTC   2023-05-03 08:59:22 +0000 UTC        
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=*.apps.example.com                               2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=ingress-operator@1683105658                      2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
+openshift-service-ca.crt   ConfigMap   47h   ca-bundle   CN=openshift-service-serving-signer@1683105630      2025-07-01 09:20:30 +0000 UTC   2023-05-03 09:20:29 +0000 UTC        
+builder-token-9f5cx        Secret      47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2033-04-30 08:59:22 +0000 UTC   2023-05-03 08:59:22 +0000 UTC        
+builder-token-9f5cx        Secret      47h   ca-bundle   CN=*.apps.example.com                               2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
+builder-token-9f5cx        Secret      47h   ca-bundle   CN=ingress-operator@1683105658                      2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
 <...>
 ```
-or a specific resource kind:
-```
-$ omc certs inspect -n openshift-kube-apiserver configmap                                                                                                                    
-configmaps/aggregator-client-ca[openshift-kube-apiserver] - ca-bundle (2023-05-03 09:20:46 +0000 UTC)
-    "openshift-kube-apiserver-operator_aggregator-client-signer@1683173502" [] issuer="<self>" (2023-05-04 04:11:41 +0000 UTC to 2023-06-03 04:11:42 +0000 UTC)
-configmaps/bound-sa-token-signing-certs[openshift-kube-apiserver] NOT a ca-bundle
-configmaps/cert-regeneration-controller-lock[openshift-kube-apiserver] NOT a ca-bundle
-configmaps/check-endpoints-kubeconfig[openshift-kube-apiserver] NOT a ca-bundle
-configmaps/client-ca[openshift-kube-apiserver] - ca-bundle (2023-05-03 09:21:59 +0000 UTC)
-    "admin-kubeconfig-signer" [] issuer="<self>" (2023-05-03 08:59:21 +0000 UTC to 2033-04-30 08:59:21 +0000 UTC)
-    "kube-csr-signer_@1683173756" [] issuer="openshift-kube-controller-manager-operator_csr-signer-signer@1683173496" (2023-05-04 04:15:55 +0000 UTC to 2023-06-03 04:15:56 +0000 UTC)
-<...>
-```
- 

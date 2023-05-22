@@ -18,6 +18,7 @@ package core
 import (
 	"fmt"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"strconv"
 
@@ -27,15 +28,16 @@ import (
 	"github.com/spf13/cobra"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 )
 
 type ConfigMapsItems struct {
-	ApiVersion string              `json:"apiVersion"`
-	Items      []*corev1.ConfigMap `json:"items"`
+	ApiVersion string                       `json:"apiVersion"`
+	Items      []*unstructured.Unstructured `json:"items"`
 }
 
-func GetConfigMaps(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]*corev1.ConfigMap) {
+func GetConfigMaps(currentContextPath string, namespace string, resourceName string, allNamespacesFlag bool, out *[]*unstructured.Unstructured) {
 	var namespaces []string
 	if allNamespacesFlag == true {
 		namespace = "all"
@@ -65,7 +67,7 @@ func GetConfigMaps(currentContextPath string, namespace string, resourceName str
 					continue
 				}
 			}
-			if resourceName != "" && resourceName != ConfigMap.Name {
+			if resourceName != "" && resourceName != ConfigMap.GetName() {
 				continue
 			}
 			*out = append(*out, ConfigMap)
@@ -82,7 +84,7 @@ var ConfigMap = &cobra.Command{
 		if len(args) == 1 {
 			resourceName = args[0]
 		}
-		var resources []*corev1.ConfigMap
+		var resources []*unstructured.Unstructured
 		GetConfigMaps(vars.MustGatherRootPath, vars.Namespace, resourceName, vars.AllNamespaceBoolVar, &resources)
 		if len(resources) == 0 {
 			fmt.Fprintln(os.Stderr, "No resources found.")
@@ -95,17 +97,19 @@ var ConfigMap = &cobra.Command{
 			labels := helpers.ExtractLabels(ConfigMap.GetLabels())
 
 			//name
-			ConfigMapName := ConfigMap.Name
+			ConfigMapName := ConfigMap.GetName()
 			if allResources {
 				ConfigMapName = "configmap/" + ConfigMapName
 			}
 			//data
-			configmapData := strconv.Itoa(len(ConfigMap.Data))
+			var cm corev1.ConfigMap
+			_ = runtime.DefaultUnstructuredConverter.FromUnstructured(ConfigMap.Object, &cm)
+			configmapData := strconv.Itoa(len(cm.Data))
 
 			//age
-			age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+ConfigMap.Namespace+"/core/", ConfigMap.GetCreationTimestamp())
+			age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+ConfigMap.GetNamespace()+"/core/", ConfigMap.GetCreationTimestamp())
 
-			_list := []string{ConfigMap.Namespace, ConfigMapName, configmapData, age}
+			_list := []string{ConfigMap.GetNamespace(), ConfigMapName, configmapData, age}
 			data = helpers.GetData(data, vars.AllNamespaceBoolVar, vars.ShowLabelsBoolVar, labels, vars.OutputStringVar, 4, _list)
 
 			if resourceName != "" && resourceName == ConfigMapName {
