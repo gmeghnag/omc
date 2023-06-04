@@ -19,19 +19,18 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/gmeghnag/omc/cmd/get/certificate"
-	"github.com/gmeghnag/omc/cmd/get/core"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
-	"io"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/cert"
-	"os"
-	"strings"
 )
 
 const (
@@ -187,19 +186,19 @@ func inspectResources(resourceTypes []string) {
 		switch resourceType {
 		case "cm", "configmap", "configmaps":
 			var configmaps []*unstructured.Unstructured
-			core.GetConfigMaps(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &configmaps)
+			GetConfigMaps(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &configmaps)
 			for _, r := range configmaps {
 				resources = append(resources, inspectConfigMap(os.Stdout, r)...)
 			}
 		case "secret", "secrets":
 			var secrets []*unstructured.Unstructured
-			core.GetSecrets(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &secrets)
+			GetSecrets(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &secrets)
 			for _, r := range secrets {
 				resources = append(resources, inspectSecret(os.Stdout, r)...)
 			}
 		case "csr", "certificatesigningrequest", "certificatesigningrequests":
 			var csrs []unstructured.Unstructured
-			certificate.GetCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &csrs)
+			GetCertificateSigningRequests(vars.MustGatherRootPath, vars.Namespace, "", vars.AllNamespaceBoolVar, &csrs)
 			for _, r := range csrs {
 				resources = append(resources, inspectCSR(os.Stdout, &r)...)
 			}
