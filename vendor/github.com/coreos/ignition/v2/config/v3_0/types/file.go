@@ -16,6 +16,7 @@ package types
 
 import (
 	"github.com/coreos/ignition/v2/config/shared/errors"
+	"github.com/coreos/ignition/v2/config/util"
 
 	"github.com/coreos/vcontext/path"
 	"github.com/coreos/vcontext/report"
@@ -24,12 +25,13 @@ import (
 func (f File) Validate(c path.ContextPath) (r report.Report) {
 	r.Merge(f.Node.Validate(c))
 	r.AddOnError(c.Append("mode"), validateMode(f.Mode))
+	r.AddOnWarn(c.Append("mode"), validateModeSpecialBits(f.Mode))
 	r.AddOnError(c.Append("overwrite"), f.validateOverwrite())
 	return
 }
 
 func (f File) validateOverwrite() error {
-	if f.Overwrite != nil && *f.Overwrite && f.Contents.Source == nil {
+	if util.IsTrue(f.Overwrite) && f.Contents.Source == nil {
 		return errors.ErrOverwriteAndNilSource
 	}
 	return nil

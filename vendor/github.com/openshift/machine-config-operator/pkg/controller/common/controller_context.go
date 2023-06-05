@@ -24,9 +24,17 @@ const (
 
 func resyncPeriod() func() time.Duration {
 	return func() time.Duration {
+		// Disable gosec here to avoid throwing
+		// G404: Use of weak random number generator (math/rand instead of crypto/rand)
+		// #nosec
 		factor := rand.Float64() + 1
 		return time.Duration(float64(minResyncPeriod.Nanoseconds()) * factor)
 	}
+}
+
+// DefaultResyncPeriod returns a function which generates a random resync period
+func DefaultResyncPeriod() func() time.Duration {
+	return resyncPeriod()
 }
 
 // ControllerContext stores all the informers for a variety of kubernetes objects.
@@ -42,6 +50,7 @@ type ControllerContext struct {
 	APIExtInformerFactory                               apiextinformers.SharedInformerFactory
 	ConfigInformerFactory                               configinformers.SharedInformerFactory
 	OperatorInformerFactory                             operatorinformers.SharedInformerFactory
+	KubeMAOSharedInformer                               informers.SharedInformerFactory
 
 	AvailableResources map[schema.GroupVersionResource]bool
 
@@ -71,6 +80,8 @@ func CreateControllerContext(cb *clients.Builder, stop <-chan struct{}, targetNa
 			opt.FieldSelector = fields.OneTermEqualSelector("metadata.name", "kube-apiserver-to-kubelet-client-ca").String()
 		},
 	)
+	// this is needed to listen for changes in MAO user data secrets to re-apply the ones we define in the MCO (since we manage them)
+	kubeMAOSharedInformer := informers.NewFilteredSharedInformerFactory(kubeClient, resyncPeriod()(), "openshift-machine-api", nil)
 
 	// filter out CRDs that do not have the MCO label
 	assignFilterLabels := func(opts *metav1.ListOptions) {
@@ -100,5 +111,6 @@ func CreateControllerContext(cb *clients.Builder, stop <-chan struct{}, targetNa
 		Stop:                                                stop,
 		InformersStarted:                                    make(chan struct{}),
 		ResyncPeriod:                                        resyncPeriod(),
+		KubeMAOSharedInformer:                               kubeMAOSharedInformer,
 	}
 }

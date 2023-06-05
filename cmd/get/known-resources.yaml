@@ -1,0 +1,716 @@
+binding:
+  group: core
+  name: binding
+  namespaced: true
+  plural: bindings
+bindings:
+  group: core
+  name: binding
+  namespaced: true
+  plural: bindings
+componentstatus:
+  group: core
+  name: componentstatus
+  namespaced: false
+  plural: componentstatuses
+componentstatuses:
+  group: core
+  name: componentstatus
+  namespaced: false
+  plural: componentstatuses
+cs:
+  group: core
+  name: componentstatus
+  namespaced: false
+  plural: componentstatuses
+configmap:
+  group: core
+  name: configmap
+  namespaced: true
+  plural: configmaps
+configmaps:
+  group: core
+  name: configmap
+  namespaced: true
+  plural: configmaps
+cm:
+  group: core
+  name: configmap
+  namespaced: true
+  plural: configmaps
+endpoints:
+  group: core
+  name: endpoints
+  namespaced: true
+  plural: endpoints
+ep:
+  group: core
+  name: endpoints
+  namespaced: true
+  plural: endpoints
+event:
+  group: events.k8s.io
+  name: event
+  namespaced: true
+  plural: events
+events:
+  group: events.k8s.io
+  name: event
+  namespaced: true
+  plural: events
+ev:
+  group: events.k8s.io
+  name: event
+  namespaced: true
+  plural: events
+limitrange:
+  group: core
+  name: limitrange
+  namespaced: true
+  plural: limitranges
+limitranges:
+  group: core
+  name: limitrange
+  namespaced: true
+  plural: limitranges
+limits:
+  group: core
+  name: limitrange
+  namespaced: true
+  plural: limitranges
+namespace:
+  group: core
+  name: namespace
+  namespaced: false
+  plural: namespaces
+namespaces:
+  group: core
+  name: namespace
+  namespaced: false
+  plural: namespaces
+ns:
+  group: core
+  name: namespace
+  namespaced: false
+  plural: namespaces
+node:
+  group: core
+  name: node
+  namespaced: false
+  plural: nodes
+nodes:
+  group: core
+  name: node
+  namespaced: false
+  plural: nodes
+no:
+  group: core
+  name: node
+  namespaced: false
+  plural: nodes
+persistentvolumeclaim:
+  group: core
+  name: persistentvolumeclaim
+  namespaced: true
+  plural: persistentvolumeclaims
+persistentvolumeclaims:
+  group: core
+  name: persistentvolumeclaim
+  namespaced: true
+  plural: persistentvolumeclaims
+pvc:
+  group: core
+  name: persistentvolumeclaim
+  namespaced: true
+  plural: persistentvolumeclaims
+persistentvolume:
+  group: core
+  name: persistentvolume
+  namespaced: false
+  plural: persistentvolumes
+persistentvolumes:
+  group: core
+  name: persistentvolume
+  namespaced: false
+  plural: persistentvolumes
+pv:
+  group: core
+  name: persistentvolume
+  namespaced: false
+  plural: persistentvolumes
+pod:
+  group: core
+  name: pod
+  namespaced: true
+  plural: pods
+pods:
+  group: core
+  name: pod
+  namespaced: true
+  plural: pods
+po:
+  group: core
+  name: pod
+  namespaced: true
+  plural: pods
+podtemplate:
+  group: core
+  name: podtemplate
+  namespaced: true
+  plural: podtemplates
+podtemplates:
+  group: core
+  name: podtemplate
+  namespaced: true
+  plural: podtemplates
+replicationcontroller:
+  group: core
+  name: replicationcontroller
+  namespaced: true
+  plural: replicationcontrollers
+replicationcontrollers:
+  group: core
+  name: replicationcontroller
+  namespaced: true
+  plural: replicationcontrollers
+rc:
+  group: core
+  name: replicationcontroller
+  namespaced: true
+  plural: replicationcontrollers
+resourcequota:
+  group: core
+  name: resourcequota
+  namespaced: true
+  plural: resourcequotas
+resourcequotas:
+  group: core
+  name: resourcequota
+  namespaced: true
+  plural: resourcequotas
+quota:
+  group: core
+  name: resourcequota
+  namespaced: true
+  plural: resourcequotas
+secret:
+  group: core
+  name: secret
+  namespaced: true
+  plural: secrets
+secrets:
+  group: core
+  name: secret
+  namespaced: true
+  plural: secrets
+serviceaccount:
+  group: core
+  name: serviceaccount
+  namespaced: true
+  plural: serviceaccounts
+serviceaccounts:
+  group: core
+  name: serviceaccount
+  namespaced: true
+  plural: serviceaccounts
+sa:
+  group: core
+  name: serviceaccount
+  namespaced: true
+  plural: serviceaccounts
+service:
+  group: core
+  name: service
+  namespaced: true
+  plural: services
+services:
+  group: core
+  name: service
+  namespaced: true
+  plural: services
+svc:
+  group: core
+  name: service
+  namespaced: true
+  plural: services
+poddisruptionbudget:
+  group: policy
+  name: poddisruptionbudget
+  namespaced: true
+  plural: poddisruptionbudgets
+pdb:
+  group: policy
+  name: poddisruptionbudget
+  namespaced: true
+  plural: poddisruptionbudgets
+poddisruptionbudgets:
+  group: policy
+  name: poddisruptionbudget
+  namespaced: true
+  plural: poddisruptionbudgets
+mutatingwebhookconfiguration:
+  group: admissionregistration.k8s.io
+  name: mutatingwebhookconfiguration
+  namespaced: false
+  plural: mutatingwebhookconfigurations
+mutatingwebhookconfigurations:
+  group: admissionregistration.k8s.io
+  name: mutatingwebhookconfiguration
+  namespaced: false
+  plural: mutatingwebhookconfigurations
+validatingwebhookconfiguration:
+  group: admissionregistration.k8s.io
+  name: validatingwebhookconfiguration
+  namespaced: false
+  plural: validatingwebhookconfigurations
+validatingwebhookconfigurations:
+  group: admissionregistration.k8s.io
+  name: validatingwebhookconfiguration
+  namespaced: false
+  plural: validatingwebhookconfigurations
+customresourcedefinition:
+  group: apiextensions.k8s.io
+  name: customresourcedefinition
+  namespaced: false
+  plural: customresourcedefinitions
+customresourcedefinitions:
+  group: apiextensions.k8s.io
+  name: customresourcedefinition
+  namespaced: false
+  plural: customresourcedefinitions
+crd:
+  group: apiextensions.k8s.io
+  name: customresourcedefinition
+  namespaced: false
+  plural: customresourcedefinitions
+crds:
+  group: apiextensions.k8s.io
+  name: customresourcedefinition
+  namespaced: false
+  plural: customresourcedefinitions
+project:
+  group: project.openshift.io
+  name: project
+  namespaced: false
+  plural: projects
+projects:
+  group: project.openshift.io
+  name: project
+  namespaced: false
+  plural: projects
+projectrequest:
+  group: project.openshift.io
+  name: projectrequest
+  namespaced: false
+  plural: projectrequests
+projectrequests:
+  group: project.openshift.io
+  name: projectrequest
+  namespaced: false
+  plural: projectrequests
+appliedclusterresourcequota:
+  group: quota.openshift.io
+  name: appliedclusterresourcequota
+  namespaced: true
+  plural: appliedclusterresourcequotas
+appliedclusterresourcequotas:
+  group: quota.openshift.io
+  name: appliedclusterresourcequota
+  namespaced: true
+  plural: appliedclusterresourcequotas
+route:
+  group: route.openshift.io
+  name: route
+  namespaced: true
+  plural: routes
+routes:
+  group: route.openshift.io
+  name: route
+  namespaced: true
+  plural: routes
+podsecuritypolicyreview:
+  group: security.openshift.io
+  name: podsecuritypolicyreview
+  namespaced: true
+  plural: podsecuritypolicyreviews
+podsecuritypolicyreviews:
+  group: security.openshift.io
+  name: podsecuritypolicyreview
+  namespaced: true
+  plural: podsecuritypolicyreviews
+podsecuritypolicyselfsubjectreview:
+  group: security.openshift.io
+  name: podsecuritypolicyselfsubjectreview
+  namespaced: true
+  plural: podsecuritypolicyselfsubjectreviews
+podsecuritypolicyselfsubjectreviews:
+  group: security.openshift.io
+  name: podsecuritypolicyselfsubjectreview
+  namespaced: true
+  plural: podsecuritypolicyselfsubjectreviews
+podsecuritypolicysubjectreview:
+  group: security.openshift.io
+  name: podsecuritypolicysubjectreview
+  namespaced: true
+  plural: podsecuritypolicysubjectreview
+podsecuritypolicysubjectreviews:
+  group: security.openshift.io
+  name: podsecuritypolicysubjectreview
+  namespaced: true
+  plural: podsecuritypolicysubjectreviews
+template:
+  group: template.openshift.io
+  name: template
+  namespaced: true
+  plural: templates
+templates:
+  group: template.openshift.io
+  name: template
+  namespaced: true
+  plural: templates
+apiservice:
+  group: apiregistration.k8s.io
+  name: apiservice
+  namespaced: false
+  plural: apiservices
+apiservices:
+  group: apiregistration.k8s.io
+  name: apiservice
+  namespaced: false
+  plural: apiservices
+controllerrevision:
+  group: apps
+  name: controllerrevision
+  namespaced: true
+  plural: controllerrevisions
+controllerrevisions:
+  group: apps
+  name: controllerrevision
+  namespaced: true
+  plural: controllerrevisions
+daemonset:
+  group: apps
+  name: daemonset
+  namespaced: true
+  plural: daemonsets
+daemonsets:
+  group: apps
+  name: daemonset
+  namespaced: true
+  plural: daemonsets
+ds:
+  group: apps
+  name: daemonset
+  namespaced: true
+  plural: daemonsets
+deployment:
+  group: apps
+  name: deployment
+  namespaced: true
+  plural: deployments
+deployments:
+  group: apps
+  name: deployment
+  namespaced: true
+  plural: deployments
+deploy:
+  group: apps
+  name: deployment
+  namespaced: true
+  plural: deployments
+replicaset:
+  group: apps
+  name: replicaset
+  namespaced: true
+  plural: replicasets
+replicasets:
+  group: apps
+  name: replicaset
+  namespaced: true
+  plural: replicasets
+rs:
+  group: apps
+  name: replicaset
+  namespaced: true
+  plural: replicasets
+statefulset:
+  group: apps
+  name: statefulset
+  namespaced: true
+  plural: statefulsets
+statefulsets:
+  group: apps
+  name: statefulset
+  namespaced: true
+  plural: statefulsets
+sts:
+  group: apps
+  name: statefulset
+  namespaced: true
+  plural: statefulsets
+tokenreview:
+  group: authentication.k8s.io
+  name: tokenreview
+  namespaced: false
+  plural: tokenreviews
+tokenreviews:
+  group: authentication.k8s.io
+  name: tokenreview
+  namespaced: false
+  plural: tokenreviews
+localsubjectaccessreview:
+  group: authorization.k8s.io
+  name: localsubjectaccessreview
+  namespaced: true
+  plural: localsubjectaccessreviews
+localsubjectaccessreviews:
+  group: authorization.k8s.io
+  name: localsubjectaccessreview
+  namespaced: true
+  plural: localsubjectaccessreviews
+selfsubjectaccessreview:
+  group: authorization.k8s.io
+  name: selfsubjectaccessreview
+  namespaced: false
+  plural: selfsubjectaccessreviews
+selfsubjectaccessreviews:
+  group: authorization.k8s.io
+  name: selfsubjectaccessreview
+  namespaced: false
+  plural: selfsubjectaccessreviews
+selfsubjectrulesreview:
+  group: authorization.k8s.io
+  name: selfsubjectrulesreview
+  namespaced: false
+  plural: selfsubjectrulesreviews
+selfsubjectrulesreviews:
+  group: authorization.k8s.io
+  name: selfsubjectrulesreview
+  namespaced: false
+  plural: selfsubjectrulesreviews
+subjectaccessreview:
+  group: authorization.k8s.io
+  name: subjectaccessreview
+  namespaced: false
+  plural: subjectaccessreviews
+subjectaccessreviews:
+  group: authorization.k8s.io
+  name: subjectaccessreview
+  namespaced: false
+  plural: subjectaccessreviews
+certificatesigningrequest:
+  group: certificates.k8s.io
+  name: certificatesigningrequest
+  namespaced: false
+  plural: certificatesigningrequests
+certificatesigningrequests:
+  group: certificates.k8s.io
+  name: certificatesigningrequest
+  namespaced: false
+  plural: certificatesigningrequests
+csr:
+  group: certificates.k8s.io
+  name: certificatesigningrequest
+  namespaced: false
+  plural: certificatesigningrequests
+lease:
+  group: coordination.k8s.io
+  name: lease
+  namespaced: true
+  plural: leases
+leases:
+  group: coordination.k8s.io
+  name: lease
+  namespaced: true
+  plural: leases
+endpointslice:
+  group: discovery.k8s.io
+  name: endpointslice
+  namespaced: true
+  plural: endpointslices
+endpointslices:
+  group: discovery.k8s.io
+  name: endpointslice
+  namespaced: true
+  plural: endpointslices
+flowschema:
+  group: flowcontrol.apiserver.k8s.io
+  name: flowschema
+  namespaced: false
+  plural: flowschemas
+flowschemas:
+  group: flowcontrol.apiserver.k8s.io
+  name: flowschema
+  namespaced: false
+  plural: flowschemas
+prioritylevelconfiguration:
+  group: flowcontrol.apiserver.k8s.io
+  name: prioritylevelconfiguration
+  namespaced: false
+  plural: prioritylevelconfigurations
+prioritylevelconfigurations:
+  group: flowcontrol.apiserver.k8s.io
+  name: prioritylevelconfiguration
+  namespaced: false
+  plural: prioritylevelconfigurations
+ingressclass:
+  group: networking.k8s.io
+  name: ingressclass
+  namespaced: false
+  plural: ingressclasses
+ingressclasses:
+  group: networking.k8s.io
+  name: ingressclass
+  namespaced: false
+  plural: ingressclasses
+ingress:
+  group: networking.k8s.io
+  name: ingress
+  namespaced: true
+  plural: ingresses
+ingresses:
+  group: networking.k8s.io
+  name: ingress
+  namespaced: true
+  plural: ingresses
+ing:
+  group: networking.k8s.io
+  name: ingress
+  namespaced: true
+  plural: ingresses
+networkpolicy:
+  group: networking.k8s.io
+  name: networkpolicy
+  namespaced: true
+  plural: networkpolicies
+networkpolicies:
+  group: networking.k8s.io
+  name: networkpolicy
+  namespaced: true
+  plural: networkpolicies
+netpol:
+  group: networking.k8s.io
+  name: networkpolicy
+  namespaced: true
+  plural: networkpolicies
+runtimeclass:
+  group: node.k8s.io
+  name: runtimeclass
+  namespaced: false
+  plural: runtimeclasses
+runtimeclasses:
+  group: node.k8s.io
+  name: runtimeclass
+  namespaced: false
+  plural: runtimeclasses
+clusterrolebinding:
+  group: rbac.authorization.k8s.io
+  name: clusterrolebinding
+  namespaced: false
+  plural: clusterrolebindings
+clusterrolebindings:
+  group: rbac.authorization.k8s.io
+  name: clusterrolebinding
+  namespaced: false
+  plural: clusterrolebindings
+clusterrole:
+  group: rbac.authorization.k8s.io
+  name: clusterrole
+  namespaced: false
+  plural: clusterroles
+clusterroles:
+  group: rbac.authorization.k8s.io
+  name: clusterrole
+  namespaced: false
+  plural: clusterroles
+rolebinding:
+  group: rbac.authorization.k8s.io
+  name: rolebinding
+  namespaced: true
+  plural: rolebindings
+rolebindings:
+  group: rbac.authorization.k8s.io
+  name: rolebinding
+  namespaced: true
+  plural: rolebindings
+role:
+  group: rbac.authorization.k8s.io
+  name: role
+  namespaced: true
+  plural: roles
+roles:
+  group: rbac.authorization.k8s.io
+  name: role
+  namespaced: true
+  plural: roles
+priorityclass:
+  group: scheduling.k8s.io
+  name: priorityclass
+  namespaced: false
+  plural: priorityclasses
+priorityclasses:
+  group: scheduling.k8s.io
+  name: priorityclass
+  namespaced: false
+  plural: priorityclasses
+pc:
+  group: scheduling.k8s.io
+  name: priorityclass
+  namespaced: false
+  plural: priorityclasses
+csidriver:
+  group: storage.k8s.io
+  name: csidriver
+  namespaced: false
+  plural: csidrivers
+csidrivers:
+  group: storage.k8s.io
+  name: csidriver
+  namespaced: false
+  plural: csidrivers
+csinode:
+  group: storage.k8s.io
+  name: csinode
+  namespaced: false
+  plural: csinodes
+csinodes:
+  group: storage.k8s.io
+  name: csinode
+  namespaced: false
+  plural: csinodes
+csistoragecapacity:
+  group: storage.k8s.io
+  name: csistoragecapacity
+  namespaced: true
+  plural: csistoragecapacities
+csistoragecapacities:
+  group: storage.k8s.io
+  name: csistoragecapacity
+  namespaced: true
+  plural: csistoragecapacities
+storageclass:
+  group: storage.k8s.io
+  name: storageclass
+  namespaced: false
+  plural: storageclasses
+storageclasses:
+  group: storage.k8s.io
+  name: storageclass
+  namespaced: false
+  plural: storageclasses
+sc:
+  group: storage.k8s.io
+  name: storageclass
+  namespaced: false
+  plural: storageclasses
+volumeattachment:
+  group: storage.k8s.io
+  name: volumeattachment
+  namespaced: false
+  plural: volumeattachments
+volumeattachments:
+  group: storage.k8s.io
+  name: volumeattachment
+  namespaced: false
+  plural: volumeattachments
+

@@ -1,6 +1,22 @@
 package types
 
-import "k8s.io/client-go/kubernetes"
+import (
+	"k8s.io/client-go/kubernetes"
+
+	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	// "k8s.io/client-go/kubernetes/scheme"
+	//"k8s.io/apimachinery/pkg/api/meta"
+	//runtime "k8s.io/apimachinery/pkg/runtime"
+	//utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	_ "embed"
+	//core "k8s.io/kubernetes/pkg/apis/core"
+	//ocpinternal "github.com/openshift/openshift-apiserver/pkg/apps/printers/internalversion"
+	// cliprint "k8s.io/cli-runtime/pkg/printers"
+)
 
 type Context struct {
 	Id      string `json:"id"`
@@ -19,4 +35,10 @@ type Config struct {
 type DescribeClient struct {
 	Namespace string
 	kubernetes.Interface
+}
+
+type UnstructuredList struct {
+	ApiVersion string                      `json:"apiVersion"`
+	Kind       string                      `json:"kind"`
+	Items      []unstructured.Unstructured `json:"items"`
 }

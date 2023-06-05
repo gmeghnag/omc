@@ -96,6 +96,12 @@ type config struct {
 	// spinnerType should be a number between 0-75
 	spinnerType int
 
+	// spinnerTypeOptionUsed remembers if the spinnerType was changed manually
+	spinnerTypeOptionUsed bool
+
+	// spinner represents the spinner as a slice of string
+	spinner []string
+
 	// fullWidth specifies whether to measure and set the bar to a specific width
 	fullWidth bool
 
@@ -134,7 +140,16 @@ func OptionSetWidth(s int) Option {
 // OptionSpinnerType sets the type of spinner used for indeterminate bars
 func OptionSpinnerType(spinnerType int) Option {
 	return func(p *ProgressBar) {
+		p.config.spinnerTypeOptionUsed = true
 		p.config.spinnerType = spinnerType
+	}
+}
+
+// OptionSpinnerCustom sets the spinner used for indeterminate bars to the passed
+// slice of string
+func OptionSpinnerCustom(spinner []string) Option {
+	return func(p *ProgressBar) {
+		p.config.spinner = spinner
 	}
 }
 
@@ -188,7 +203,7 @@ func OptionEnableColorCodes(colorCodes bool) Option {
 	}
 }
 
-// OptionSetElapsedTime will enable elapsed time. always enabled if OptionSetPredictTime is true.
+// OptionSetElapsedTime will enable elapsed time. Always enabled if OptionSetPredictTime is true.
 func OptionSetElapsedTime(elapsedTime bool) Option {
 	return func(p *ProgressBar) {
 		p.config.elapsedTime = elapsedTime
@@ -484,12 +499,12 @@ func (p *ProgressBar) Add(num int) error {
 	return p.Add64(int64(num))
 }
 
-// Set wil set the bar to a current number
+// Set will set the bar to a current number
 func (p *ProgressBar) Set(num int) error {
 	return p.Set64(int64(num))
 }
 
-// Set64 wil set the bar to a current number
+// Set64 will set the bar to a current number
 func (p *ProgressBar) Set64(num int64) error {
 	p.lock.Lock()
 	toAdd := num - int64(p.state.currentBytes)
@@ -507,6 +522,11 @@ func (p *ProgressBar) Add64(num int64) error {
 
 	if p.state.exit {
 		return nil
+	}
+
+	// error out since OptionSpinnerCustom will always override a manually set spinnerType
+	if p.config.spinnerTypeOptionUsed && len(p.config.spinner) > 0 {
+		return errors.New("OptionSpinnerType and OptionSpinnerCustom cannot be used together")
 	}
 
 	if p.config.max == 0 {
@@ -560,6 +580,8 @@ func (p *ProgressBar) Clear() error {
 // Describe will change the description shown before the progress, which
 // can be changed on the fly (as for a slow running process).
 func (p *ProgressBar) Describe(description string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	p.config.description = description
 	if p.config.invisible {
 		return
@@ -634,7 +656,6 @@ func (p *ProgressBar) render() error {
 		if !p.config.clearOnFinish {
 			renderProgressBar(p.config, &p.state)
 		}
-
 		if p.config.onCompletion != nil {
 			p.config.onCompletion()
 		}
@@ -776,7 +797,7 @@ func renderProgressBar(c config, s *state) (int, error) {
 			sb.WriteString(fmt.Sprintf("%0.0f %s/hr", 3600*averageRate, c.iterationString))
 		}
 	}
-	if sb.Len() != 0 {
+	if sb.Len() > 0 {
 		sb.WriteString(")")
 	}
 
@@ -796,15 +817,25 @@ func renderProgressBar(c config, s *state) (int, error) {
 	}
 
 	if c.fullWidth && !c.ignoreLength {
-		width, _, err := term.GetSize(int(os.Stdout.Fd()))
+		width, err := termWidth()
 		if err != nil {
-			width, _, err = term.GetSize(int(os.Stderr.Fd()))
-			if err != nil {
-				width = 80
-			}
+			width = 80
 		}
 
-		c.width = width - getStringWidth(c, c.description, true) - 14 - sb.Len() - len(leftBrac) - len(rightBrac)
+		amend := 1 // an extra space at eol
+		switch {
+		case leftBrac != "" && rightBrac != "":
+			amend = 4 // space, square brackets and colon
+		case leftBrac != "" && rightBrac == "":
+			amend = 4 // space and square brackets and another space
+		case leftBrac == "" && rightBrac != "":
+			amend = 3 // space and square brackets
+		}
+		if c.showDescriptionAtLineEnd {
+			amend += 1 // another space
+		}
+
+		c.width = width - getStringWidth(c, c.description, true) - 10 - amend - sb.Len() - len(leftBrac) - len(rightBrac)
 		s.currentSaucerSize = int(float64(s.currentPercent) / 100.0 * float64(c.width))
 	}
 	if s.currentSaucerSize > 0 {
@@ -844,7 +875,11 @@ func renderProgressBar(c config, s *state) (int, error) {
 	str := ""
 
 	if c.ignoreLength {
-		spinner := spinners[c.spinnerType][int(math.Round(math.Mod(float64(time.Since(s.startTime).Milliseconds()/100), float64(len(spinners[c.spinnerType])))))]
+		selectedSpinner := spinners[c.spinnerType]
+		if len(c.spinner) > 0 {
+			selectedSpinner = c.spinner
+		}
+		spinner := selectedSpinner[int(math.Round(math.Mod(float64(time.Since(s.startTime).Milliseconds()/100), float64(len(selectedSpinner)))))]
 		if c.elapsedTime {
 			if c.showDescriptionAtLineEnd {
 				str = fmt.Sprintf("\r%s %s [%s] %s ",
@@ -882,10 +917,14 @@ func renderProgressBar(c config, s *state) (int, error) {
 			c.theme.BarEnd,
 			sb.String())
 
+		if s.currentPercent == 100 && c.showElapsedTimeOnFinish {
+			str = fmt.Sprintf("%s [%s]", str, leftBrac)
+		}
+
 		if c.showDescriptionAtLineEnd {
 			str = fmt.Sprintf("\r%s %s ", str, c.description)
 		} else {
-			str = fmt.Sprintf("\r%s %s ", c.description, str)
+			str = fmt.Sprintf("\r%s%s ", c.description, str)
 		}
 	} else {
 		if s.currentPercent == 100 {
@@ -897,6 +936,7 @@ func renderProgressBar(c config, s *state) (int, error) {
 				strings.Repeat(c.theme.SaucerPadding, repeatAmount),
 				c.theme.BarEnd,
 				sb.String())
+
 			if c.showElapsedTimeOnFinish {
 				str = fmt.Sprintf("%s [%s]", str, leftBrac)
 			}
@@ -1044,4 +1084,15 @@ func humanizeBytes(s float64) (string, string) {
 
 func logn(n, b float64) float64 {
 	return math.Log(n) / math.Log(b)
+}
+
+// termWidth function returns the visible width of the current terminal
+// and can be redefined for testing
+var termWidth = func() (width int, err error) {
+	width, _, err = term.GetSize(int(os.Stdout.Fd()))
+	if err == nil {
+		return width, nil
+	}
+
+	return 0, err
 }

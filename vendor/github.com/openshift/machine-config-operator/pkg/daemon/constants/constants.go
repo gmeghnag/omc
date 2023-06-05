@@ -14,11 +14,21 @@ const (
 	DesiredMachineConfigAnnotationKey = "machineconfiguration.openshift.io/desiredConfig"
 	// MachineConfigDaemonStateAnnotationKey is used to fetch the state of the daemon on the machine.
 	MachineConfigDaemonStateAnnotationKey = "machineconfiguration.openshift.io/state"
+	// DesiredDrainerAnnotationKey is set by the MCD to indicate drain/uncordon requests
+	DesiredDrainerAnnotationKey = "machineconfiguration.openshift.io/desiredDrain"
+	// LastAppliedDrainerAnnotationKey is set by the controller to indicate the last request applied
+	LastAppliedDrainerAnnotationKey = "machineconfiguration.openshift.io/lastAppliedDrain"
+	// DrainerStateDrain is used for drainer annotation as a value to indicate needing a drain
+	DrainerStateDrain = "drain"
+	// DrainerStateUncordon is used for drainer annotation as a value to indicate needing an uncordon
+	DrainerStateUncordon = "uncordon"
 	// ClusterControlPlaneTopologyAnnotationKey is set by the node controller by reading value from
 	// controllerConfig. MCD uses the annotation value to decide drain action on the node.
 	ClusterControlPlaneTopologyAnnotationKey = "machineconfiguration.openshift.io/controlPlaneTopology"
 	// OpenShiftOperatorManagedLabel is used to filter out kube objects that don't need to be synced by the MCO
 	OpenShiftOperatorManagedLabel = "openshift.io/operator-managed"
+	// ControllerConfigResourceVersionKey is used for the certificate writer to indicate the last controllerconfig object it synced upon
+	ControllerConfigResourceVersionKey = "machineconfiguration.openshift.io/lastSyncedControllerConfigResourceVersion"
 
 	// GeneratedByVersionAnnotationKey is used to tag the controllerconfig to synchronize the MCO and MCC
 	GeneratedByVersionAnnotationKey = "machineconfiguration.openshift.io/generated-by-version"
@@ -34,6 +44,8 @@ const (
 	MachineConfigDaemonStateUnreconcilable = "Unreconcilable"
 	// MachineConfigDaemonReasonAnnotationKey is set by the daemon when it needs to report a human readable reason for its state. E.g. when state flips to degraded/unreconcilable.
 	MachineConfigDaemonReasonAnnotationKey = "machineconfiguration.openshift.io/reason"
+	// MachineConfigDaemonFinalizeFailureAnnotationKey is set by the daemon when ostree fails to finalize
+	MachineConfigDaemonFinalizeFailureAnnotationKey = "machineconfiguration.openshift.io/ostree-finalize-staged-failure"
 	// InitialNodeAnnotationsFilePath defines the path at which it will find the node annotations it needs to set on the node once it comes up for the first time.
 	// The Machine Config Server writes the node annotations to this path.
 	InitialNodeAnnotationsFilePath = "/etc/machine-config-daemon/node-annotations.json"
@@ -67,4 +79,20 @@ const (
 	// "currentConfig" state.  Create this file (empty contents is fine) if you wish the MCD
 	// to proceed and attempt to "reconcile" to the new "desiredConfig" state regardless.
 	MachineConfigDaemonForceFile = "/run/machine-config-daemon-force"
+
+	// coreUser is "core" and currently the only permissible user name
+	CoreUserName  = "core"
+	CoreGroupName = "core"
+
+	// changes to registries.conf will cause a crio reload and require extra logic about whether to drain
+	ContainerRegistryConfPath = "/etc/containers/registries.conf"
+
+	// SSH Keys for user "core" will only be written at /home/core/.ssh
+	CoreUserSSHPath = "/home/" + CoreUserName + "/.ssh"
+
+	// SSH keys in RHCOS 8 will be written to /home/core/.ssh/authorized_keys
+	RHCOS8SSHKeyPath = CoreUserSSHPath + "/authorized_keys"
+
+	// SSH keys in RHCOS 9 / FCOS / SCOS will be written to /home/core/.ssh/authorized_keys.d/ignition
+	RHCOS9SSHKeyPath = CoreUserSSHPath + "/authorized_keys.d/ignition"
 )

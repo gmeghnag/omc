@@ -177,7 +177,7 @@ type BitbucketWebHookCause struct {
 // ImageChangeCause contains information about the image that triggered a
 // build
 type ImageChangeCause struct {
-	// imageID is the ID of the image that triggered a a new build.
+	// imageID is the ID of the image that triggered a new build.
 	ImageID string `json:"imageID,omitempty" protobuf:"bytes,1,opt,name=imageID"`
 
 	// fromRef contains detailed information about an image that triggered a
@@ -825,53 +825,53 @@ type JenkinsPipelineBuildStrategy struct {
 //
 // 1. Shell script:
 //
-//        "postCommit": {
-//          "script": "rake test --verbose",
-//        }
+//	   "postCommit": {
+//	     "script": "rake test --verbose",
+//	   }
 //
-//     The above is a convenient form which is equivalent to:
+//	The above is a convenient form which is equivalent to:
 //
-//        "postCommit": {
-//          "command": ["/bin/sh", "-ic"],
-//          "args":    ["rake test --verbose"]
-//        }
+//	   "postCommit": {
+//	     "command": ["/bin/sh", "-ic"],
+//	     "args":    ["rake test --verbose"]
+//	   }
 //
 // 2. A command as the image entrypoint:
 //
-//        "postCommit": {
-//          "commit": ["rake", "test", "--verbose"]
-//        }
+//	   "postCommit": {
+//	     "commit": ["rake", "test", "--verbose"]
+//	   }
 //
-//     Command overrides the image entrypoint in the exec form, as documented in
-//     Docker: https://docs.docker.com/engine/reference/builder/#entrypoint.
+//	Command overrides the image entrypoint in the exec form, as documented in
+//	Docker: https://docs.docker.com/engine/reference/builder/#entrypoint.
 //
 // 3. Pass arguments to the default entrypoint:
 //
-//        "postCommit": {
-// 		      "args": ["rake", "test", "--verbose"]
-// 	      }
+//	       "postCommit": {
+//			      "args": ["rake", "test", "--verbose"]
+//		      }
 //
-//     This form is only useful if the image entrypoint can handle arguments.
+//	    This form is only useful if the image entrypoint can handle arguments.
 //
 // 4. Shell script with arguments:
 //
-//        "postCommit": {
-//          "script": "rake test $1",
-//          "args":   ["--verbose"]
-//        }
+//	   "postCommit": {
+//	     "script": "rake test $1",
+//	     "args":   ["--verbose"]
+//	   }
 //
-//     This form is useful if you need to pass arguments that would otherwise be
-//     hard to quote properly in the shell script. In the script, $0 will be
-//     "/bin/sh" and $1, $2, etc, are the positional arguments from Args.
+//	This form is useful if you need to pass arguments that would otherwise be
+//	hard to quote properly in the shell script. In the script, $0 will be
+//	"/bin/sh" and $1, $2, etc, are the positional arguments from Args.
 //
 // 5. Command with arguments:
 //
-//        "postCommit": {
-//          "command": ["rake", "test"],
-//          "args":    ["--verbose"]
-//        }
+//	   "postCommit": {
+//	     "command": ["rake", "test"],
+//	     "args":    ["--verbose"]
+//	   }
 //
-//     This form is equivalent to appending the arguments to the Command slice.
+//	This form is equivalent to appending the arguments to the Command slice.
 //
 // It is invalid to provide both Script and Command simultaneously. If none of
 // the fields are specified, the hook is not executed.
@@ -1411,6 +1411,9 @@ const (
 
 	// BuildVolumeSourceTypeConfigmap is the ConfigMap build source volume type
 	BuildVolumeSourceTypeConfigMap BuildVolumeSourceType = "ConfigMap"
+
+	// BuildVolumeSourceTypeCSI is the CSI build source volume type
+	BuildVolumeSourceTypeCSI BuildVolumeSourceType = "CSI"
 )
 
 // BuildVolumeSource represents the source of a volume to mount
@@ -1430,6 +1433,10 @@ type BuildVolumeSource struct {
 	// configMap represents a ConfigMap that should populate this volume
 	// +optional
 	ConfigMap *corev1.ConfigMapVolumeSource `json:"configMap,omitempty" protobuf:"bytes,3,opt,name=configMap"`
+
+	// csi represents ephemeral storage provided by external CSI drivers which support this capability
+	// +optional
+	CSI *corev1.CSIVolumeSource `json:"csi,omitempty" protobuf:"bytes,4,opt,name=csi"`
 }
 
 // BuildVolumeMount describes the mounting of a Volume within buildah's runtime environment.

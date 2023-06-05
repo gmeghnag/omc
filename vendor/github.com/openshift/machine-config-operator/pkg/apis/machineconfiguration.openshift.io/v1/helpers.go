@@ -20,20 +20,23 @@ func NewMachineConfigPoolCondition(condType MachineConfigPoolConditionType, stat
 
 // GetMachineConfigPoolCondition returns the condition with the provided type.
 func GetMachineConfigPoolCondition(status MachineConfigPoolStatus, condType MachineConfigPoolConditionType) *MachineConfigPoolCondition {
+	// in case of sync errors, return the last condition that matches, not the first
+	// this exists for redundancy and potential race conditions.
+	var LatestState *MachineConfigPoolCondition
 	for i := range status.Conditions {
 		c := status.Conditions[i]
 		if c.Type == condType {
-			return &c
+			LatestState = &c
 		}
 	}
-	return nil
+	return LatestState
 }
 
 // SetMachineConfigPoolCondition updates the MachineConfigPool to include the provided condition. If the condition that
 // we are about to add already exists and has the same status and reason then we are not going to update.
 func SetMachineConfigPoolCondition(status *MachineConfigPoolStatus, condition MachineConfigPoolCondition) {
 	currentCond := GetMachineConfigPoolCondition(*status, condition.Type)
-	if currentCond != nil && currentCond.Status == condition.Status && currentCond.Reason == condition.Reason {
+	if currentCond != nil && currentCond.Status == condition.Status && currentCond.Reason == condition.Reason && currentCond.Message == condition.Message {
 		return
 	}
 	// Do not update lastTransitionTime if the status of the condition doesn't change.

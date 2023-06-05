@@ -103,18 +103,81 @@ type NetworkSpec struct {
 	// +optional
 	ExportNetworkFlows *ExportNetworkFlows `json:"exportNetworkFlows,omitempty"`
 
-	// migration enables and configures the cluster network migration.
-	// Setting this to the target network type to allow changing the default network.
-	// If unset, the operation of changing cluster default network plugin will be rejected.
+	// migration enables and configures the cluster network migration. The
+	// migration procedure allows to change the network type and the MTU.
 	// +optional
 	Migration *NetworkMigration `json:"migration,omitempty"`
 }
 
 // NetworkMigration represents the cluster network configuration.
 type NetworkMigration struct {
-	// networkType is the target type of network migration
+	// networkType is the target type of network migration. Set this to the
+	// target network type to allow changing the default network. If unset, the
+	// operation of changing cluster default network plugin will be rejected.
 	// The supported values are OpenShiftSDN, OVNKubernetes
-	NetworkType NetworkType `json:"networkType"`
+	// +optional
+	NetworkType string `json:"networkType,omitempty"`
+
+	// mtu contains the MTU migration configuration. Set this to allow changing
+	// the MTU values for the default network. If unset, the operation of
+	// changing the MTU for the default network will be rejected.
+	// +optional
+	MTU *MTUMigration `json:"mtu,omitempty"`
+
+	// features contains the features migration configuration. Set this to migrate
+	// feature configuration when changing the cluster default network provider.
+	// if unset, the default operation is to migrate all the configuration of
+	// supported features.
+	// +optional
+	Features *FeaturesMigration `json:"features,omitempty"`
+}
+
+type FeaturesMigration struct {
+	// egressIP specifies whether or not the Egress IP configuration is migrated
+	// automatically when changing the cluster default network provider.
+	// If unset, this property defaults to 'true' and Egress IP configure is migrated.
+	// +optional
+	// +kubebuilder:default:=true
+	EgressIP bool `json:"egressIP,omitempty"`
+	// egressFirewall specifies whether or not the Egress Firewall configuration is migrated
+	// automatically when changing the cluster default network provider.
+	// If unset, this property defaults to 'true' and Egress Firewall configure is migrated.
+	// +optional
+	// +kubebuilder:default:=true
+	EgressFirewall bool `json:"egressFirewall,omitempty"`
+	// multicast specifies whether or not the multicast configuration is migrated
+	// automatically when changing the cluster default network provider.
+	// If unset, this property defaults to 'true' and multicast configure is migrated.
+	// +optional
+	// +kubebuilder:default:=true
+	Multicast bool `json:"multicast,omitempty"`
+}
+
+// MTUMigration MTU contains infomation about MTU migration.
+type MTUMigration struct {
+	// network contains information about MTU migration for the default network.
+	// Migrations are only allowed to MTU values lower than the machine's uplink
+	// MTU by the minimum appropriate offset.
+	// +optional
+	Network *MTUMigrationValues `json:"network,omitempty"`
+
+	// machine contains MTU migration configuration for the machine's uplink.
+	// Needs to be migrated along with the default network MTU unless the
+	// current uplink MTU already accommodates the default network MTU.
+	// +optional
+	Machine *MTUMigrationValues `json:"machine,omitempty"`
+}
+
+// MTUMigrationValues contains the values for a MTU migration.
+type MTUMigrationValues struct {
+	// to is the MTU to migrate to.
+	// +kubebuilder:validation:Minimum=0
+	To *uint32 `json:"to"`
+
+	// from is the MTU to migrate from.
+	// +kubebuilder:validation:Minimum=0
+	// +optional
+	From *uint32 `json:"from,omitempty"`
 }
 
 // ClusterNetworkEntry is a subnet from which to allocate PodIPs. A network of size
@@ -139,8 +202,7 @@ type DefaultNetworkDefinition struct {
 	// +optional
 	OpenShiftSDNConfig *OpenShiftSDNConfig `json:"openshiftSDNConfig,omitempty"`
 
-	// oVNKubernetesConfig configures the ovn-kubernetes plugin. This is currently
-	// not implemented.
+	// ovnKubernetesConfig configures the ovn-kubernetes plugin.
 	// +optional
 	OVNKubernetesConfig *OVNKubernetesConfig `json:"ovnKubernetesConfig,omitempty"`
 
@@ -309,9 +371,9 @@ type KuryrConfig struct {
 
 	// enablePortPoolsPrepopulation when true will make Kuryr prepopulate each newly created port
 	// pool with a minimum number of ports. Kuryr uses Neutron port pooling to fight the fact
-	// that it takes a significant amount of time to create one. Instead of creating it when
-	// pod is being deployed, Kuryr keeps a number of ports ready to be attached to pods. By
-	// default port prepopulation is disabled.
+	// that it takes a significant amount of time to create one. It creates a number of ports when
+	// the first pod that is configured to use the dedicated network for pods is created in a namespace,
+	// and keeps them ready to be attached to pods. Port prepopulation is disabled by default.
 	// +optional
 	EnablePortPoolsPrepopulation bool `json:"enablePortPoolsPrepopulation,omitempty"`
 
@@ -342,7 +404,8 @@ type KuryrConfig struct {
 	// mtu is the MTU that Kuryr should use when creating pod networks in Neutron.
 	// The value has to be lower or equal to the MTU of the nodes network and Neutron has
 	// to allow creation of tenant networks with such MTU. If unset Pod networks will be
-	// created with the same MTU as the nodes network has.
+	// created with the same MTU as the nodes network has. This also affects the services
+	// network created by cluster-network-operator.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	MTU *uint32 `json:"mtu,omitempty"`
@@ -374,6 +437,28 @@ type OVNKubernetesConfig struct {
 	// reported defaults are used.
 	// +optional
 	PolicyAuditConfig *PolicyAuditConfig `json:"policyAuditConfig,omitempty"`
+	// gatewayConfig holds the configuration for node gateway options.
+	// +optional
+	GatewayConfig *GatewayConfig `json:"gatewayConfig,omitempty"`
+	// v4InternalSubnet is a v4 subnet used internally by ovn-kubernetes in case the
+	// default one is being already used by something else. It must not overlap with
+	// any other subnet being used by OpenShift or by the node network. The size of the
+	// subnet must be larger than the number of nodes. The value cannot be changed
+	// after installation.
+	// Default is 100.64.0.0/16
+	// +optional
+	V4InternalSubnet string `json:"v4InternalSubnet,omitempty"`
+	// v6InternalSubnet is a v6 subnet used internally by ovn-kubernetes in case the
+	// default one is being already used by something else. It must not overlap with
+	// any other subnet being used by OpenShift or by the node network. The size of the
+	// subnet must be larger than the number of nodes. The value cannot be changed
+	// after installation.
+	// Default is fd98::/48
+	// +optional
+	V6InternalSubnet string `json:"v6InternalSubnet,omitempty"`
+	// egressIPConfig holds the configuration for EgressIP options.
+	// +optional
+	EgressIPConfig EgressIPConfig `json:"egressIPConfig,omitempty"`
 }
 
 type HybridOverlayConfig struct {
@@ -386,6 +471,17 @@ type HybridOverlayConfig struct {
 }
 
 type IPsecConfig struct {
+}
+
+// GatewayConfig holds node gateway-related parsed config file parameters and command-line overrides
+type GatewayConfig struct {
+	// RoutingViaHost allows pod egress traffic to exit via the ovn-k8s-mp0 management port
+	// into the host before sending it out. If this is not set, traffic will always egress directly
+	// from OVN to outside without touching the host stack. Setting this to true means hardware
+	// offload will not be supported. Default is false if GatewayConfig is specified.
+	// +kubebuilder:default:=false
+	// +optional
+	RoutingViaHost bool `json:"routingViaHost,omitempty"`
 }
 
 type ExportNetworkFlows struct {
@@ -483,6 +579,21 @@ type ProxyConfig struct {
 
 	// Any additional arguments to pass to the kubeproxy process
 	ProxyArguments map[string]ProxyArgumentList `json:"proxyArguments,omitempty"`
+}
+
+// EgressIPConfig defines the configuration knobs for egressip
+type EgressIPConfig struct {
+	// reachabilityTotalTimeout configures the EgressIP node reachability check total timeout in seconds.
+	// If the EgressIP node cannot be reached within this timeout, the node is declared down.
+	// Setting a large value may cause the EgressIP feature to react slowly to node changes.
+	// In particular, it may react slowly for EgressIP nodes that really have a genuine problem and are unreachable.
+	// When omitted, this means the user has no opinion and the platform is left to choose a reasonable default, which is subject to change over time.
+	// The current default is 1 second.
+	// A value of 0 disables the EgressIP node's reachability check.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=60
+	// +optional
+	ReachabilityTotalTimeoutSeconds *uint32 `json:"reachabilityTotalTimeoutSeconds,omitempty"`
 }
 
 const (
