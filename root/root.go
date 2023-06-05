@@ -61,7 +61,6 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	RootCmd.PersistentFlags().StringVar(&vars.CfgFile, "config", "", "Config file to use (default is $HOME/.omc.json).")
 	RootCmd.PersistentFlags().StringVarP(&vars.Namespace, "namespace", "n", "", "If present, list the requested object(s) for a specific namespace.")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -72,6 +71,8 @@ func init() {
 		cmd.ProjectCmd,
 		cmd.ProjectsCmd,
 		cmd.UseCmd,
+		cmd.MustGather,
+		cmd.IngestCRDS,
 		config.ConfigCmd,
 		get.GetCmd,
 		describe.DescribeCmd,
@@ -86,78 +87,71 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// fmt.Println("inside initConfig") FLOW 1
-	if vars.CfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(vars.CfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		exist, _ := helpers.Exists(home + "/.omc/omc.json")
-		if !exist {
-			if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
-				err := os.Mkdir(home+"/.omc", os.ModePerm)
-				if err != nil {
-					cobra.CheckErr(err)
-				}
-			}
-			helpers.CreateConfigFile(home + "/.omc/omc.json")
-		}
-		if _, err := os.Stat(home + "/.omc/customresourcedefinitions"); errors.Is(err, os.ErrNotExist) {
-			err := os.Mkdir(home+"/.omc/customresourcedefinitions", os.ModePerm)
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+	exist, _ := helpers.Exists(home + "/.omc/omc.json")
+	if !exist {
+		if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
+			err := os.Mkdir(home+"/.omc", os.ModePerm)
 			if err != nil {
 				cobra.CheckErr(err)
 			}
 		}
-		// Search config in home directory with name ".omc" (without extension).
-		viper.AddConfigPath(home + "/.omc/")
-		viper.SetConfigType("json")
-		viper.SetConfigName("omc")
-		// If a config file is found, read it in.
-		if err := viper.ReadInConfig(); err == nil {
-			//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-			omcConfigJson := types.Config{}
-			file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
-			_ = json.Unmarshal([]byte(file), &omcConfigJson)
-			var contexts []types.Context
-			contexts = omcConfigJson.Contexts
-			for _, context := range contexts {
-				if context.Current == "*" {
-					vars.MustGatherRootPath = context.Path
-					if vars.Namespace == "" {
-						vars.Namespace = context.Project
-					}
-					break
+		helpers.CreateConfigFile(home + "/.omc/omc.json")
+	}
+	if _, err := os.Stat(home + "/.omc/customresourcedefinitions"); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(home+"/.omc/customresourcedefinitions", os.ModePerm)
+		if err != nil {
+			cobra.CheckErr(err)
+		}
+	}
+	// Search config in home directory with name ".omc" (without extension).
+	viper.AddConfigPath(home + "/.omc/")
+	viper.SetConfigType("json")
+	viper.SetConfigName("omc")
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err == nil {
+		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		omcConfigJson := types.Config{}
+		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
+		_ = json.Unmarshal([]byte(file), &omcConfigJson)
+		var contexts []types.Context
+		contexts = omcConfigJson.Contexts
+		for _, context := range contexts {
+			if context.Current == "*" {
+				vars.MustGatherRootPath = context.Path
+				if vars.Namespace == "" {
+					vars.Namespace = context.Project
 				}
+				break
 			}
-			if vars.MustGatherRootPath != "" {
-				exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
-				if !exist {
-					files, err := ioutil.ReadDir(vars.MustGatherRootPath)
-					if err != nil {
-						fmt.Println(err)
-						cmd.DeleteContext(vars.MustGatherRootPath, viper.ConfigFileUsed(), "")
-						fmt.Println("Cleaning", viper.ConfigFileUsed())
-					} else {
-						baseDir := ""
-						for _, f := range files {
-							if f.IsDir() {
-								baseDir = f.Name()
-								vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
-								break
-							}
+		}
+		if vars.MustGatherRootPath != "" {
+			exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
+			if !exist {
+				files, err := ioutil.ReadDir(vars.MustGatherRootPath)
+				if err != nil {
+					fmt.Println(err)
+					cmd.DeleteContext(vars.MustGatherRootPath, viper.ConfigFileUsed(), "")
+					fmt.Println("Cleaning", viper.ConfigFileUsed())
+				} else {
+					baseDir := ""
+					for _, f := range files {
+						if f.IsDir() {
+							baseDir = f.Name()
+							vars.MustGatherRootPath = vars.MustGatherRootPath + "/" + baseDir
+							break
 						}
-						if baseDir == "" && !helpers.StringInSlice("use", os.Args) {
-							fmt.Fprintln(os.Stderr, "wrong must-gather file composition for", vars.MustGatherRootPath)
-							os.Exit(1)
-						}
+					}
+					if baseDir == "" && !helpers.StringInSlice("use", os.Args) {
+						fmt.Fprintln(os.Stderr, "wrong must-gather file composition for", vars.MustGatherRootPath)
+						os.Exit(1)
 					}
 				}
 			}
 		}
 	}
+
 }
 
 func loadOmcConfigs() {
