@@ -11,7 +11,7 @@ import (
 )
 
 var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, LabelSelectorStringVar, Id, Container, OMCVersionHash, OMCVersionTag, DiffCmd, CurrentKind, LastKind string
-var AllNamespaceBoolVar, ShowLabelsBoolVar, Previous, AllContainers, UseLocalCRDs, SingleResource, Wide, ShowKind, ShowNamespace, ShowManagedFields, NoHeaders bool
+var AllNamespaceBoolVar, ShowLabelsBoolVar, Previous, AllContainers, UseLocalCRDs, SingleResource, Wide, ShowKind, ShowNamespace, ShowManagedFields, NoHeaders, InsecureLogs bool
 
 var GetArgs map[string]map[string]struct{}
 var AliasToCrd map[string]apiextensionsv1.CustomResourceDefinition

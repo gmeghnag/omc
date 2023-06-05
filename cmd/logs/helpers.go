@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -36,8 +37,9 @@ type logMessage struct {
 }
 
 // parseCRILog parses logs in CRI log format. CRI Log format example:
-//   2016-10-06T00:17:09.669794202Z stdout P log content 1
-//   2016-10-06T00:17:09.669794203Z stderr F log content 2
+//
+//	2016-10-06T00:17:09.669794202Z stdout P log content 1
+//	2016-10-06T00:17:09.669794203Z stderr F log content 2
 func parseCRILog(log []byte, infoLevel bool, warningLevel bool, errorLevel bool) (string, error) {
 	var err error
 	// Parse timestamp
@@ -55,19 +57,19 @@ func parseCRILog(log []byte, infoLevel bool, warningLevel bool, errorLevel bool)
 	_log := log[idx+1:]
 	idx = bytes.Index(_log, delimiter)
 	if idx < 0 {
-		return "", fmt.Errorf("stream type is not found")
+		idx = len(string(_log))
 	}
 	stream := string(_log[:idx])
 	if len(stream) == 0 {
 		return "", nil
 	}
-	if string(stream[0]) == "I" && infoLevel {
+	if string(stream[0]) == "I" && isNumber(stream[1]) && infoLevel {
 		return string(log), nil
 	}
-	if string(stream[0]) == "W" && warningLevel {
+	if string(stream[0]) == "W" && isNumber(stream[1]) && warningLevel {
 		return string(log), nil
 	}
-	if string(stream[0]) == "E" && errorLevel {
+	if string(stream[0]) == "E" && isNumber(stream[1]) && errorLevel {
 		return string(log), nil
 	}
 
@@ -110,5 +112,14 @@ func FilterCatLogs(filePath string, logLevels []string) {
 			fmt.Println(log)
 		}
 
+	}
+}
+
+func isNumber(char byte) bool {
+	_, err := strconv.Atoi(string(char))
+	if err == nil {
+		return true
+	} else {
+		return false
 	}
 }

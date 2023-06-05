@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -28,9 +29,17 @@ import (
 func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, allContainersFlag bool, logLevels []string) {
 	var logFile string
 	if previousFlag {
-		logFile = "previous.log"
+		if vars.InsecureLogs {
+			logFile = "previous.insecure.log"
+		} else {
+			logFile = "previous.log"
+		}
 	} else {
-		logFile = "current.log"
+		if vars.InsecureLogs {
+			logFile = "current.insecure.log"
+		} else {
+			logFile = "current.log"
+		}
 	}
 	var _Items v1.PodList
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
