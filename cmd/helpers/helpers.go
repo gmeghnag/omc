@@ -51,7 +51,6 @@ func PrintTable(headers []string, data [][]string) {
 	table.SetHeader(headers)
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
-	table.SetTrimWhiteSpaceAtEOL(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetCenterSeparator("")
