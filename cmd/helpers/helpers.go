@@ -339,6 +339,63 @@ func MatchLabels(labels string, selector string) bool {
 	return isMatching
 }
 
+func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error) {
+	if selector == "" {
+		return true, nil
+	}
+	selectorArray := strings.Split(selector, ",")
+
+	for _, s := range selectorArray {
+		if strings.Contains(s, "!=") {
+			split := strings.Split(s, "!=")
+			if len(split) != 2 {
+				return false, fmt.Errorf("invalid labels input")
+			}
+			key := split[0]
+			val := split[1]
+			value, _ := labels[key]
+			if val == value {
+				return false, nil
+			}
+		} else if strings.Contains(s, "==") {
+			split := strings.Split(s, "==")
+			if len(split) != 2 {
+				return false, fmt.Errorf("invalid labels input")
+			}
+			key := split[0]
+			val := split[1]
+			value, _ := labels[key]
+			if val != value {
+				return false, nil
+			}
+		} else if strings.Contains(s, "=") {
+			split := strings.Split(s, "=")
+			if len(split) != 2 {
+				return false, fmt.Errorf("invalid labels input")
+			}
+			key := split[0]
+			val := split[1]
+			value, _ := labels[key]
+			if val != value {
+				return false, nil
+			}
+		} else if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
+			s = "app=" + s
+			split := strings.Split(s, "=")
+			if len(split) != 2 {
+				return false, fmt.Errorf("invalid labels input")
+			}
+			key := split[0]
+			val := split[1]
+			value, _ := labels[key]
+			if val != value {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
 func TranslateTimestamp(timestamp metav1.Time) string {
 	if timestamp.IsZero() {
 		return "<unknown>"
