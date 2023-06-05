@@ -20,6 +20,7 @@ func validateArgs(args []string) error {
 	args = _args
 	if len(args) == 1 && !strings.Contains(args[0], "/") {
 		if strings.Contains(args[0], ",") {
+			vars.ShowKind = true
 			resourcesTypes := strings.Split(strings.TrimPrefix(strings.TrimSuffix(args[0], ","), ","), ",")
 			for _, resourceType := range resourcesTypes {
 				if strings.Contains(resourceType, ".") {
@@ -71,6 +72,9 @@ func validateArgs(args []string) error {
 			} else {
 				return fmt.Errorf("there is no need to specify a resource type as a separate argument when passing arguments in resource/name form (e.g. 'omc get resource/<resource_name>' instead of 'omc get resource resource/<resource_name>'")
 			}
+		}
+		if len(vars.GetArgs) > 1 {
+			vars.ShowKind = true
 		}
 	} else if len(args) > 1 && !strings.Contains(args[0], "/") {
 		resourceType := args[0]

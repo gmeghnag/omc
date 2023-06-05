@@ -47,11 +47,7 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 	}
 	if table.ColumnDefinitions[0].Name == "Name" {
 		if vars.ShowKind == true || vars.Namespace == "" {
-			if unstruct.GetAPIVersion() == "v1" {
-				table.Rows[0].Cells[0] = resourceKind + "/" + unstruct.GetName()
-			} else {
-				table.Rows[0].Cells[0] = resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName()
-			}
+			table.Rows[0].Cells[0] = resourceKind + "/" + unstruct.GetName()
 		} else {
 			table.Rows[0].Cells[0] = unstruct.GetName()
 		}
@@ -87,10 +83,10 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Ta
 	if vars.ShowKind == true || vars.Namespace == "" {
 		if vars.ShowNamespace && unstruct.GetNamespace() != "" {
 			table.ColumnDefinitions = []metav1.TableColumnDefinition{{Name: "Namespace", Format: "string"}, {Name: "Name", Format: "name"}}
-			cells = []interface{}{unstruct.GetNamespace(), resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName()}
+			cells = []interface{}{unstruct.GetNamespace(), resourceKind + "/" + unstruct.GetName()}
 		} else {
 			table.ColumnDefinitions = []metav1.TableColumnDefinition{{Name: "Name", Format: "name"}}
-			cells = []interface{}{resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName()}
+			cells = []interface{}{resourceKind + "/" + unstruct.GetName()}
 		}
 	} else {
 		if vars.ShowNamespace && unstruct.GetNamespace() != "" {
@@ -128,4 +124,10 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Ta
 	}
 
 	return table, nil
+}
+
+func kind(resource *unstructured.Unstructured) string {
+	longKind := strings.Split(resource.GetAPIVersion(), "/")[0]
+	splittedKind := strings.Split(longKind, ".")
+	return splittedKind[0]
 }
