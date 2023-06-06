@@ -173,7 +173,7 @@ func init() {
 	templateprinters.AddTemplateOpenShiftHandlers(vars.TableGenerator)
 }
 
-func getNamespacedResources(resourceNamePlural string, resourceGroup string, prova map[string]struct{}) {
+func getNamespacedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	var namespaces []string
 	if vars.AllNamespaceBoolVar == true {
 		vars.Namespace = ""
@@ -202,8 +202,8 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, pro
 						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 						os.Exit(1)
 					}
-					if len(prova) > 0 {
-						_, ok := prova[item.GetName()]
+					if len(resources) > 0 {
+						_, ok := resources[item.GetName()]
 						if ok {
 							handleObject(item)
 						}
@@ -218,8 +218,8 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, pro
 				os.Exit(1)
 			}
 			for _, item := range UnstructuredItems.Items {
-				if len(prova) > 0 {
-					_, ok := prova[item.GetName()]
+				if len(resources) > 0 {
+					_, ok := resources[item.GetName()]
 					if ok {
 						handleObject(item)
 					}
@@ -231,7 +231,7 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, pro
 	}
 }
 
-func getClusterScopedResources(resourceNamePlural string, resourceGroup string, prova map[string]struct{}) {
+func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
 	resourcesFiles, _ := ioutil.ReadDir(resourceDir)
 	for _, f := range resourcesFiles {
@@ -242,8 +242,8 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 			os.Exit(1)
 		}
-		if len(prova) > 0 {
-			_, ok := prova[item.GetName()]
+		if len(resources) > 0 {
+			_, ok := resources[item.GetName()]
 			if ok {
 				handleObject(item)
 			}

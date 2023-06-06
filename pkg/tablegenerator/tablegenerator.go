@@ -46,14 +46,14 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 		}
 	}
 	if table.ColumnDefinitions[0].Name == "Name" {
-		if vars.ShowKind == true || vars.Namespace == "" {
+		if vars.ShowKind == true {
 			table.Rows[0].Cells[0] = resourceKind + "/" + unstruct.GetName()
 		} else {
 			table.Rows[0].Cells[0] = unstruct.GetName()
 		}
 	}
 
-	if vars.ShowNamespace && unstruct.GetNamespace() != "" {
+	if vars.ShowNamespace {
 		table.ColumnDefinitions = append([]metav1.TableColumnDefinition{{Format: "string", Name: "Namespace"}}, table.ColumnDefinitions...)
 		table.Rows[0].Cells = append([]interface{}{unstruct.GetNamespace()}, table.Rows[0].Cells...)
 	}
@@ -80,7 +80,7 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Ta
 
 	cells := []interface{}{}
 	// table.ColumnDefinitions = []metav1.TableColumnDefinition{{Name: "Name", Format: "name"}}
-	if vars.ShowKind == true || vars.Namespace == "" {
+	if vars.ShowKind == true {
 		if vars.ShowNamespace && unstruct.GetNamespace() != "" {
 			table.ColumnDefinitions = []metav1.TableColumnDefinition{{Name: "Namespace", Format: "string"}, {Name: "Name", Format: "name"}}
 			cells = []interface{}{unstruct.GetNamespace(), resourceKind + "/" + unstruct.GetName()}
