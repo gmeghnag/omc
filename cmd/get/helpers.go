@@ -23,10 +23,10 @@ func validateArgs(args []string) error {
 			vars.ShowKind = true
 			resourcesTypes := strings.Split(strings.TrimPrefix(strings.TrimSuffix(args[0], ","), ","), ",")
 			for _, resourceType := range resourcesTypes {
-				resourceNamePlural, _, _, err := kindGroupNamespaced(resourceType)
+				resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
 				if err == nil {
 					if !strings.Contains(resourceType, ".") {
-						vars.GetArgs[resourceNamePlural] = make(map[string]struct{})
+						vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
 					} else {
 						vars.GetArgs[resourceType] = make(map[string]struct{})
 					}
@@ -37,10 +37,10 @@ func validateArgs(args []string) error {
 			}
 		} else {
 			resourceType := args[0]
-			resourceNamePlural, _, _, err := kindGroupNamespaced(resourceType)
+			resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
 			if err == nil {
 				if !strings.Contains(resourceType, ".") {
-					vars.GetArgs[resourceNamePlural] = make(map[string]struct{})
+					vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
 				} else {
 					vars.GetArgs[resourceType] = make(map[string]struct{})
 				}
@@ -56,20 +56,20 @@ func validateArgs(args []string) error {
 			if strings.Contains(arg, "/") {
 				resource := strings.Split(arg, "/")
 				resourceType, resourceName := resource[0], resource[1]
-				resourceNamePlural, _, _, err := kindGroupNamespaced(resourceType)
+				resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
 				if err == nil {
-					_, ok := vars.GetArgs[resourceNamePlural]
+					_, ok := vars.GetArgs[resourceNamePlural+"."+resourceGroup]
 					if !ok {
 						if !strings.Contains(resourceType, ".") {
-							vars.GetArgs[resourceNamePlural] = make(map[string]struct{})
-							vars.GetArgs[resourceNamePlural][resourceName] = struct{}{}
+							vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
+							vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 						} else {
 							vars.GetArgs[resourceType] = make(map[string]struct{})
 							vars.GetArgs[resourceType][resourceName] = struct{}{}
 						}
 					} else {
 						if !strings.Contains(resourceType, ".") {
-							vars.GetArgs[resourceNamePlural][resourceName] = struct{}{}
+							vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 						} else {
 							vars.GetArgs[resourceType][resourceName] = struct{}{}
 						}
@@ -86,10 +86,10 @@ func validateArgs(args []string) error {
 		}
 	} else if len(args) > 1 && !strings.Contains(args[0], "/") {
 		resourceType := args[0]
-		resourceNamePlural, _, _, err := kindGroupNamespaced(resourceType)
+		resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
 		if err == nil {
 			if !strings.Contains(resourceType, ".") {
-				vars.GetArgs[resourceNamePlural] = make(map[string]struct{})
+				vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
 			} else {
 				vars.GetArgs[resourceType] = make(map[string]struct{})
 			}
@@ -104,7 +104,7 @@ func validateArgs(args []string) error {
 				return fmt.Errorf("there is no need to specify a resource type as a separate argument when passing arguments in resource/name form (e.g. 'omc get resource/<resource_name>' instead of 'omc get resource resource/<resource_name>'")
 			}
 			if !strings.Contains(resourceType, ".") {
-				vars.GetArgs[resourceNamePlural][resourceName] = struct{}{}
+				vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 			} else {
 				vars.GetArgs[resourceType][resourceName] = struct{}{}
 			}
@@ -114,6 +114,24 @@ func validateArgs(args []string) error {
 }
 
 func kindGroupNamespaced(alias string) (string, string, bool, error) {
+	// when it si called the second time
+	if strings.Contains(alias, ".") {
+		split := strings.Split(alias, ".")
+		if len(split) > 1 {
+			resourcePlural := strings.Join(split[:1], ".")
+			group := strings.Join(split[1:], ".")
+			value, ok := vars.KnownResources[resourcePlural]
+			if ok {
+				klog.V(3).Info("INFO ", fmt.Sprintf("Alias \"%s\" is a known resource.", alias))
+				resourceNamePlural := value["plural"].(string)
+				resourceGroup := value["group"].(string)
+				namespaced := value["namespaced"].(bool)
+				if group == resourceGroup {
+					return resourceNamePlural, resourceGroup, namespaced, nil
+				}
+			}
+		}
+	}
 	value, ok := vars.KnownResources[alias]
 	if ok {
 		klog.V(3).Info("INFO ", fmt.Sprintf("Alias \"%s\" is a known resource.", alias))
@@ -127,7 +145,7 @@ func kindGroupNamespaced(alias string) (string, string, bool, error) {
 		if ok {
 			_crd := &apiextensionsv1.CustomResourceDefinition{Spec: crd.Spec}
 			namespaced := false
-			if _crd.Spec.Scope == "namespaced" {
+			if _crd.Spec.Scope == "Namespaced" {
 				namespaced = true
 			}
 			return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
@@ -161,15 +179,14 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 							if _crd.Spec.Scope == "Namespaced" {
 								namespaced = true
 							}
-							vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-							vars.AliasToCrd[alias] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-							vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+
+							vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
 							return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
 						}
 					}
 				}
 			}
-			vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+			vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
 			if strings.ToLower(_crd.Spec.Names.Kind) == alias || strings.ToLower(_crd.Spec.Names.Plural) == alias || strings.ToLower(_crd.Spec.Names.Singular) == alias || StringInSlice(alias, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == alias {
 				vars.AliasToCrd[alias] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
 				klog.V(4).Info("INFO ", fmt.Sprintf("Alias  \"%s\" found in path \"%s\".", alias, crdYamlPath))
@@ -186,12 +203,9 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 
 	home, _ := os.UserHomeDir()
 	omcCrdsPath := home + "/.omc/customresourcedefinitions/"
-	crds, err := ioutil.ReadDir(omcCrdsPath)
-	if err != nil {
-		panic(err)
-	}
+	crds, _ := ioutil.ReadDir(omcCrdsPath)
 	for _, f := range crds {
-		crdYamlPath := omcCrdsPath + f.Name()
+		crdYamlPath := crdsPath + f.Name()
 		crdByte, _ := ioutil.ReadFile(crdYamlPath)
 		_crd := &apiextensionsv1.CustomResourceDefinition{}
 		if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
@@ -210,14 +224,14 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 						if _crd.Spec.Scope == "Namespaced" {
 							namespaced = true
 						}
-						vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-						vars.AliasToCrd[alias] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+
+						vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
 						return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
 					}
 				}
 			}
 		}
-		vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+		vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
 		if strings.ToLower(_crd.Spec.Names.Kind) == alias || strings.ToLower(_crd.Spec.Names.Plural) == alias || strings.ToLower(_crd.Spec.Names.Singular) == alias || StringInSlice(alias, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == alias {
 			vars.AliasToCrd[alias] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
 			klog.V(4).Info("INFO ", fmt.Sprintf("Alias  \"%s\" found in path \"%s\".", alias, crdYamlPath))

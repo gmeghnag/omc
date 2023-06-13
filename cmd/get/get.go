@@ -430,6 +430,11 @@ func handleObject(obj unstructured.Unstructured) error {
 
 func handleOutput() {
 	printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
+	_resources := make([]string, 0, len(vars.GetArgs))
+	for resource := range vars.GetArgs {
+		_resources = append(_resources, resource)
+	}
+	resources := strings.Join(_resources, ",")
 	if vars.OutputStringVar == "json" {
 		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
 			data, _ := json.MarshalIndent(vars.UnstructuredList.Items[0].Object, "", "  ")
@@ -441,9 +446,9 @@ func handleOutput() {
 			fmt.Printf("%s", data)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources found in %s namespace.\n", vars.Namespace)
+				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Println("No resources found.")
+				fmt.Printf("No resources %s found.\n", resources)
 			}
 		}
 	} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
@@ -454,9 +459,9 @@ func handleOutput() {
 			helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources found in %s namespace.\n", vars.Namespace)
+				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Println("No resources found.")
+				fmt.Printf("No resources %s found.\n", resources)
 			}
 		}
 	} else if vars.OutputStringVar == "yaml" {
@@ -468,9 +473,9 @@ func handleOutput() {
 			fmt.Printf("%s", data)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources found in %s namespace.\n", vars.Namespace)
+				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Println("No resources found.")
+				fmt.Printf("No resources %s found.\n", resources)
 			}
 		}
 	} else {
@@ -483,9 +488,9 @@ func handleOutput() {
 		}
 		if vars.Output.Len() == 0 {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources found in %s namespace.\n", vars.Namespace)
+				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Println("No resources found.")
+				fmt.Printf("No resources %s found.\n", resources)
 			}
 		} else {
 			vars.Output.WriteTo(os.Stdout)

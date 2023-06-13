@@ -99,18 +99,13 @@ func InternalUnstructuredApiResource(unstruct unstructured.Unstructured) (*metav
 func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Table, error) {
 	resourceKind := strings.ToLower(unstruct.GetKind())
 	table := &metav1.Table{}
-	// TODO
-	// search for its corresponding CRD obly if this object Kind differs from the previous one parsed
-	//if vars.CurrentKind != unstruct.GetKind() {
 	vars.CRD = nil
-	crd, ok := vars.AliasToCrd[resourceKind]
-	//crd, ok := vars.AliasToCrd[resourceKind+strings.Split(unstruct.GetAPIVersion(), "/")[0]]
+	crd, ok := vars.AliasToCrd[resourceKind+"."+strings.Split(unstruct.GetAPIVersion(), "/")[0]]
 	if ok {
 		vars.CRD = &apiextensionsv1.CustomResourceDefinition{Spec: crd.Spec}
 	}
 
 	cells := []interface{}{}
-	// table.ColumnDefinitions = []metav1.TableColumnDefinition{{Name: "Name", Format: "name"}}
 	if vars.ShowKind == true {
 		if vars.ShowNamespace && unstruct.GetNamespace() != "" {
 			table.ColumnDefinitions = []metav1.TableColumnDefinition{{Name: "Namespace", Format: "string"}, {Name: "Name", Format: "name"}}
