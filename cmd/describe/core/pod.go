@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,19 +30,23 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func describePod(currentContextPath string, defaultConfigNamespace string, resourceName string) {
-	podPath := currentContextPath + "/namespaces/" + defaultConfigNamespace + "/pods/" + resourceName + "/" + resourceName + ".yaml"
-	Pod := corev1.Pod{}
-	_file := helpers.ReadYaml(podPath)
-	if err := yaml.Unmarshal([]byte(_file), &Pod); err != nil {
-		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podPath)
+func describePod(currentContextPath string, defaultConfigNamespace string, args []string) {
+	podResources := currentContextPath + "/namespaces/" + defaultConfigNamespace + "/core/pods.yaml"
+	PodList := corev1.PodList{}
+	_file := helpers.ReadYaml(podResources)
+	if err := yaml.Unmarshal(_file, &PodList); err != nil {
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podResources)
 		os.Exit(1)
 	}
-	fake := fake.NewSimpleClientset(&Pod)
-	c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
-	d := describe.PodDescriber{c}
-	out, _ := d.Describe(defaultConfigNamespace, resourceName, describe.DescriberSettings{ShowEvents: false})
-	fmt.Printf(out)
+	for _, pod := range PodList.Items {
+		if len(args) == 0 || (len(args) > 0 && helpers.StringInSlice(pod.GetName(), args)) {
+			fake := fake.NewSimpleClientset(&pod)
+			c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
+			d := describe.PodDescriber{c}
+			out, _ := d.Describe(defaultConfigNamespace, pod.GetName(), describe.DescriberSettings{ShowEvents: false})
+			fmt.Printf(out)
+		}
+	}
 }
 
 var Pod = &cobra.Command{
@@ -50,10 +54,6 @@ var Pod = &cobra.Command{
 	Aliases: []string{"po", "pods"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
-		resourceName := ""
-		if len(args) == 1 {
-			resourceName = args[0]
-		}
-		describePod(vars.MustGatherRootPath, vars.Namespace, resourceName)
+		describePod(vars.MustGatherRootPath, vars.Namespace, args)
 	},
 }
