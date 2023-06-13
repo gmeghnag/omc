@@ -95,15 +95,15 @@ var GetCmd = &cobra.Command{
 			// namespaces, clusterloggings and clusterlogforwarders locations
 			// are exceptions to must-gather resources structure
 			if resourceNamePlural == "namespaces" {
-				getNamespacesResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+				getNamespacesResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if resourceNamePlural == "clusterloggings" {
-				getClusterLoggingResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+				getClusterLoggingResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if resourceNamePlural == "clusterlogforwarders" {
-				getClusterLogForwarderResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+				getClusterLogForwarderResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if namespaced {
-				getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+				getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else {
-				getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+				getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			}
 		}
 		handleOutput()
