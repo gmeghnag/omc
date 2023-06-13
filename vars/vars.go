@@ -23,6 +23,7 @@ var CRD *apiextensionsv1.CustomResourceDefinition
 var Schema *runtime.Scheme
 
 var UnstructuredList types.UnstructuredList
+var JsonPathList types.JsonPathList
 
 var Output bytes.Buffer
 

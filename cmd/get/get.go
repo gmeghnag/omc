@@ -92,7 +92,15 @@ var GetCmd = &cobra.Command{
 				klog.V(1).ErrorS(err, "ERROR")
 				os.Exit(1)
 			}
-			if namespaced {
+			// namespaces, clusterloggings and clusterlogforwarders locations
+			// are exceptions to must-gather resources structure
+			if resourceNamePlural == "namespaces" {
+				getNamespacesResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+			} else if resourceNamePlural == "clusterloggings" {
+				getClusterLoggingResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+			} else if resourceNamePlural == "clusterlogforwarders" {
+				getClusterLogForwarderResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
+			} else if namespaced {
 				getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
 			} else {
 				getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural])
@@ -117,6 +125,7 @@ func init() {
 	vars.ArgPresent = make(map[string]bool)
 	vars.KnownResources = make(map[string]map[string]interface{})
 	vars.UnstructuredList = types.UnstructuredList{Kind: "List", ApiVersion: "v1", Items: []unstructured.Unstructured{}}
+	vars.JsonPathList = types.JsonPathList{Kind: "List", ApiVersion: "v1"}
 	err := goyaml.Unmarshal(yamlData, vars.KnownResources)
 	if err != nil {
 		fmt.Println(err)
@@ -196,7 +205,7 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 				resourcesFiles, _ := ioutil.ReadDir(resourceDir)
 				for _, f := range resourcesFiles {
 					resourceYamlPath := resourceDir + "/" + f.Name()
-					_file := helpers.ReadYaml(resourceYamlPath)
+					_file, _ := ioutil.ReadFile(resourceYamlPath)
 					item := unstructured.Unstructured{}
 					if err := yaml.Unmarshal(_file, &item); err != nil {
 						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
@@ -231,24 +240,111 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 	}
 }
 
-func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
-	resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
-	resourcesFiles, _ := ioutil.ReadDir(resourceDir)
-	for _, f := range resourcesFiles {
-		resourceYamlPath := resourceDir + "/" + f.Name()
-		_file := helpers.ReadYaml(resourceYamlPath)
-		item := unstructured.Unstructured{}
-		if err := yaml.Unmarshal(_file, &item); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
+func getClusterLogForwarderResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	resourcesYamlPath := vars.MustGatherRootPath + "/cluster-logging/clo/clusterlogforwarder_instance.yaml"
+	_file, err := ioutil.ReadFile(resourcesYamlPath)
+	if err == nil {
+		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourcesYamlPath)
 			os.Exit(1)
 		}
-		if len(resources) > 0 {
+		for _, item := range UnstructuredItems.Items {
 			_, ok := resources[item.GetName()]
-			if ok {
+			if ok || len(resources) == 0 {
 				handleObject(item)
 			}
-		} else {
-			handleObject(item)
+		}
+	}
+}
+
+func getClusterLoggingResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	resourcesYamlPath := vars.MustGatherRootPath + "/cluster-logging/clo/clusterlogging_instance.yaml"
+	_file, err := ioutil.ReadFile(resourcesYamlPath)
+	if err == nil {
+		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourcesYamlPath)
+			os.Exit(1)
+		}
+		for _, item := range UnstructuredItems.Items {
+			_, ok := resources[item.GetName()]
+			if ok || len(resources) == 0 {
+				handleObject(item)
+			}
+		}
+	}
+}
+
+func getNamespacesResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	if len(resources) > 0 {
+		for namespace := range resources {
+			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", vars.MustGatherRootPath, namespace, namespace)
+			_file, err := ioutil.ReadFile(resourceYamlPath)
+			if err == nil {
+				item := unstructured.Unstructured{}
+				if err := yaml.Unmarshal(_file, &item); err != nil {
+					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
+					os.Exit(1)
+				}
+				handleObject(item)
+			}
+		}
+	} else {
+		_namespaces, _ := ioutil.ReadDir(vars.MustGatherRootPath + "/namespaces/")
+		for _, namespace := range _namespaces {
+			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", vars.MustGatherRootPath, namespace.Name(), namespace.Name())
+			_file, err := ioutil.ReadFile(resourceYamlPath)
+			if err == nil {
+				item := unstructured.Unstructured{}
+				if err := yaml.Unmarshal(_file, &item); err != nil {
+					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
+					os.Exit(1)
+				}
+				handleObject(item)
+			}
+		}
+	}
+}
+
+func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
+	_file, err := ioutil.ReadFile(resourcePath)
+	if err != nil {
+		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
+		resourcesFiles, _ := ioutil.ReadDir(resourceDir)
+		for _, f := range resourcesFiles {
+			resourceYamlPath := resourceDir + "/" + f.Name()
+			_file, _ := ioutil.ReadFile(resourceYamlPath)
+			item := unstructured.Unstructured{}
+			if err := yaml.Unmarshal(_file, &item); err != nil {
+				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
+				os.Exit(1)
+			}
+			if len(resources) > 0 {
+				_, ok := resources[item.GetName()]
+				if ok {
+					handleObject(item)
+				}
+			} else {
+				handleObject(item)
+			}
+		}
+	} else {
+		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		for _, item := range UnstructuredItems.Items {
+			if len(resources) > 0 {
+				_, ok := resources[item.GetName()]
+				if ok {
+					handleObject(item)
+				}
+			} else {
+				handleObject(item)
+			}
 		}
 	}
 
@@ -268,6 +364,14 @@ func handleObject(obj unstructured.Unstructured) error {
 			obj.SetManagedFields(nil)
 		}
 		vars.UnstructuredList.Items = append(vars.UnstructuredList.Items, obj)
+		return nil
+	}
+	if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
+		if vars.ShowManagedFields == false {
+			obj.SetManagedFields(nil)
+		}
+		vars.UnstructuredList.Items = append(vars.UnstructuredList.Items, obj)
+		vars.JsonPathList.Items = append(vars.JsonPathList.Items, obj.Object)
 		return nil
 	}
 	if vars.OutputStringVar == "name" {
@@ -335,6 +439,19 @@ func handleOutput() {
 			data, _ := json.MarshalIndent(vars.UnstructuredList, "", "  ")
 			data = append(data, '\n')
 			fmt.Printf("%s", data)
+		} else {
+			if vars.Namespace != "" {
+				fmt.Printf("No resources found in %s namespace.\n", vars.Namespace)
+			} else {
+				fmt.Println("No resources found.")
+			}
+		}
+	} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
+		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
+			helpers.ExecuteJsonPath(vars.UnstructuredList.Items[0].Object, jsonPathTemplate)
+		} else if !vars.SingleResource && len(vars.UnstructuredList.Items) > 0 {
+			helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate)
 		} else {
 			if vars.Namespace != "" {
 				fmt.Printf("No resources found in %s namespace.\n", vars.Namespace)

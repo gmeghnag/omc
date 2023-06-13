@@ -49,17 +49,17 @@ ep:
   namespaced: true
   plural: endpoints
 event:
-  group: events.k8s.io
+  group: core
   name: event
   namespaced: true
   plural: events
 events:
-  group: events.k8s.io
+  group: core
   name: event
   namespaced: true
   plural: events
 ev:
-  group: events.k8s.io
+  group: core
   name: event
   namespaced: true
   plural: events
@@ -93,6 +93,36 @@ ns:
   name: namespace
   namespaced: false
   plural: namespaces
+clf:
+  group: logging.openshift.io
+  name: clusterlogforwarder
+  namespaced: false
+  plural: clusterlogforwarders
+clusterlogforwarder:
+  group: logging.openshift.io
+  name: clusterlogforwarder
+  namespaced: false
+  plural: clusterlogforwarders
+clusterlogforwarders:
+  group: logging.openshift.io
+  name: clusterlogforwarder
+  namespaced: true
+  plural: clusterlogforwarders 
+cl:
+  group: logging.openshift.io
+  name: clusterlogging
+  namespaced: false
+  plural: clusterloggings
+clusterlogging:
+  group: logging.openshift.io
+  name: clusterlogging
+  namespaced: false
+  plural: clusterloggings
+clusterloggings:
+  group: logging.openshift.io
+  name: clusterlogging
+  namespaced: true
+  plural: clusterloggings  
 node:
   group: core
   name: node

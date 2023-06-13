@@ -22,7 +22,7 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 	resourceKind := strings.ToLower(unstruct.GetKind())
 	table, err := vars.TableGenerator.GenerateTable(runtimeObject, printers.GenerateOptions{Wide: vars.Wide, NoHeaders: false})
 	if err != nil {
-		return table, err
+		return InternalUnstructuredApiResource(*unstruct)
 	}
 	for i, column := range table.ColumnDefinitions {
 		if column.Name == "Age" {
@@ -65,17 +65,48 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 	return table, err
 }
 
+func InternalUnstructuredApiResource(unstruct unstructured.Unstructured) (*metav1.Table, error) {
+	resourceKind := strings.ToLower(unstruct.GetKind())
+	table := &metav1.Table{}
+	if vars.ShowNamespace == true && unstruct.GetNamespace() != "" {
+		table.ColumnDefinitions = []metav1.TableColumnDefinition{
+			{Name: "Namespace", Type: "string", Format: "name"},
+			{Name: "Name", Type: "string", Format: "string"},
+			{Name: "Created At", Type: "date"},
+		}
+		if vars.ShowKind == true || vars.Namespace == "" {
+			table.Rows = []metav1.TableRow{{Cells: []interface{}{unstruct.GetNamespace(), resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
+		} else {
+			table.Rows = []metav1.TableRow{{Cells: []interface{}{unstruct.GetNamespace(), unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
+		}
+
+	} else {
+		table.ColumnDefinitions = []metav1.TableColumnDefinition{
+			{Name: "Name", Type: "string", Format: "name"},
+			{Name: "Created At", Type: "date"},
+		}
+		if vars.ShowKind == true || vars.Namespace == "" {
+			table.Rows = []metav1.TableRow{{Cells: []interface{}{resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
+
+		} else {
+			table.Rows = []metav1.TableRow{{Cells: []interface{}{unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
+		}
+
+	}
+	return table, nil
+}
+
 func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Table, error) {
 	resourceKind := strings.ToLower(unstruct.GetKind())
 	table := &metav1.Table{}
+	// TODO
 	// search for its corresponding CRD obly if this object Kind differs from the previous one parsed
-	if vars.CurrentKind != unstruct.GetKind() {
-		vars.CRD = nil
-		crd, ok := vars.AliasToCrd[resourceKind]
-		if ok {
-			_crd := &apiextensionsv1.CustomResourceDefinition{Spec: crd.Spec}
-			vars.CRD = _crd
-		}
+	//if vars.CurrentKind != unstruct.GetKind() {
+	vars.CRD = nil
+	crd, ok := vars.AliasToCrd[resourceKind]
+	//crd, ok := vars.AliasToCrd[resourceKind+strings.Split(unstruct.GetAPIVersion(), "/")[0]]
+	if ok {
+		vars.CRD = &apiextensionsv1.CustomResourceDefinition{Spec: crd.Spec}
 	}
 
 	cells := []interface{}{}

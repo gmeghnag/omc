@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gmeghnag/omc/types"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/olekukonko/tablewriter"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -400,7 +401,9 @@ func TranslateTimestamp(timestamp metav1.Time) string {
 	if timestamp.IsZero() {
 		return "<unknown>"
 	}
-	return ShortHumanDuration(time.Now().Sub(timestamp.Time))
+	ResourceFile, _ := os.Stat(vars.MustGatherRootPath + "/namespaces")
+	t2 := ResourceFile.ModTime()
+	return ShortHumanDuration(t2.Sub(timestamp.Time))
 }
 func ShortHumanDuration(d time.Duration) string {
 	// Allow deviation no more than 2 seconds(excluded) to tolerate machine time

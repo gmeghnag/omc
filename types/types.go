@@ -42,3 +42,9 @@ type UnstructuredList struct {
 	Kind       string                      `json:"kind"`
 	Items      []unstructured.Unstructured `json:"items"`
 }
+
+type JsonPathList struct {
+	ApiVersion string                   `json:"apiVersion"`
+	Kind       string                   `json:"kind"`
+	Items      []map[string]interface{} `json:"items"`
+}
