@@ -205,7 +205,7 @@ func inspectResources(resourceTypes []string) {
 		}
 	}
 	for _, curr := range resources {
-		age := helpers.GetAge(vars.MustGatherRootPath+"/namespaces/"+curr.GetNamespace()+"/core/", curr.GetCreationTimestamp())
+		age := helpers.GetAge(vars.MustGatherRootPath+"/cluster-scoped-resources/certificates.k8s.io/certificatesigningrequests/", curr.GetCreationTimestamp())
 		_list := []string{
 			curr.GetNamespace(),
 			curr.GetName(),
