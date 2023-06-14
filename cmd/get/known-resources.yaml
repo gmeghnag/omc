@@ -105,7 +105,12 @@ builds:
   plural: builds
 buildconfig:
   group: build.openshift.io
-  name: build
+  name: buildconfig
+  namespaced: true
+  plural: buildconfigs
+bc:
+  group: build.openshift.io
+  name: buildconfig
   namespaced: true
   plural: buildconfigs
 buildconfigs:
