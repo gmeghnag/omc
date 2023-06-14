@@ -1,7 +1,13 @@
 package get
 
 import (
+	"reflect"
+
+	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/vars"
+	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kubernetes/pkg/printers"
@@ -14,8 +20,17 @@ func AddMissingHandlers(h printers.PrintHandler) {
 		{Name: "Available", Type: "string"},
 		{Name: "Age", Type: "string"},
 	}
+	clusterVersionDefinitions := []metav1.TableColumnDefinition{
+		{Name: "Name", Type: "string", Format: "name"},
+		{Name: "Version", Type: "string"},
+		{Name: "Available", Type: "string"},
+		{Name: "Progressing", Type: "string"},
+		{Name: "Since", Type: "string"},
+		{Name: "Status", Type: "string"},
+	}
 
 	_ = h.TableHandler(apiServiceColumnDefinitions, printAPIService)
+	_ = h.TableHandler(clusterVersionDefinitions, printClusterVersion)
 }
 
 func printAPIService(obj *apiregistrationv1.APIService, options printers.GenerateOptions) ([]metav1.TableRow, error) {
@@ -37,5 +52,59 @@ func printAPIService(obj *apiregistrationv1.APIService, options printers.Generat
 		Object: runtime.RawExtension{Object: obj},
 	}
 	row.Cells = append(row.Cells, obj.Name, service, available, "")
+	return []metav1.TableRow{row}, nil
+}
+
+func printClusterVersion(obj *configv1.ClusterVersion, options printers.GenerateOptions) ([]metav1.TableRow, error) {
+	clusterOperatorName := obj.Name
+	//version
+	version := ""
+	for _, h := range obj.Status.History {
+		if h.State == "Completed" {
+			version = h.Version
+			break
+		}
+	}
+	// conditions
+	conditions := obj.Status.Conditions
+	available := ""
+	progressing := ""
+	status := ""
+	var lastsTransitionTime []v1.Time
+	var lastTransitionTime v1.Time
+	var zeroTime v1.Time
+	for _, c := range conditions {
+		//available
+		if c.Type == "Available" {
+			available = string(c.Status)
+			lastsTransitionTime = append(lastsTransitionTime, c.LastTransitionTime)
+		}
+		//progressing
+		if c.Type == "Progressing" {
+			progressing = string(c.Status)
+			status = string(c.Message)
+			lastsTransitionTime = append(lastsTransitionTime, c.LastTransitionTime)
+		}
+		//status
+		if c.Type == "Failing" {
+			lastsTransitionTime = append(lastsTransitionTime, c.LastTransitionTime)
+		}
+	}
+	//since
+	for _, t := range lastsTransitionTime {
+		if reflect.DeepEqual(lastTransitionTime, zeroTime) {
+			lastTransitionTime = t
+		} else {
+			if t.Time.After(lastTransitionTime.Time) {
+				lastTransitionTime = t
+			}
+		}
+	}
+	since := helpers.GetAge(vars.MustGatherRootPath+"/namespaces", lastTransitionTime)
+
+	row := metav1.TableRow{
+		Object: runtime.RawExtension{Object: obj},
+	}
+	row.Cells = append(row.Cells, clusterOperatorName, version, available, progressing, since, status)
 	return []metav1.TableRow{row}, nil
 }

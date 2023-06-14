@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	authorizationv1 "github.com/openshift/api/authorization/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	quotav1 "github.com/openshift/api/quota/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	imagev1 "github.com/openshift/openshift-apiserver/pkg/image/apis/image"
@@ -323,6 +324,15 @@ func addApiRegistrationTypes(scheme *runtime.Scheme) error {
 	GroupVersion := schema.GroupVersion{Group: "apiregistration.k8s.io", Version: "v1"}
 	types := []runtime.Object{
 		&apiregistrationv1.APIService{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
+func addConfigV1Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "config.openshift.io", Version: "v1"}
+	types := []runtime.Object{
+		&configv1.ClusterVersion{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil

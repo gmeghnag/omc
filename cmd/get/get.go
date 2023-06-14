@@ -146,6 +146,7 @@ func init() {
 	_ = addBatchTypes(vars.Schema)
 	_ = addBuildTypes(vars.Schema)
 	_ = addCertificatesTypes(vars.Schema)
+	_ = addConfigV1Types(vars.Schema)
 	_ = addCoordinationTypes(vars.Schema)
 	_ = addDiscoveryTypes(vars.Schema)
 	_ = addFlowControlTypes(vars.Schema)

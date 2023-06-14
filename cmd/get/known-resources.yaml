@@ -1,3 +1,13 @@
+clusterversion:
+  group: config.openshift.io
+  name: clusterversion
+  namespaced: false
+  plural: clusterversions
+clusterversions:
+  group: config.openshift.io
+  name: clusterversion
+  namespaced: false
+  plural: clusterversions
 binding:
   group: core
   name: binding

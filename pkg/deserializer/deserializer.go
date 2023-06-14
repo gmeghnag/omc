@@ -8,6 +8,7 @@ import (
 	apiregistration "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	nodeapi "k8s.io/kubernetes/pkg/apis/node"
 
+	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "github.com/openshift/openshift-apiserver/pkg/apps/apis/apps"
 	imagev1 "github.com/openshift/openshift-apiserver/pkg/image/apis/image"
 	"github.com/openshift/openshift-apiserver/pkg/project/apis/project"
@@ -111,6 +112,8 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &build.BuildConfig{}
 	case *certificates.CertificateSigningRequest:
 		return &certificates.CertificateSigningRequest{}
+	case *configv1.ClusterVersion:
+		return &configv1.ClusterVersion{}
 	case *coordination.Lease:
 		return &coordination.Lease{}
 	case *corev1.Pod:
