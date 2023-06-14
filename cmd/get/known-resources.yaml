@@ -8,6 +8,56 @@ clusterversions:
   name: clusterversion
   namespaced: false
   plural: clusterversions
+images:
+  group: image.openshift.io
+  name: image
+  namespaced: true
+  plural: images
+image:
+  group: image.openshift.io
+  name: image
+  namespaced: true
+  plural: images
+imagestreamtag:
+  group: image.openshift.io
+  name: imagestreamtag
+  namespaced: true
+  plural: imagestreamtags
+imagestreamtags:
+  group: image.openshift.io
+  name: imagestreamtag
+  namespaced: true
+  plural: imagestreamtags
+istag:
+  group: image.openshift.io
+  name: imagestreamtag
+  namespaced: true
+  plural: imagestreamtags
+imagestream:
+  group: image.openshift.io
+  name: imagestream
+  namespaced: true
+  plural: imagestreams
+imagestreams:
+  group: image.openshift.io
+  name: imagestream
+  namespaced: true
+  plural: imagestreams
+deploymentconfig:
+  group: apps.openshift.io
+  name: deploymentconfig
+  namespaced: true
+  plural: deploymentconfigs
+dc:
+  group: apps.openshift.io
+  name: deploymentconfig
+  namespaced: true
+  plural: deploymentconfigs
+deploymentconfigs:
+  group: apps.openshift.io
+  name: deploymentconfig
+  namespaced: true
+  plural: deploymentconfigs
 binding:
   group: core
   name: binding
@@ -18,6 +68,51 @@ bindings:
   name: binding
   namespaced: true
   plural: bindings
+job:
+  group: batch
+  name: job
+  namespaced: true
+  plural: jobs
+jobs:
+  group: batch
+  name: job
+  namespaced: true
+  plural: jobs
+cronjob:
+  group: batch
+  name: cronjob
+  namespaced: true
+  plural: cronjobs
+cronjobs:
+  group: batch
+  name: cronjob
+  namespaced: true
+  plural: cronjobs
+cj:
+  group: batch
+  name: cronjob
+  namespaced: true
+  plural: cronjobs
+build:
+  group: build.openshift.io
+  name: build
+  namespaced: true
+  plural: builds
+builds:
+  group: build.openshift.io
+  name: build
+  namespaced: true
+  plural: builds
+buildconfig:
+  group: build.openshift.io
+  name: build
+  namespaced: true
+  plural: buildconfigs
+buildconfigs:
+  group: build.openshift.io
+  name: buildconfig
+  namespaced: true
+  plural: buildconfigs
 componentstatus:
   group: core
   name: componentstatus
@@ -753,4 +848,5 @@ volumeattachments:
   name: volumeattachment
   namespaced: false
   plural: volumeattachments
+
 

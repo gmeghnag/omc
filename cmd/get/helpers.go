@@ -13,6 +13,9 @@ import (
 )
 
 func validateArgs(args []string) error {
+	if len(args) == 1 && args[0] == "all" {
+		args = []string{"pods.core,services.core,daemonsets.apps,deployments.apps,replicasets.apps,replicationcontrollers.core,deploymentconfigs.apps.openshift.io,builds.build.openshift.io,buildconfigs.build.openshift.io,jobs.batch,cronjobs.batch,routes.route.openshift.io,ingresses.networking.k8s.io"}
+	}
 	var _args []string
 	for _, arg := range args {
 		_args = append(_args, strings.ToLower(arg))
@@ -126,7 +129,7 @@ func kindGroupNamespaced(alias string) (string, string, bool, error) {
 				resourceNamePlural := value["plural"].(string)
 				resourceGroup := value["group"].(string)
 				namespaced := value["namespaced"].(bool)
-				if group == resourceGroup {
+				if strings.HasPrefix(resourceGroup, group) {
 					return resourceNamePlural, resourceGroup, namespaced, nil
 				}
 			}
@@ -200,12 +203,11 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 		}
 		klog.V(4).Info("INFO ", fmt.Sprintf("No customResource found with name or alias \"%s\" in path: \"%s\".", alias, crdsPath))
 	}
-
 	home, _ := os.UserHomeDir()
 	omcCrdsPath := home + "/.omc/customresourcedefinitions/"
 	crds, _ := ioutil.ReadDir(omcCrdsPath)
 	for _, f := range crds {
-		crdYamlPath := crdsPath + f.Name()
+		crdYamlPath := omcCrdsPath + f.Name()
 		crdByte, _ := ioutil.ReadFile(crdYamlPath)
 		_crd := &apiextensionsv1.CustomResourceDefinition{}
 		if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
