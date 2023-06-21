@@ -139,7 +139,7 @@ var UseCmd = &cobra.Command{
 	Short: "Select the must-gather to use",
 	Long: `
 	Select the must-gather to use.
-	If the must-gather does not exists it will be added as default to the managed must-gahters.
+	If the must-gather does not exists it will be added as default to the managed must-gathers.
 	Use the command 'omc get mg' to see them all.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		idFlag, _ := cmd.Flags().GetString("id")
