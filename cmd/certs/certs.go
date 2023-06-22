@@ -16,15 +16,17 @@ limitations under the License.
 package certs
 
 import (
+	"os"
+
 	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var listNonCerts, showParseFailure bool
 
 var Certs = &cobra.Command{
-	Use: "certs",
+	Use:   "certs",
+	Short: "Inspect cluster certificates.",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(0)

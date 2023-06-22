@@ -44,7 +44,10 @@ import (
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{ // FLOW 4
 	Use: "omc",
-	Run: func(cmd *cobra.Command, args []string) { fmt.Println("Hello from omc CLI. :]") },
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+		os.Exit(0)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -67,7 +70,6 @@ func init() {
 	RootCmd.AddCommand(
 		alert.AlertCmd,
 		cmd.VersionCmd,
-		cmd.DeleteCmd,
 		cmd.ProjectCmd,
 		cmd.ProjectsCmd,
 		cmd.UseCmd,

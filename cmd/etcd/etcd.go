@@ -25,6 +25,7 @@ import (
 var Etcd = &cobra.Command{
 	Use:     "etcd",
 	Aliases: []string{"etcdctl"},
+	Short:   "Shows etcd health and status.",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(0)

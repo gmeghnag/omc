@@ -72,7 +72,8 @@ var resourcesAndObjects [][]string
 var yamlData []byte
 
 var GetCmd = &cobra.Command{
-	Use: "get",
+	Use:   "get",
+	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Help()

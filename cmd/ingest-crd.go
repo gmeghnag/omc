@@ -19,6 +19,7 @@ import (
 var IngestCRDS = &cobra.Command{
 	Use:     "collect-crd",
 	Aliases: []string{"ingest-crd", "ingest-crds", "collect-crds"},
+	Short:   "Collect CRDs from your running cluster to ~/.omc/customresourcedefinitions/* .",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		homeDir, err := os.UserHomeDir()

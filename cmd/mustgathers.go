@@ -18,6 +18,17 @@ import (
 var MustGather = &cobra.Command{
 	Use:     "mg",
 	Aliases: []string{"must-gather", "must-gathers"},
+	Short:   "List or delete previously used must-gathers.",
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+		os.Exit(0)
+	},
+}
+
+var GetMustGather = &cobra.Command{
+	Use:     "get",
+	Aliases: []string{"ls", "list"},
+	Short:   "List must-gathers saved in omc config file.",
 	Run: func(cmd *cobra.Command, args []string) {
 		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
 		omcConfigJson := types.Config{}
@@ -39,5 +50,12 @@ var MustGather = &cobra.Command{
 			helpers.PrintTable(headers, data)
 		}
 	},
-	Hidden: true,
+}
+
+func init() {
+
+	MustGather.AddCommand(
+		GetMustGather,
+		DeleteCmd,
+	)
 }
