@@ -73,7 +73,7 @@ func projectsDefault(omcConfigFile string, projDefault string) {
 
 var ProjectsCmd = &cobra.Command{
 	Use:   "projects",
-	Short: "Switch to another project",
+	Short: "List all available projects",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 0 {
 			fmt.Fprintln(os.Stderr, "Expect zero arguemnt, found: ", len(args))
