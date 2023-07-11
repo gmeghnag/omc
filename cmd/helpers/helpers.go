@@ -341,6 +341,7 @@ func MatchLabels(labels string, selector string) bool {
 }
 
 func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error) {
+	fmt.Println(labels)
 	if selector == "" {
 		return true, nil
 	}
@@ -365,8 +366,8 @@ func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error)
 			}
 			key := split[0]
 			val := split[1]
-			value, _ := labels[key]
-			if val != value {
+			value, isPresent := labels[key]
+			if val != value || !isPresent {
 				return false, nil
 			}
 		} else if strings.Contains(s, "=") {
@@ -376,8 +377,8 @@ func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error)
 			}
 			key := split[0]
 			val := split[1]
-			value, _ := labels[key]
-			if val != value {
+			value, isPresent := labels[key]
+			if val != value || !isPresent {
 				return false, nil
 			}
 		} else if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
