@@ -341,7 +341,6 @@ func MatchLabels(labels string, selector string) bool {
 }
 
 func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error) {
-	fmt.Println(labels)
 	if selector == "" {
 		return true, nil
 	}
