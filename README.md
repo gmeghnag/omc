@@ -73,13 +73,13 @@ openshift-kubernetes.rules   AlertmanagerReceiversNotConfigured   firing    5s  
 ```
 $ omc certs inspect                                                                                                                   
 NAME                       KIND        AGE   CERTTYPE    SUBJECT                                             NOTBEFORE                       NOTAFTER                             
-kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2033-04-30 08:59:22 +0000 UTC   2023-05-03 08:59:22 +0000 UTC        
-kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-localhost-signer,OU=openshift     2033-04-30 08:59:22 +0000 UTC   2023-05-03 08:59:22 +0000 UTC        
-kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=*.apps.example.com                               2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
-kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=ingress-operator@1683105658                      2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
-openshift-service-ca.crt   ConfigMap   47h   ca-bundle   CN=openshift-service-serving-signer@1683105630      2025-07-01 09:20:30 +0000 UTC   2023-05-03 09:20:29 +0000 UTC        
-builder-token-9f5cx        Secret      47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2033-04-30 08:59:22 +0000 UTC   2023-05-03 08:59:22 +0000 UTC        
-builder-token-9f5cx        Secret      47h   ca-bundle   CN=*.apps.example.com                               2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
-builder-token-9f5cx        Secret      47h   ca-bundle   CN=ingress-operator@1683105658                      2025-05-02 09:20:58 +0000 UTC   2023-05-03 09:20:57 +0000 UTC        
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2023-05-03 08:59:22 +0000 UTC 　2033-04-30 08:59:22 +0000 UTC
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-localhost-signer,OU=openshift     2023-05-03 08:59:22 +0000 UTC 　2033-04-30 08:59:22 +0000 UTC
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=*.apps.example.com                               2023-05-03 09:20:57 +0000 UTC 　2025-05-02 09:20:58 +0000 UTC
+kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=ingress-operator@1683105658                      2023-05-03 09:20:57 +0000 UTC 　2025-05-02 09:20:58 +0000 UTC
+openshift-service-ca.crt   ConfigMap   47h   ca-bundle   CN=openshift-service-serving-signer@1683105630      2023-05-03 09:20:29 +0000 UTC 　2025-07-01 09:20:30 +0000 UTC
+builder-token-9f5cx        Secret      47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2023-05-03 08:59:22 +0000 UTC 　2033-04-30 08:59:22 +0000 UTC
+builder-token-9f5cx        Secret      47h   ca-bundle   CN=*.apps.example.com                               2023-05-03 09:20:57 +0000 UTC 　2025-05-02 09:20:58 +0000 UTC
+builder-token-9f5cx        Secret      47h   ca-bundle   CN=ingress-operator@1683105658                      2023-05-03 09:20:57 +0000 UTC 　2025-05-02 09:20:58 +0000 UTC
 <...>
 ```
