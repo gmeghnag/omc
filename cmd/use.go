@@ -144,12 +144,13 @@ var UseCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
+		isCompressedFile := false
 		if len(args) == 0 && idFlag == "" {
 			fmt.Printf("must-gather: \"%s\"\nnamespace: \"%s\"\n", vars.MustGatherRootPath, vars.Namespace)
 			os.Exit(0)
 		}
 		if len(args) > 1 {
-			fmt.Fprintln(os.Stderr, "Expect one arguemnt, found: ", len(args))
+			fmt.Fprintln(os.Stderr, "Expect one argument, found: ", len(args))
 			os.Exit(1)
 		}
 		if len(args) == 1 {
@@ -163,9 +164,22 @@ var UseCmd = &cobra.Command{
 			path, _ = filepath.Abs(path)
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
-				fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory.")
+				isCompressedFile, _ = helpers.IsCompressedFile(path)
+				if (!isCompressedFile) {
+				     fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory not a compressed file.")
+					 os.Exit(1)
+				}
+			}
+		}
+
+		if (isCompressedFile) {
+			outputpath, _ := os.MkdirTemp(filepath.Dir(path),"mg")
+			err := helpers.DecompressFile(path,outputpath)
+			if ( err != nil ) {
+				fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
 				os.Exit(1)
 			}
+			path = outputpath
 		}
 
 		useContext(path, viper.ConfigFileUsed(), idFlag)
