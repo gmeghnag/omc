@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package use
 
 import (
 	"encoding/json"
@@ -164,7 +164,7 @@ var UseCmd = &cobra.Command{
 			path, _ = filepath.Abs(path)
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
-				isCompressedFile, _ = helpers.IsCompressedFile(path)
+				isCompressedFile, _ = IsCompressedFile(path)
 				if (!isCompressedFile) {
 				     fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory not a compressed file.")
 					 os.Exit(1)
@@ -174,7 +174,7 @@ var UseCmd = &cobra.Command{
 
 		if (isCompressedFile) {
 			outputpath, _ := os.MkdirTemp(filepath.Dir(path),"mg")
-			err := helpers.DecompressFile(path,outputpath)
+			err := DecompressFile(path,outputpath)
 			if ( err != nil ) {
 				fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
 				os.Exit(1)

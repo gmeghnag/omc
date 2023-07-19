@@ -33,6 +33,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
 	"github.com/gmeghnag/omc/cmd/upgrade"
+	"github.com/gmeghnag/omc/cmd/use"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -72,7 +73,7 @@ func init() {
 		cmd.VersionCmd,
 		cmd.ProjectCmd,
 		cmd.ProjectsCmd,
-		cmd.UseCmd,
+		use.UseCmd,
 		cmd.MustGather,
 		cmd.IngestCRDS,
 		config.ConfigCmd,
