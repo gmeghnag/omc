@@ -173,13 +173,13 @@ var UseCmd = &cobra.Command{
 		}
 
 		if (isCompressedFile) {
-			outputpath, _ := os.MkdirTemp(filepath.Dir(path),"mg")
-			err := DecompressFile(path,outputpath)
+			outputpath := filepath.Dir(path)
+			rootfile,err := DecompressFile(path,outputpath)
 			if ( err != nil ) {
 				fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
 				os.Exit(1)
 			}
-			path = outputpath
+			path = rootfile
 		}
 
 		useContext(path, viper.ConfigFileUsed(), idFlag)
