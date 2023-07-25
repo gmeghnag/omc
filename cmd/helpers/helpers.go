@@ -12,8 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/gmeghnag/omc/types"
+  	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
 	"github.com/olekukonko/tablewriter"
@@ -437,3 +436,4 @@ func GetFromJsonPath(data interface{}, jsonPathTemplate string) string {
 	jPath.Execute(buf, data)
 	return buf.String()
 }
+
