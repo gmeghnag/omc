@@ -194,7 +194,10 @@ func ReadYaml(YamlPath string) []byte {
 }
 
 func GetAge(resourcefilePath string, resourceCreationTimeStamp v1.Time) string {
-	ResourceFile, _ := os.Stat(resourcefilePath)
+	ResourceFile, err := os.Stat(resourcefilePath)
+	if err != nil {
+		return "Unknown"
+	}
 	t2 := ResourceFile.ModTime()
 	diffTime := t2.Sub(resourceCreationTimeStamp.Time).String()
 	d, _ := time.ParseDuration(diffTime)
