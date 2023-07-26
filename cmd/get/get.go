@@ -95,7 +95,7 @@ var GetCmd = &cobra.Command{
 			}
 			// namespaces, clusterloggings and clusterlogforwarders locations
 			// are exceptions to must-gather resources structure
-			if resourceNamePlural == "namespaces" {
+			if resourceNamePlural == "namespaces" || resourceNamePlural == "projects" {
 				getNamespacesResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if resourceNamePlural == "clusterloggings" {
 				getClusterLoggingResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
