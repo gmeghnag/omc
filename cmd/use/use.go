@@ -33,13 +33,6 @@ import (
 )
 
 func useContext(path string, omcConfigFile string, idFlag string) {
-	//if path != "" {
-	//	if !filepath.IsAbs(path) {
-	//		fmt.Println("error: \"" + path + "\" is not an absolute path.")
-	//		os.Exit(1)
-	//	}
-	//}
-	// read json omcConfigFile
 	if path != "" {
 		_path, err := findMustGatherIn(path)
 		if err != nil {
@@ -51,6 +44,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 		path = strings.TrimSuffix(path, "/")
 	}
 
+	// read json omcConfigFile
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
