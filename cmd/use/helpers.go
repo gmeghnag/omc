@@ -1,13 +1,16 @@
 package use
 
 import (
-	"fmt"
-	"os"
-	"io"
-	"net/http"
 	"archive/tar"
-	"compress/gzip"
 	"archive/zip"
+	"compress/gzip"
+	"fmt"
+	"io"
+	"mime"
+	"net/http"
+	"net/url"
+	"os"
+	pathlib "path"
 	"path/filepath"
 )
 
@@ -85,6 +88,55 @@ func IsCompressedFile(path string) (bool,error) {
 	 return result,nil
 }
 
+func IsRemoteFile(path string) bool {
+	parsedURL, err := url.Parse(path)
+	return err == nil && parsedURL.Scheme != "" && parsedURL.Host != ""
+}
+
+func DownloadFile(path string) (string, error) {
+	tmpdir, err := os.MkdirTemp("", "omc-*")
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := http.Get(path)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Use a sensible filename
+	var filename string
+	// First, try to extract filename from headers
+	if cd := resp.Header.Get("Content-Disposition"); cd != "" {
+		if _, params, err := mime.ParseMediaType(cd); err == nil {
+			filename = params["filename"]
+		}
+	}
+	// If that fails, resort to parsing the path
+	if filename == "" {
+		if parsedURL, err := url.Parse(path); err == nil {
+			filename = pathlib.Base(parsedURL.Path)
+		}
+	}
+
+	outpath := filepath.Join(tmpdir, filename)
+	fmt.Println("downloading file "+path+" in "+outpath)
+
+	out, err := os.Create(outpath)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err = io.Copy(out, resp.Body); err != nil {
+		out.Close()
+		return "", err
+	}
+
+	out.Close()
+
+	return out.Name(), nil
+}
 
 func CopyFile(path string,destinationfile string) error {
 	source, err := os.Open(path)
@@ -108,7 +160,7 @@ func CopyFile(path string,destinationfile string) error {
 
 func DecompressFile(path string,outpath string) (string,error) {
 	fmt.Println("decompressing file "+path+" in "+outpath)
-    var mgRootDir string = "" 
+	var mgRootDir string = ""
 	result, err := isGzip(path)
 	if ( err == nil ) {
 	    if ( result ) {
@@ -132,7 +184,6 @@ func DecompressFile(path string,outpath string) (string,error) {
 
 	return mgRootDir,err
 }
-
 
 func ExtractTarStream(st io.Reader,destinationdir string) (string,error) {
 	firstDirectory := false

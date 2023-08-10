@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -136,6 +136,7 @@ var UseCmd = &cobra.Command{
 	If the must-gather does not exists it will be added as default to the managed must-gathers.
 	Use the command 'omc get mg' to see them all.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		var err error
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
 		isCompressedFile := false
@@ -149,13 +150,22 @@ var UseCmd = &cobra.Command{
 		}
 		if len(args) == 1 {
 			path = args[0]
-			if strings.HasSuffix(path, "/") {
-				path = strings.TrimRight(path, "/")
+			if IsRemoteFile(path) {
+				path, err = DownloadFile(path)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
+			} else {
+				if strings.HasSuffix(path, "/") {
+					path = strings.TrimRight(path, "/")
+				}
+				if strings.HasSuffix(path, "\\") {
+					path = strings.TrimRight(path, "\\")
+				}
+				path, _ = filepath.Abs(path)
 			}
-			if strings.HasSuffix(path, "\\") {
-				path = strings.TrimRight(path, "\\")
-			}
-			path, _ = filepath.Abs(path)
+
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
 				isCompressedFile, _ = IsCompressedFile(path)
