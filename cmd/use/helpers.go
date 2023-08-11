@@ -137,48 +137,53 @@ func DecompressFile(path string,outpath string) (string,error) {
 func ExtractTarStream(st io.Reader,destinationdir string) (string,error) {
 	firstDirectory := false
 	var mgRootDir string = ""
-    tarReader := tar.NewReader(st)
+	tarReader := tar.NewReader(st)
 
-    for true {
-        header, err := tarReader.Next()
+	for true {
+		header, err := tarReader.Next()
 
-        if err == io.EOF {
-            break
-        }
+		if err == io.EOF {
+			break
+		}
 
-        if err != nil {
-            fmt.Fprintln(os.Stderr,"cannot extract tar: " + err.Error())
+		if err != nil {
+			fmt.Fprintln(os.Stderr,"cannot extract tar: " + err.Error())
 			return "",err
-        }
+		}
 
-        switch header.Typeflag {
-        case tar.TypeDir:
+		switch header.Typeflag {
+		case tar.TypeDir:
 			if (!firstDirectory) {
 				firstDirectory = true
 				mgRootDir = destinationdir+"/"+header.Name
 			}
-            if err := os.Mkdir(destinationdir+"/"+header.Name, 0755); err != nil {
-				fmt.Fprintln(os.Stderr,"mkdir failed extracting tar: "+err.Error())
-				return "",err
-            }
-        case tar.TypeReg:
-            outFile, err := os.Create(destinationdir+"/"+header.Name)
-            if err != nil {
+			directory := filepath.Join(destinationdir, header.Name)
+			if _, err := os.Stat(directory); os.IsNotExist(err) {
+				if err := os.Mkdir(directory, 0755); err != nil {
+					fmt.Fprintln(os.Stderr,"mkdir failed extracting tar: "+err.Error())
+					return "",err
+				}
+			}
+		case tar.TypeReg:
+			outpath := filepath.Join(destinationdir, header.Name)
+			if _, err := os.Stat(outpath); ! os.IsNotExist(err) {
+				fmt.Fprintln(os.Stderr,"create file failed extracting tar: file already exists")
+			}
+			outFile, err := os.Create(outpath)
+			if err != nil {
 				fmt.Fprintln(os.Stderr,"create file failed extracting tar: "+err.Error())
 				return "",err
-            }
-            if _, err := io.Copy(outFile, tarReader); err != nil {
+			}
+			if _, err := io.Copy(outFile, tarReader); err != nil {
 				fmt.Fprintln(os.Stderr,"copy file failed extracting tar: "+err.Error())
 				return "",err
-            }
-            outFile.Close()
-
-        default:
+			}
+			outFile.Close()
+		default:
 			fmt.Fprintf(os.Stderr,"unknown type(%s) in %s: "+err.Error(),header.Typeflag,header.Name)
 			return "",err
-        }
-
-    }
+		}
+	}
 	return mgRootDir,nil
 }
 
