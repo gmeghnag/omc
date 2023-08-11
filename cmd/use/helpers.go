@@ -6,13 +6,73 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"math"
 	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	pathlib "path"
 	"path/filepath"
+	"strings"
+	"time"
 )
+
+func humanizeBytes(bytes int64) string {
+	var human string
+	if float64(bytes) < math.Pow(2, 10) {
+		human = fmt.Sprintf("%.0f B", float64(bytes))
+	} else if float64(bytes) < math.Pow(2, 20) {
+		human = fmt.Sprintf("%.1f K", float64(bytes) / math.Pow(2, 10))
+	} else {
+		human = fmt.Sprintf("%.1f M", float64(bytes) / math.Pow(2, 20))
+	}
+	return human
+}
+
+type WriteCounter struct {
+	length string
+	downloaded int64
+	lastShown time.Time
+}
+
+func NewWriteCounter(total int64) *WriteCounter {
+	length := ""
+	if total != -1 {
+		length = humanizeBytes(total)
+	} else {
+		length = "?"
+	}
+	counter := &WriteCounter{
+		length: length,
+		downloaded: 0,
+		lastShown: time.Now(),
+	}
+	return counter
+}
+
+func (counter *WriteCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	counter.downloaded += int64(n)
+	counter.ShowProgress()
+	return n, nil
+}
+
+func (counter *WriteCounter) Downloaded() string {
+	return humanizeBytes(counter.downloaded)
+}
+
+func (counter *WriteCounter) ShowProgress() {
+	// rate limit
+	throttleDuration, _ := time.ParseDuration("100ms")
+	if time.Since(counter.lastShown).Nanoseconds() < throttleDuration.Nanoseconds() {
+		return
+	}
+
+	fmt.Printf("\r%s", strings.Repeat(" ", 78))
+	fmt.Printf("\rDownloading... %s / %s", counter.Downloaded(), counter.length)
+
+	counter.lastShown = time.Now()
+}
 
 func GetHeaderFile(path string) (string,error) {
 	file, err := os.Open(path)
@@ -128,12 +188,14 @@ func DownloadFile(path string) (string, error) {
 		return "", err
 	}
 
-	if _, err = io.Copy(out, resp.Body); err != nil {
+	counter := NewWriteCounter(resp.ContentLength)
+	if _, err = io.Copy(out, io.TeeReader(resp.Body, counter)); err != nil {
 		out.Close()
 		return "", err
 	}
 
 	out.Close()
+	fmt.Println()
 
 	return out.Name(), nil
 }
