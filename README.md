@@ -26,7 +26,7 @@ $ go install
 Starting with `v2.1.0` it's possible to upgrade the tool by running `omc upgrade --to=<version>`
 
 ## Usage
-Point it to an **extracted** must-gather:
+Point it to a must-gather. This can be a local extracted must-gather, a local tarball, or a remote tarball:
 ```
 $ omc use </path/to/must-gather/>
 ```
