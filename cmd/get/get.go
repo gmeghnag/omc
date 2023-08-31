@@ -203,6 +203,11 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 		if err != nil {
 			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
 			_, err = os.Stat(resourceDir)
+			// TODO clean up handling of alternative structures
+			if err != nil {
+				resourceDir = fmt.Sprintf("%s/namespaces/%s/%s/%s.%s", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural, resourceGroup)
+				_, err = os.Stat(resourceDir)
+			}
 			if err == nil {
 				resourcesFiles, _ := ioutil.ReadDir(resourceDir)
 				for _, f := range resourcesFiles {

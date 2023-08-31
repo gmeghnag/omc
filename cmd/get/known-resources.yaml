@@ -853,5 +853,63 @@ volumeattachments:
   name: volumeattachment
   namespaced: false
   plural: volumeattachments
-
-
+backup:
+  group: velero.io
+  name: backup
+  namespaced: true
+  plural: backups
+backupstoragelocation:
+  group: velero.io
+  name: backupstoragelocation
+  namespaced: true
+  plural: backupstoragelocations
+deletebackuprequest:
+  group: velero.io
+  name: deletebackuprequest
+  namespaced: true
+  plural: deletebackuprequests
+downloadrequest:
+  group: velero.io
+  name: downloadrequest
+  namespaced: true
+  plural: downloadrequests
+podvolumebackup:
+  group: velero.io
+  name: podvolumebackup
+  namespaced: true
+  plural: podvolumebackups
+podvolumerestore:
+  group: velero.io
+  name: podvolumerestore
+  namespaced: true
+  plural: podvolumerestores
+resticrepository:
+  group: velero.io
+  name: resticrepository
+  namespaced: true
+  plural: resticrepositories
+resticrepositories:
+  group: velero.io
+  name: resticrepository
+  namespaced: true
+  plural: resticrepositories
+restore:
+  group: velero.io
+  name: restore
+  namespaced: true
+  plural: restores
+schedule:
+  group: velero.io
+  name: schedule
+  namespaced: true
+  plural: schedules
+serverstatusrequest:
+  group: velero.io
+  name: serverstatusrequest
+  namespaced: true
+  plural: serverstatusrequests
+volumesnapshotlocation:
+  group: velero.io
+  name: volumesnapshotlocation
+  namespaced: true
+  plural: volumesnapshotlocations
