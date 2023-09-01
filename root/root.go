@@ -38,8 +38,10 @@ import (
 	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
-
 	"github.com/spf13/viper"
+
+	goflags "flag"
+	"k8s.io/klog/v2"
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -60,6 +62,19 @@ func Execute() {
 func init() {
 	//fmt.Println("inside init") //FLOW 0
 	cobra.OnInitialize(initConfig)
+
+	// add klog flags, but hide them from the overall --help information
+	fs := goflags.NewFlagSet("klog", goflags.ExitOnError)
+	klog.InitFlags(fs)
+	RootCmd.PersistentFlags().AddGoFlagSet(fs)
+	for _, f := range []string{"alsologtostderr", "log_backtrace_at", "log_dir", "log_file", "log_file_max_size", "logtostderr", "one_output", "skip_headers", "skip_log_headers", "stderrthreshold", "v", "vmodule", "add_dir_header"} {
+		flag := RootCmd.PersistentFlags().Lookup(f)
+		if flag != nil {
+			flag.Hidden = true
+		} else {
+			fmt.Fprintln(os.Stderr, "Failed to find flag to remove "+f)
+		}
+	}
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
