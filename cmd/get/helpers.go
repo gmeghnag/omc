@@ -14,7 +14,7 @@ import (
 
 func validateArgs(args []string) error {
 	if len(args) == 1 && args[0] == "all" {
-		args = []string{"pods.core,services.core,daemonsets.apps,deployments.apps,replicasets.apps,replicationcontrollers.core,deploymentconfigs.apps.openshift.io,builds.build.openshift.io,buildconfigs.build.openshift.io,jobs.batch,cronjobs.batch,routes.route.openshift.io,ingresses.networking.k8s.io"}
+		args = []string{"pods.core,services.core,daemonsets.apps,deployments.apps,replicasets.apps,statefulsets.apps,replicationcontrollers.core,deploymentconfigs.apps.openshift.io,builds.build.openshift.io,buildconfigs.build.openshift.io,jobs.batch,cronjobs.batch,routes.route.openshift.io,ingresses.networking.k8s.io,"}
 	}
 	var _args []string
 	for _, arg := range args {
