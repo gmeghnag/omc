@@ -278,6 +278,15 @@ func ExtractTarStream(st io.Reader,destinationdir string) (string,error) {
 				}
 			}
 		case tar.TypeReg:
+			// Root dir is not part of the archive
+			if mgRootDir == "" {
+				mgRootDir = filepath.Join(destinationdir, filepath.Dir(header.Name))
+				firstDirectory = true
+				err := os.MkdirAll(mgRootDir, os.ModePerm)
+				if err != nil && !os.IsExist(err) {
+					return "", err
+				}
+			}
 			outpath := filepath.Join(destinationdir, header.Name)
 			if _, err := os.Stat(outpath); ! os.IsNotExist(err) {
 				fmt.Fprintln(os.Stderr,"create file failed extracting tar: file already exists")
@@ -329,6 +338,16 @@ func ExtractZip(zipfile string,destinationdir string) (string,error) {
     for _, f := range archive.File {
         filePath := filepath.Join(destinationdir, f.Name)
 
+	// Root dir is not part of the archive
+	if !f.FileInfo().IsDir() && mgRootDir == "" {
+		mgRootDir = filepath.Dir(filePath)
+		firstDirectory = true
+		err := os.MkdirAll(mgRootDir, os.ModePerm)
+		if err != nil && !os.IsExist(err) {
+			return "", err
+		}
+	}
+
         if f.FileInfo().IsDir() {
 			if (!firstDirectory) {
 				firstDirectory = true
@@ -339,7 +358,7 @@ func ExtractZip(zipfile string,destinationdir string) (string,error) {
 				fmt.Fprintln(os.Stderr,"error: cannot create directory "+filePath+": "+err.Error())
 				return "",err
 			}
-        } else { 
+        } else {
             dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
             if err != nil {
 				fmt.Fprintln(os.Stderr,"error: cannot create file "+filePath+": "+err.Error())
