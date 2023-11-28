@@ -8,12 +8,20 @@
 ---
 ## Installation
 
-### Download the latest binary
+### Linux / OS X
 ```
-OS=Linux        # or Darwin
-curl -sL https://github.com/gmeghnag/omc/releases/latest/download/omc_${OS}_x86_64.tar.gz| tar xzf - omc
-chmod +x ./omc
+# cd to a directory that is in your $PATH
+
+curl -sL https://github.com/gmeghnag/omc/releases/latest/download/omc_$(uname -o)_$(uname -m).tar.gz | tar xzf - omc && chmod +x ./omc
+
+omc -h
 ```
+**Note:** OS X may block the downloaded omc binary until it is approved via `System Settings` -> `Privacy & Security`.
+
+### Other Operating systems
+1. View the available downloads from the latest releases page
+1. Chose and download the Asset that best suits your operating system
+1. Un zip/tar the binary and move it to a directory location that is in your executable path. 
 
 ### Build from source
 ```
