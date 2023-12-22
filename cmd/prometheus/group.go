@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package alert
+package prometheus
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -35,7 +34,7 @@ func GetAlertGroups(resourcesNames []string, outputFlag string, groupFile string
 	var data [][]string
 	var filteredGroups []RuleGroup
 	var _Alerts alerts
-	_file, _ := ioutil.ReadFile(alertsFilePath)
+	_file, _ := os.ReadFile(alertsFilePath)
 	if err := yaml.Unmarshal([]byte(_file), &_Alerts); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+alertsFilePath)
 		os.Exit(1)
@@ -89,8 +88,9 @@ func GetAlertGroups(resourcesNames []string, outputFlag string, groupFile string
 }
 
 var GroupSubCmd = &cobra.Command{
-	Use:     "group",
-	Aliases: []string{"groups"},
+	Use:     "alertgroup",
+	Aliases: []string{"alertgroups", "group", "groups"},
+	Short:   "Retrieve the alerting rules' groups configured in Prometheus.",
 	Run: func(cmd *cobra.Command, args []string) {
 		resourcesNames := args
 		monitoringExist, _ := helpers.Exists(vars.MustGatherRootPath + "/monitoring")
@@ -114,4 +114,5 @@ var GroupSubCmd = &cobra.Command{
 
 func init() {
 	GroupSubCmd.Flags().StringVarP(&GroupFilename, "filename", "f", "", "Filter the AlertGroup by filename.")
+	GroupSubCmd.Flags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml")
 }

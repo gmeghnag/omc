@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package alert
+package prometheus
 
 import (
 	"encoding/json"
@@ -143,8 +143,9 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 }
 
 var RuleSubCmd = &cobra.Command{
-	Use:     "rule",
-	Aliases: []string{"rules"},
+	Use:     "alertrule",
+	Aliases: []string{"rule", "rules", "alertrules"},
+	Short:   "Retrieve the alerting rules (and their status) configured in Prometheus.",
 	Run: func(cmd *cobra.Command, args []string) {
 		resourcesNames := args
 		monitoringExist, _ := helpers.Exists(vars.MustGatherRootPath + "/monitoring")
@@ -169,4 +170,5 @@ var RuleSubCmd = &cobra.Command{
 func init() {
 	RuleSubCmd.Flags().StringVarP(&GroupName, "group", "g", "", "Filter the AlertRules by AlertGroup/s (comma separated).")
 	RuleSubCmd.Flags().StringVarP(&RuleState, "state", "s", "", "Filter the AlertRules by state.")
+	RuleSubCmd.Flags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml")
 }

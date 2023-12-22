@@ -32,6 +32,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
+	"github.com/gmeghnag/omc/cmd/prometheus"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
 	"github.com/gmeghnag/omc/types"
@@ -41,6 +42,7 @@ import (
 	"github.com/spf13/viper"
 
 	goflags "flag"
+
 	"k8s.io/klog/v2"
 )
 
@@ -85,6 +87,7 @@ func init() {
 	// when this action is called directly.
 	RootCmd.AddCommand(
 		alert.AlertCmd,
+		certs.Certs,
 		cmd.VersionCmd,
 		cmd.ProjectCmd,
 		cmd.ProjectsCmd,
@@ -97,8 +100,8 @@ func init() {
 		etcd.Etcd,
 		logs.Logs,
 		machineconfig.MachineConfig,
+		prometheus.PrometheusCmd,
 		upgrade.Upgrade,
-		certs.Certs,
 	)
 	loadOmcConfigs()
 }
