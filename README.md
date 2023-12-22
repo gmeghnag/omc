@@ -70,7 +70,7 @@ $ omc etcd status
 ```
 - Retrive the prometheus alerts in `firing` or `pending` state:
 ```
-$ omc alert rule -s firing,pending -o wide
+$ omc prom rules -s firing,pending -o wide
 GROUP                        RULE                                 STATE     AGE   ALERTS   ACTIVE SINCE
 cluster-version              UpdateAvailable                      firing    11s   1        27 Jan 22 14:32 UTC
 logging_fluentd.alerts       FluentdQueueLengthIncreasing         pending   27s   1        29 Jan 22 11:48 UTC
