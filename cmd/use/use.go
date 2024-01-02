@@ -18,9 +18,9 @@ package use
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -45,7 +45,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	}
 
 	// read json omcConfigFile
-	file, _ := ioutil.ReadFile(omcConfigFile)
+	file, _ := os.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
@@ -68,7 +68,18 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 			NewContexts = append(NewContexts, types.Context{Id: idFlag, Path: path, Current: "*", Project: "default"})
 		} else {
 			ctxId = helpers.RandString(8)
-			NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
+			var namespaces []string
+			_namespaces, _ := os.ReadDir(path + "/namespaces/")
+			for _, f := range _namespaces {
+				namespaces = append(namespaces, f.Name())
+			}
+			if len(namespaces) == 1 {
+				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: namespaces[0]})
+			} else if len(namespaces) > 1 && slices.Contains(namespaces, "openshift-logging") {
+				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: "openshift-logging"})
+			} else {
+				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
+			}
 		}
 
 	}
@@ -83,7 +94,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 		}
 	}
 	file, _ = json.MarshalIndent(config, "", " ")
-	_ = ioutil.WriteFile(omcConfigFile, file, 0644)
+	_ = os.WriteFile(omcConfigFile, file, 0644)
 
 }
 
@@ -94,7 +105,7 @@ func findMustGatherIn(path string) (string, error) {
 	var retErr error
 	timeStampFound := false
 	namespacesFolderFound := false
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
 	}
@@ -169,17 +180,17 @@ var UseCmd = &cobra.Command{
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
 				isCompressedFile, _ = IsCompressedFile(path)
-				if (!isCompressedFile) {
-				     fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory not a compressed file.")
-					 os.Exit(1)
+				if !isCompressedFile {
+					fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory not a compressed file.")
+					os.Exit(1)
 				}
 			}
 		}
 
-		if (isCompressedFile) {
+		if isCompressedFile {
 			outputpath := filepath.Dir(path)
-			rootfile,err := DecompressFile(path,outputpath)
-			if ( err != nil ) {
+			rootfile, err := DecompressFile(path, outputpath)
+			if err != nil {
 				fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
 				os.Exit(1)
 			}
