@@ -28,8 +28,10 @@ import (
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"sigs.k8s.io/yaml"
 )
 
 func useContext(path string, omcConfigFile string, idFlag string) {
@@ -152,7 +154,19 @@ var UseCmd = &cobra.Command{
 		path := ""
 		isCompressedFile := false
 		if len(args) == 0 && idFlag == "" {
-			fmt.Printf("must-gather: \"%s\"\nnamespace: \"%s\"\n", vars.MustGatherRootPath, vars.Namespace)
+			fmt.Printf("Must-Gather  : %s\nProject      : %s\n", vars.MustGatherRootPath, vars.Namespace)
+			InfrastrctureFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+			if InfrastrctureFilePathExists {
+				_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+				infrastructureList := configv1.InfrastructureList{}
+				if err := yaml.Unmarshal([]byte(_file), &infrastructureList); err != nil {
+					fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+					os.Exit(1)
+				} else {
+					fmt.Printf("ApiServerURL : %s\n", infrastructureList.Items[0].Status.APIServerURL)
+					fmt.Printf("Platform     : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
+				}
+			}
 			os.Exit(0)
 		}
 		if len(args) > 1 {
