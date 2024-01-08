@@ -11,10 +11,10 @@ jobs:
         uses: actions/checkout@v2
       - name: Dependencies
         run: |
-          wget -nv https://golang.org/dl/go1.19.3.linux-amd64.tar.gz \
+          wget -nv https://golang.org/dl/go1.21.5.linux-amd64.tar.gz \
           && sudo rm -rf /usr/local/go \
           && sudo rm -rf m -rf /usr/bin/go \
-          && sudo tar -C /usr/local -xzf go1.19.3.linux-amd64.tar.gz \
+          && sudo tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz \
           && export PATH=$PATH:/usr/local/go/bin \
           && go version
       - name: Build
