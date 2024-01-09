@@ -1,6 +1,9 @@
 name: Build
 on:
   push:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
     tags:
       - "v*.*.*"
 jobs:
