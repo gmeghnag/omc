@@ -1,7 +1,10 @@
 # `omc`: OpenShift Must-Gather Client
 
-[![GitHub Actions Build Status](https://github.com/gmeghnag/omc/actions/workflows/build.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ABuild)
-![Downloads](https://img.shields.io/github/downloads/gmeghnag/omc/total)
+[![GitHub Actions Test Status](https://github.com/gmeghnag/omc/actions/workflows/test.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ATest) [![GitHub Actions Build Status](https://github.com/gmeghnag/omc/actions/workflows/build.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ABuild) ![Go version](https://img.shields.io/github/go-mod/go-version/gmeghnag/omc)
+![Downloads](https://img.shields.io/github/downloads/gmeghnag/omc/total) 
+
+
+
 
 `omc` tool has been created to allow engineers to inspect resources from a must-gather in the same way as they are retrieved with the `oc` command.
 
