@@ -32,6 +32,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
+	"github.com/gmeghnag/omc/cmd/ovn"
 	"github.com/gmeghnag/omc/cmd/prometheus"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
@@ -100,6 +101,7 @@ func init() {
 		etcd.Etcd,
 		logs.Logs,
 		machineconfig.MachineConfig,
+		ovn.OvnCmd,
 		prometheus.PrometheusCmd,
 		upgrade.Upgrade,
 	)
