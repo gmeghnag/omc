@@ -18,6 +18,7 @@ package get
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"strings"
 
@@ -107,7 +108,7 @@ var GetCmd = &cobra.Command{
 				getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			}
 		}
-		handleOutput()
+		handleOutput(os.Stdout)
 	},
 }
 
@@ -430,27 +431,33 @@ func handleObject(obj unstructured.Unstructured) error {
 	return nil
 }
 
-func handleOutput() {
+func handleOutput(w io.Writer) {
 	printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
 	_resources := make([]string, 0, len(vars.GetArgs))
+	var includesClusterScoped bool
 	for resource := range vars.GetArgs {
 		_resources = append(_resources, resource)
+		// if at least one resource is cluster-scoped, never include a namespace in the output if no resources are found of the kind
+		_, _, namespaced, _ := kindGroupNamespaced(resource)
+		if !namespaced {
+			includesClusterScoped = true
+		}
 	}
 	resources := strings.Join(_resources, ",")
 	if vars.OutputStringVar == "json" {
 		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
 			data, _ := json.MarshalIndent(vars.UnstructuredList.Items[0].Object, "", "  ")
 			data = append(data, '\n')
-			fmt.Printf("%s", data)
+			fmt.Fprintf(w, "%s", data)
 		} else if !vars.SingleResource && len(vars.UnstructuredList.Items) > 0 {
 			data, _ := json.MarshalIndent(vars.UnstructuredList, "", "  ")
 			data = append(data, '\n')
-			fmt.Printf("%s", data)
+			fmt.Fprintf(w, "%s", data)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(w, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Printf("No resources %s found.\n", resources)
+				fmt.Fprintf(w, "No resources %s found.\n", resources)
 			}
 		}
 	} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
@@ -461,23 +468,23 @@ func handleOutput() {
 			helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(w, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Printf("No resources %s found.\n", resources)
+				fmt.Fprintf(w, "No resources %s found.\n", resources)
 			}
 		}
 	} else if vars.OutputStringVar == "yaml" {
 		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
 			data, _ := yaml.Marshal(vars.UnstructuredList.Items[0].Object)
-			fmt.Printf("%s", data)
+			fmt.Fprintf(w, "%s", data)
 		} else if len(vars.UnstructuredList.Items) > 0 {
 			data, _ := yaml.Marshal(vars.UnstructuredList)
-			fmt.Printf("%s", data)
+			fmt.Fprintf(w, "%s", data)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(w, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Printf("No resources %s found.\n", resources)
+				fmt.Fprintf(w, "No resources %s found.\n", resources)
 			}
 		}
 	} else {
@@ -489,13 +496,14 @@ func handleOutput() {
 			vars.Table = metav1.Table{}
 		}
 		if vars.Output.Len() == 0 {
-			if vars.Namespace != "" {
-				fmt.Printf("No resources %s found in %s namespace.\n", resources, vars.Namespace)
+			// never print the (default/current) namespace if at least one cluster-scoped resource is requested
+			if vars.Namespace == "" || includesClusterScoped {
+				fmt.Fprintf(w, "No resources %s found.\n", resources)
 			} else {
-				fmt.Printf("No resources %s found.\n", resources)
+				fmt.Fprintf(w, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			}
 		} else {
-			vars.Output.WriteTo(os.Stdout)
+			vars.Output.WriteTo(w)
 		}
 	}
 }
