@@ -15,7 +15,7 @@
 ```
 # cd to a directory that is in your $PATH
 
-curl -sL https://github.com/gmeghnag/omc/releases/latest/download/omc_$(uname -o)_$(uname -m).tar.gz | tar xzf - omc && chmod +x ./omc
+curl -sL https://github.com/gmeghnag/omc/releases/latest/download/omc_$(uname)_$(uname -m).tar.gz | tar xzf - omc && chmod +x ./omc
 
 omc -h
 ```
