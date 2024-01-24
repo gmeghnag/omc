@@ -136,7 +136,7 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		omcConfigJson := types.Config{}
-		file, _ := ioutil.ReadFile(viper.ConfigFileUsed())
+		file, _ := os.ReadFile(viper.ConfigFileUsed())
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
 		var contexts []types.Context
 		contexts = omcConfigJson.Contexts
@@ -179,7 +179,7 @@ func initConfig() {
 
 func loadOmcConfigs() {
 	home, _ := os.UserHomeDir()
-	file, _ := ioutil.ReadFile(home + "/.omc/omc.json")
+	file, _ := os.ReadFile(home + "/.omc/omc.json")
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	vars.UseLocalCRDs = omcConfigJson.UseLocalCRDs

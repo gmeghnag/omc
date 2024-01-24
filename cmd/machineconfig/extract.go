@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +16,10 @@ limitations under the License.
 package machineconfig
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -42,8 +44,64 @@ func extractIgnitionConfigStorage(ignConfig ign3types.Config, extractedMachineCo
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-			ioutil.WriteFile(ignitionStorageFilesPath+f.Path, contents.Data, 0644)
+			if f.Contents.Compression != nil && *f.Contents.Compression == "gzip" {
+				reader := bytes.NewReader([]byte(contents.Data))
+				gzreader, e1 := gzip.NewReader(reader)
+				if e1 != nil {
+					fmt.Fprintln(os.Stderr, e1)
+				}
+
+				output, e2 := io.ReadAll(gzreader)
+				if e2 != nil {
+					fmt.Fprintln(os.Stderr, e2)
+				}
+
+				result := string(output)
+				fmt.Println(ignitionStorageFilesPath + f.Path)
+				os.WriteFile(ignitionStorageFilesPath+f.Path, []byte(result), 0644)
+			} else {
+				fmt.Println(ignitionStorageFilesPath + f.Path)
+				os.WriteFile(ignitionStorageFilesPath+f.Path, contents.Data, 0644)
+			}
 		}
+	}
+	ignitionPasswdFilesPath := extractedMachineConfigPath + "/passwd/"
+	for _, f := range ignConfig.Passwd.Users {
+		_ = os.MkdirAll(ignitionPasswdFilesPath+"users/", os.ModePerm)
+		keys := ""
+		for _, key := range f.SSHAuthorizedKeys {
+			keys = keys + string(key) + "\n"
+		}
+		os.WriteFile(ignitionPasswdFilesPath+"users/"+f.Name, []byte(keys), 0644)
+		fmt.Println(ignitionPasswdFilesPath + "users/" + f.Name)
+	}
+	ignitionSystemdPath := extractedMachineConfigPath + "/systemd/units/"
+	for _, f := range ignConfig.Systemd.Units {
+		if len(f.Dropins) > 0 {
+			_ = os.MkdirAll(ignitionSystemdPath+f.Name+"/dropins", os.ModePerm)
+			for _, dropin := range f.Dropins {
+				var content []byte
+				if dropin.Contents != nil {
+					content = []byte(*dropin.Contents)
+				}
+				os.WriteFile(ignitionSystemdPath+f.Name+"/dropins/"+dropin.Name, content, 0644)
+				fmt.Println(ignitionSystemdPath + f.Name + "/dropins/" + dropin.Name)
+			}
+		} else {
+			fmt.Println(ignitionSystemdPath + f.Name)
+			var content []byte
+			if f.Contents != nil {
+				content = []byte(*f.Contents)
+			}
+			os.WriteFile(ignitionSystemdPath+f.Name, content, 0644)
+		}
+
+		//keys := ""
+		//for _, key := range f.SSHAuthorizedKeys {
+		//	keys = keys + string(key) + "\n"
+		//}
+		//os.WriteFile(ignitionPasswdFilesPath+"users/"+f.Name, []byte(keys), 0644)
+		//fmt.Println(ignitionPasswdFilesPath + "users/" + f.Name)
 	}
 }
 
@@ -55,7 +113,7 @@ var Extract = &cobra.Command{
 			os.Exit(1)
 		}
 		machineconfigYamlPath := vars.MustGatherRootPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/" + args[0] + ".yaml"
-		_file, err := ioutil.ReadFile(machineconfigYamlPath)
+		_file, err := os.ReadFile(machineconfigYamlPath)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
