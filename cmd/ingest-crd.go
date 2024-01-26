@@ -26,7 +26,11 @@ var IngestCRDS = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		kubeconfigPath := filepath.Join(homeDir, ".kube", "config")
+		kubeconfigPath := os.Getenv("KUBECONFIG")
+
+		if kubeconfigPath == "" {
+			kubeconfigPath = filepath.Join(homeDir, ".kube", "config")
+		}
 		outputDir := filepath.Join(homeDir, ".omc", "customresourcedefinitions")
 		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 		if err != nil {
