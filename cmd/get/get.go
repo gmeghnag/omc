@@ -74,7 +74,7 @@ var yamlData []byte
 
 var GetCmd = &cobra.Command{
 	Use:   "get",
-	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath.",
+	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Help()
@@ -117,7 +117,7 @@ func init() {
 	GetCmd.PersistentFlags().BoolVar(&vars.NoHeaders, "no-headers", false, "When using the default or custom-column output format, don't print headers (default print headers).")
 	GetCmd.PersistentFlags().BoolVar(&vars.ShowManagedFields, "show-managed-fields", false, "If true, show the managedFields when printing objects in JSON or YAML format.")
 	GetCmd.PersistentFlags().BoolVarP(&vars.ShowLabelsBoolVar, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
-	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
+	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath|custom-columns=...")
 	GetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 }
 
