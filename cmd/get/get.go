@@ -392,23 +392,31 @@ func handleObject(obj unstructured.Unstructured) error {
 	}
 	klog.V(3).Info("INFO deserializing ", obj.GetKind(), " ", obj.GetName())
 	var objectTable *metav1.Table
-	_, ok := vars.KnownResources[strings.ToLower(obj.GetKind())]
-	if ok {
-		runtimeObjectType := deserializer.RawObjectToRuntimeObject(rawObject, vars.Schema)
-		if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
-			klog.V(3).Info(err, err.Error())
-		}
-		objectTable, err = tablegenerator.InternalResourceTable(runtimeObjectType, &obj)
+	if strings.HasPrefix(vars.OutputStringVar, "custom-columns=") {
+		objectTable, err = tablegenerator.CustomColumnsTable(&obj)
 		if err != nil {
-			klog.V(3).Info("INFO ", fmt.Sprintf("%s: %s, %s", err.Error(), obj.GetKind(), obj.GetAPIVersion()))
 			klog.V(1).ErrorS(err, err.Error())
 			return err
 		}
 	} else {
-		objectTable, err = tablegenerator.GenerateCustomResourceTable(obj)
-		if err != nil {
-			klog.V(1).ErrorS(err, err.Error())
-			return err
+		_, ok := vars.KnownResources[strings.ToLower(obj.GetKind())]
+		if ok {
+			runtimeObjectType := deserializer.RawObjectToRuntimeObject(rawObject, vars.Schema)
+			if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
+				klog.V(3).Info(err, err.Error())
+			}
+			objectTable, err = tablegenerator.InternalResourceTable(runtimeObjectType, &obj)
+			if err != nil {
+				klog.V(3).Info("INFO ", fmt.Sprintf("%s: %s, %s", err.Error(), obj.GetKind(), obj.GetAPIVersion()))
+				klog.V(1).ErrorS(err, err.Error())
+				return err
+			}
+		} else {
+			objectTable, err = tablegenerator.GenerateCustomResourceTable(obj)
+			if err != nil {
+				klog.V(1).ErrorS(err, err.Error())
+				return err
+			}
 		}
 	}
 
