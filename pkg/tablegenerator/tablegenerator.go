@@ -2,6 +2,7 @@ package tablegenerator
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -17,6 +18,35 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
+
+func CustomColumnsTable(unstruct *unstructured.Unstructured) (*metav1.Table, error) {
+	// Matches .metadata.name and metadata.name formats
+	format := regexp.MustCompile(`^\.?([^{}]+)$`)
+	fieldSelectors := map[string]string{}
+	prefix := "custom-columns="
+	table := &metav1.Table{}
+	args := vars.OutputStringVar[len(prefix):]
+	fields := strings.Split(args, ",")
+
+	for _, field := range fields {
+		fieldPair := strings.Split(field, ":")
+		if len(fieldPair) != 2 {
+			return nil, fmt.Errorf("error processing column '%s': expected format <name>:<selector>", field)
+		}
+		name, selector := fieldPair[0], fieldPair[1]
+		name = strings.Title(strings.ToLower(name))
+		column := metav1.TableColumnDefinition{Name: name, Type: "string"}
+		table.ColumnDefinitions = append(table.ColumnDefinitions, column)
+		fieldSelectors[name] = selector
+	}
+	cells := make([]interface{}, 0)
+	for _, column := range table.ColumnDefinitions {
+		matches := format.FindStringSubmatch(fieldSelectors[column.Name])
+		cells = append(cells, helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{.", matches[1], "}")))
+	}
+	table.Rows = []metav1.TableRow{{Cells: cells}}
+	return table, nil
+}
 
 func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.Unstructured) (*metav1.Table, error) {
 	resourceKind := strings.ToLower(unstruct.GetKind())

@@ -16,3 +16,4 @@ omc get pod my-pod -o yaml                # Get a pod's YAML
 | `-o=name`                 | Print only the resource name and nothing else                                                             | 
 | `-o=wide`                 | Output in the plain-text format with any additional information, and for pods, the node name is included  | 
 | `-o=yaml`                 | Output a YAML formatted API object                                                                        | 
+| `-o=custom-columns`       | Allows a user to customise the fields that are output and their corresponding header names                | 

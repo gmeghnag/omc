@@ -74,7 +74,7 @@ var yamlData []byte
 
 var GetCmd = &cobra.Command{
 	Use:   "get",
-	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath.",
+	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Help()
@@ -117,7 +117,7 @@ func init() {
 	GetCmd.PersistentFlags().BoolVar(&vars.NoHeaders, "no-headers", false, "When using the default or custom-column output format, don't print headers (default print headers).")
 	GetCmd.PersistentFlags().BoolVar(&vars.ShowManagedFields, "show-managed-fields", false, "If true, show the managedFields when printing objects in JSON or YAML format.")
 	GetCmd.PersistentFlags().BoolVarP(&vars.ShowLabelsBoolVar, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
-	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath=...")
+	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath|custom-columns=...")
 	GetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
 }
 
@@ -392,23 +392,31 @@ func handleObject(obj unstructured.Unstructured) error {
 	}
 	klog.V(3).Info("INFO deserializing ", obj.GetKind(), " ", obj.GetName())
 	var objectTable *metav1.Table
-	_, ok := vars.KnownResources[strings.ToLower(obj.GetKind())]
-	if ok {
-		runtimeObjectType := deserializer.RawObjectToRuntimeObject(rawObject, vars.Schema)
-		if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
-			klog.V(3).Info(err, err.Error())
-		}
-		objectTable, err = tablegenerator.InternalResourceTable(runtimeObjectType, &obj)
+	if strings.HasPrefix(vars.OutputStringVar, "custom-columns=") {
+		objectTable, err = tablegenerator.CustomColumnsTable(&obj)
 		if err != nil {
-			klog.V(3).Info("INFO ", fmt.Sprintf("%s: %s, %s", err.Error(), obj.GetKind(), obj.GetAPIVersion()))
 			klog.V(1).ErrorS(err, err.Error())
 			return err
 		}
 	} else {
-		objectTable, err = tablegenerator.GenerateCustomResourceTable(obj)
-		if err != nil {
-			klog.V(1).ErrorS(err, err.Error())
-			return err
+		_, ok := vars.KnownResources[strings.ToLower(obj.GetKind())]
+		if ok {
+			runtimeObjectType := deserializer.RawObjectToRuntimeObject(rawObject, vars.Schema)
+			if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
+				klog.V(3).Info(err, err.Error())
+			}
+			objectTable, err = tablegenerator.InternalResourceTable(runtimeObjectType, &obj)
+			if err != nil {
+				klog.V(3).Info("INFO ", fmt.Sprintf("%s: %s, %s", err.Error(), obj.GetKind(), obj.GetAPIVersion()))
+				klog.V(1).ErrorS(err, err.Error())
+				return err
+			}
+		} else {
+			objectTable, err = tablegenerator.GenerateCustomResourceTable(obj)
+			if err != nil {
+				klog.V(1).ErrorS(err, err.Error())
+				return err
+			}
 		}
 	}
 
