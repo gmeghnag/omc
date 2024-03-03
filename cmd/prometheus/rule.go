@@ -57,6 +57,10 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 		}
 
 		for _, rule := range group.Rules {
+			ruleType := fmt.Sprint(rule["type"])
+			if ruleType == "recording" {
+				continue
+			}
 			ruleName := fmt.Sprint(rule["name"])
 			if len(resourcesNames) != 0 && !helpers.StringInSlice(ruleName, resourcesNames) {
 				continue
