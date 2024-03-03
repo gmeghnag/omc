@@ -106,7 +106,7 @@ func findMustGatherIn(path string) (string, error) {
 	retPath := strings.TrimSuffix(path, "/")
 	var retErr error
 	timeStampFound := false
-	namespacesFolderFound := false
+	resourcesFolderFound := false
 	files, err := os.ReadDir(path)
 	if err != nil {
 		return "", err
@@ -115,29 +115,31 @@ func findMustGatherIn(path string) (string, error) {
 		if file.IsDir() {
 			dirName = file.Name()
 			numDirs = numDirs + 1
-			if file.Name() == "namespaces" {
-				namespacesFolderFound = true
+			if file.Name() == "namespaces" || file.Name() == "cluster-scoped-resources" {
+				resourcesFolderFound = true
 			}
 		}
 		if !file.IsDir() && file.Name() == "timestamp" {
 			timeStampFound = true
 		}
 	}
-	if namespacesFolderFound {
+	if numDirs == 1 && !timeStampFound && !resourcesFolderFound {
+		return findMustGatherIn(path + "/" + dirName)
+	}
+	if resourcesFolderFound {
+		fmt.Println("CASE1")
 		return retPath + "/", retErr
 	}
 	if timeStampFound && (numDirs > 1 || numDirs == 0) {
-		return path, fmt.Errorf("Expected one directory in path: \"%s\", found: %s.", path, strconv.Itoa(numDirs))
+		fmt.Println("CASE2")
+		return path, fmt.Errorf("expected one directory in path: \"%s\", found: %s", path, strconv.Itoa(numDirs))
 	}
-	if !timeStampFound && numDirs == 1 {
-		return findMustGatherIn(path + "/" + dirName)
-	}
-	if !timeStampFound && !namespacesFolderFound {
+	if !timeStampFound && !resourcesFolderFound {
+		fmt.Println("CASE3")
 		// Case: "path" is an empty directory
 		return path, fmt.Errorf("wrong must-gather file composition for %v", path)
 	}
-
-	return retPath + "/", retErr
+	return findMustGatherIn(path + "/" + dirName)
 }
 
 // useCmd represents the use command
