@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,11 +77,23 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 		}
 	}
 	if table.ColumnDefinitions[0].Name == "Name" {
-		if vars.ShowKind == true {
+		if vars.ShowKind {
 			table.Rows[0].Cells[0] = resourceKind + "/" + unstruct.GetName()
 		} else {
 			table.Rows[0].Cells[0] = unstruct.GetName()
 		}
+	}
+	if resourceKind == "event" && table.ColumnDefinitions[0].Name == "Last Seen" {
+		var lastTimestamp metav1.Time
+		lastTimestampInterface := unstruct.Object["lastTimestamp"]
+		if lastTimestampInterface != nil {
+			lastTimestampTime, _ := time.Parse(time.RFC3339, fmt.Sprintf("%v", lastTimestampInterface))
+			lastTimestamp = metav1.NewTime(lastTimestampTime.UTC())
+		} else {
+			lastTimestamp = metav1.NewTime(unstruct.GetCreationTimestamp().UTC())
+		}
+		lastSeen := helpers.GetAge(vars.MustGatherRootPath, lastTimestamp)
+		table.Rows[0].Cells[0] = lastSeen
 	}
 
 	if vars.ShowNamespace {
@@ -180,10 +193,4 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Ta
 	}
 
 	return table, nil
-}
-
-func kind(resource *unstructured.Unstructured) string {
-	longKind := strings.Split(resource.GetAPIVersion(), "/")[0]
-	splittedKind := strings.Split(longKind, ".")
-	return splittedKind[0]
 }
