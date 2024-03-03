@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -12,7 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-  	"github.com/gmeghnag/omc/types"
+
+	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
 	"github.com/olekukonko/tablewriter"
@@ -194,9 +196,16 @@ func ReadYaml(YamlPath string) []byte {
 }
 
 func GetAge(resourcefilePath string, resourceCreationTimeStamp v1.Time) string {
-	ResourceFile, err := os.Stat(resourcefilePath)
+	var ResourceFile fs.FileInfo
+	ResourceFile, err := os.Stat(resourcefilePath + "/timestamp")
 	if err != nil {
-		return "Unknown"
+		ResourceFile, err = os.Stat(resourcefilePath + "/namespaces")
+		if err != nil {
+			ResourceFile, err = os.Stat(resourcefilePath + "/cluster-scoped-resources")
+			if err != nil {
+				return "Unknown"
+			}
+		}
 	}
 	t2 := ResourceFile.ModTime()
 	diffTime := t2.Sub(resourceCreationTimeStamp.Time).String()
@@ -439,4 +448,3 @@ func GetFromJsonPath(data interface{}, jsonPathTemplate string) string {
 	jPath.Execute(buf, data)
 	return buf.String()
 }
-

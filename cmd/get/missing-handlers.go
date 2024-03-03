@@ -2,10 +2,13 @@ package get
 
 import (
 	"reflect"
+	"time"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 	configv1 "github.com/openshift/api/config/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -29,8 +32,15 @@ func AddMissingHandlers(h printers.PrintHandler) {
 		{Name: "Status", Type: "string"},
 	}
 
+	customResourceDefinitionColumnDefinitions := []metav1.TableColumnDefinition{
+		{Name: "Name", Type: "string", Format: "name"},
+		{Name: "Ceated At", Type: "string"},
+	}
+
 	_ = h.TableHandler(apiServiceColumnDefinitions, printAPIService)
 	_ = h.TableHandler(clusterVersionDefinitions, printClusterVersion)
+	_ = h.TableHandler(customResourceDefinitionColumnDefinitions, printCustomResourceDefinitionv1)
+	_ = h.TableHandler(customResourceDefinitionColumnDefinitions, printCustomResourceDefinitionv1beta1)
 }
 
 func printAPIService(obj *apiregistrationv1.APIService, options printers.GenerateOptions) ([]metav1.TableRow, error) {
@@ -100,11 +110,31 @@ func printClusterVersion(obj *configv1.ClusterVersion, options printers.Generate
 			}
 		}
 	}
-	since := helpers.GetAge(vars.MustGatherRootPath+"/namespaces", lastTransitionTime)
+	since := helpers.GetAge(vars.MustGatherRootPath, lastTransitionTime)
 
 	row := metav1.TableRow{
 		Object: runtime.RawExtension{Object: obj},
 	}
 	row.Cells = append(row.Cells, clusterOperatorName, version, available, progressing, since, status)
+	return []metav1.TableRow{row}, nil
+}
+
+func printCustomResourceDefinitionv1(obj *apiextensionsv1.CustomResourceDefinition, options printers.GenerateOptions) ([]metav1.TableRow, error) {
+	creationTimestamp := obj.GetCreationTimestamp()
+	createdAt := creationTimestamp.UTC().Format(time.RFC3339Nano)
+	row := metav1.TableRow{
+		Object: runtime.RawExtension{Object: obj},
+	}
+	row.Cells = append(row.Cells, obj.Name, createdAt)
+	return []metav1.TableRow{row}, nil
+}
+
+func printCustomResourceDefinitionv1beta1(obj *apiextensionsv1beta1.CustomResourceDefinition, options printers.GenerateOptions) ([]metav1.TableRow, error) {
+	creationTimestamp := obj.GetCreationTimestamp()
+	createdAt := creationTimestamp.UTC().Format(time.RFC3339Nano)
+	row := metav1.TableRow{
+		Object: runtime.RawExtension{Object: obj},
+	}
+	row.Cells = append(row.Cells, obj.Name, createdAt)
 	return []metav1.TableRow{row}, nil
 }

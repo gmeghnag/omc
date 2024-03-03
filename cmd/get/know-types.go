@@ -36,6 +36,9 @@ import (
 	projectv1helpers "github.com/openshift/openshift-apiserver/pkg/project/apis/project"
 	"github.com/openshift/openshift-apiserver/pkg/route/apis/route"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 func addAdmissionRegistrationTypes(scheme *runtime.Scheme) error {
@@ -45,6 +48,24 @@ func addAdmissionRegistrationTypes(scheme *runtime.Scheme) error {
 		&admissionregistration.ValidatingAdmissionPolicyBinding{},
 		&admissionregistration.ValidatingWebhookConfiguration{},
 		&admissionregistration.ValidatingAdmissionPolicy{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
+func addApiextensionsTypes(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "apiextensions.k8s.io", Version: "v1"}
+	types := []runtime.Object{
+		&apiextensionsv1.CustomResourceDefinition{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
+func addApiextensionsV1Beta1Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "apiextensions.k8s.io", Version: "v1beta1"}
+	types := []runtime.Object{
+		&apiextensionsv1beta1.CustomResourceDefinition{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil

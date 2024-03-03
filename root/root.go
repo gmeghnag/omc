@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/gmeghnag/omc/cmd"
@@ -138,8 +137,7 @@ func initConfig() {
 		omcConfigJson := types.Config{}
 		file, _ := os.ReadFile(viper.ConfigFileUsed())
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
-		var contexts []types.Context
-		contexts = omcConfigJson.Contexts
+		contexts := omcConfigJson.Contexts
 		for _, context := range contexts {
 			if context.Current == "*" {
 				vars.MustGatherRootPath = context.Path
@@ -150,9 +148,9 @@ func initConfig() {
 			}
 		}
 		if vars.MustGatherRootPath != "" {
-			exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
+			exist, _ := helpers.Exists(vars.MustGatherRootPath)
 			if !exist {
-				files, err := ioutil.ReadDir(vars.MustGatherRootPath)
+				files, err := os.ReadDir(vars.MustGatherRootPath)
 				if err != nil {
 					fmt.Println(err)
 					cmd.DeleteContext(vars.MustGatherRootPath, viper.ConfigFileUsed(), "")

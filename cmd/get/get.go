@@ -139,6 +139,8 @@ func init() {
 		apiregistration.AddToScheme,
 	}
 	_ = addAdmissionRegistrationTypes(vars.Schema)
+	_ = addApiextensionsTypes(vars.Schema)
+	_ = addApiextensionsV1Beta1Types(vars.Schema)
 	_ = addApiServerInternalTypes(vars.Schema)
 	_ = addApiRegistrationTypes(vars.Schema)
 	_ = addAppsTypes(vars.Schema)
@@ -187,7 +189,7 @@ func init() {
 
 func getNamespacedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	var namespaces []string
-	if vars.AllNamespaceBoolVar == true {
+	if vars.AllNamespaceBoolVar {
 		vars.Namespace = ""
 		vars.ShowNamespace = true
 		_namespaces, _ := ioutil.ReadDir(vars.MustGatherRootPath + "/namespaces/")
@@ -357,20 +359,20 @@ func handleObject(obj unstructured.Unstructured) error {
 	if vars.Namespace != "" && obj.GetNamespace() != "" && vars.Namespace != obj.GetNamespace() {
 		return nil
 	}
-	labelsOk, err := helpers.MatchLabelsFromMap(obj.GetLabels(), vars.LabelSelectorStringVar)
+	labelsOk, _ := helpers.MatchLabelsFromMap(obj.GetLabels(), vars.LabelSelectorStringVar)
 	if !labelsOk {
 		return nil
 	}
 	vars.LastKind = obj.GetKind()
 	if vars.OutputStringVar == "yaml" || vars.OutputStringVar == "json" {
-		if vars.ShowManagedFields == false {
+		if !vars.ShowManagedFields {
 			obj.SetManagedFields(nil)
 		}
 		vars.UnstructuredList.Items = append(vars.UnstructuredList.Items, obj)
 		return nil
 	}
 	if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
-		if vars.ShowManagedFields == false {
+		if !vars.ShowManagedFields {
 			obj.SetManagedFields(nil)
 		}
 		vars.UnstructuredList.Items = append(vars.UnstructuredList.Items, obj)
