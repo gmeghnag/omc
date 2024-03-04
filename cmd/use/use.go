@@ -127,15 +127,12 @@ func findMustGatherIn(path string) (string, error) {
 		return findMustGatherIn(path + "/" + dirName)
 	}
 	if resourcesFolderFound {
-		fmt.Println("CASE1")
 		return retPath + "/", retErr
 	}
 	if timeStampFound && (numDirs > 1 || numDirs == 0) {
-		fmt.Println("CASE2")
 		return path, fmt.Errorf("expected one directory in path: \"%s\", found: %s", path, strconv.Itoa(numDirs))
 	}
 	if !timeStampFound && !resourcesFolderFound {
-		fmt.Println("CASE3")
 		// Case: "path" is an empty directory
 		return path, fmt.Errorf("wrong must-gather file composition for %v", path)
 	}
