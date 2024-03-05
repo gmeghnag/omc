@@ -8,7 +8,7 @@ import (
 	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 	"k8s.io/kubernetes/pkg/apis/apiserverinternal"
 	"k8s.io/kubernetes/pkg/apis/apps"
-	"k8s.io/kubernetes/pkg/apis/autoscaling"
+	autoscaling "k8s.io/kubernetes/pkg/apis/autoscaling"
 	batch "k8s.io/kubernetes/pkg/apis/batch"
 	"k8s.io/kubernetes/pkg/apis/certificates"
 	"k8s.io/kubernetes/pkg/apis/coordination"
@@ -80,7 +80,7 @@ func addApiServerInternalTypes(scheme *runtime.Scheme) error {
 	return nil
 }
 
-func addAutoscalingTypes(scheme *runtime.Scheme) error {
+func addAutoscalingV1Types(scheme *runtime.Scheme) error {
 	GroupVersion := schema.GroupVersion{Group: "autoscaling", Version: "v1"}
 	types := []runtime.Object{
 		&autoscaling.HorizontalPodAutoscaler{},
@@ -89,6 +89,17 @@ func addAutoscalingTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil
 }
+
+func addAutoscalingV2Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "autoscaling", Version: "v2"}
+	types := []runtime.Object{
+		&autoscaling.HorizontalPodAutoscaler{},
+		&autoscaling.Scale{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
 func addCertificatesTypes(scheme *runtime.Scheme) error {
 	GroupVersion := schema.GroupVersion{Group: "certificates.k8s.io", Version: "v1"}
 	types := []runtime.Object{

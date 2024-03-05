@@ -853,5 +853,18 @@ volumeattachments:
   name: volumeattachment
   namespaced: false
   plural: volumeattachments
-
-
+horizontalpodautoscalers:
+  group: autoscaling
+  name: horizontalpodautoscaler
+  namespaced: true
+  plural: horizontalpodautoscalers
+hpa:
+  group: autoscaling
+  name: horizontalpodautoscaler
+  namespaced: true
+  plural: horizontalpodautoscalers
+horizontalpodautoscaler:
+  group: autoscaling
+  name: horizontalpodautoscaler
+  namespaced: true
+  plural: horizontalpodautoscalers
