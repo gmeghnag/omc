@@ -32,7 +32,7 @@ import (
 )
 
 func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames string, rulesStates string, alertsFilePath string) {
-	_headers := []string{"group", "rule", "state", "age", "alerts", "active since"}
+	_headers := []string{"group", "rule", "severity", "state", "age", "alerts", "active since"}
 	var data [][]string
 	var filteredRules []Rule
 	var filteredRulesList FilteredRulesList
@@ -65,6 +65,8 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 			if len(resourcesNames) != 0 && !helpers.StringInSlice(ruleName, resourcesNames) {
 				continue
 			}
+			ruleLables := rule["labels"].(map[string]interface{})
+			ruleSeverity := fmt.Sprint(ruleLables["severity"])
 			ruleState := fmt.Sprint(rule["state"])
 			if len(searchingStates) != 0 && !helpers.StringInSlice(ruleState, searchingStates) {
 				continue
@@ -108,7 +110,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 			diffTime := t2.Sub(ruleLastEvaluationTime).String()
 			d, _ := time.ParseDuration(diffTime)
 			lastEval := helpers.FormatDiffTime(d)
-			_list := []string{group.Name, ruleName, ruleState, lastEval, numAlerts, activeSince}
+			_list := []string{group.Name, ruleName, ruleSeverity, ruleState, lastEval, numAlerts, activeSince}
 			showGroup := false
 			if outputFlag == "wide" {
 				showGroup = true
