@@ -22,7 +22,6 @@ import (
 	"os"
 
 	"github.com/gmeghnag/omc/cmd"
-	"github.com/gmeghnag/omc/cmd/alert"
 	"github.com/gmeghnag/omc/cmd/certs"
 	"github.com/gmeghnag/omc/cmd/config"
 	"github.com/gmeghnag/omc/cmd/describe"
@@ -87,7 +86,6 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	RootCmd.AddCommand(
-		alert.AlertCmd,
 		certs.Certs,
 		cmd.VersionCmd,
 		cmd.ProjectCmd,
