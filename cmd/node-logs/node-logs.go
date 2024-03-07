@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// alertCmd represents the alert command
 var NodeLogs = &cobra.Command{
 	Use: "node-logs",
 	Run: func(cmd *cobra.Command, args []string) {
