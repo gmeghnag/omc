@@ -31,6 +31,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
+	nodelogs "github.com/gmeghnag/omc/cmd/node-logs"
 	"github.com/gmeghnag/omc/cmd/ovn"
 	"github.com/gmeghnag/omc/cmd/prometheus"
 	"github.com/gmeghnag/omc/cmd/upgrade"
@@ -94,6 +95,7 @@ func init() {
 		use.UseCmd,
 		cmd.MustGather,
 		cmd.IngestCRDS,
+		nodelogs.NodeLogs,
 		config.ConfigCmd,
 		get.GetCmd,
 		describe.DescribeCmd,
