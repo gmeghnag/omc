@@ -468,6 +468,16 @@ routes:
   name: route
   namespaced: true
   plural: routes
+scc:
+  group: security.openshift.io
+  name: securitycontextconstraints
+  namespaced: false
+  plural: securitycontextconstraints
+securitycontextconstraints:
+  group: security.openshift.io
+  name: securitycontextconstraints
+  namespaced: false
+  plural: securitycontextconstraints
 podsecuritypolicyreview:
   group: security.openshift.io
   name: podsecuritypolicyreview

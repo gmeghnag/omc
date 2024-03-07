@@ -206,6 +206,8 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &scheduling.PriorityClass{}
 	case *securityv1.PodSecurityPolicyReview:
 		return &securityv1.PodSecurityPolicyReview{}
+	case *securityv1.SecurityContextConstraints:
+		return &securityv1.SecurityContextConstraints{}
 	case *securityv1.PodSecurityPolicySelfSubjectReview:
 		return &securityv1.PodSecurityPolicySelfSubjectReview{}
 	case *securityv1.PodSecurityPolicySubjectReview:

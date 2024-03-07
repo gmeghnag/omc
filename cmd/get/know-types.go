@@ -289,6 +289,7 @@ func addSecurityV1Types(scheme *runtime.Scheme) error {
 		&securityv1.PodSecurityPolicyReview{},
 		&securityv1.PodSecurityPolicySelfSubjectReview{},
 		&securityv1.PodSecurityPolicySubjectReview{},
+		&securityv1.SecurityContextConstraints{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil
