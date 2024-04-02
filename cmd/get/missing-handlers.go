@@ -9,7 +9,9 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 	configv1 "github.com/openshift/api/config/v1"
+	oauthv1 "github.com/openshift/api/oauth/v1"
 	securityv1 "github.com/openshift/api/security/v1"
+	oauthapi "github.com/openshift/oauth-apiserver/pkg/oauth/apis/oauth"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,12 +53,19 @@ func AddMissingHandlers(h printers.PrintHandler) {
 		{Name: "ReadOnlyRootFs", Type: "string"},
 		{Name: "Volumes", Type: "string"},
 	}
-
+	oauthClientColumnsDefinitions := []metav1.TableColumnDefinition{
+		{Name: "Name", Type: "string", Format: "name", Description: metav1.ObjectMeta{}.SwaggerDoc()["name"]},
+		{Name: "Secret", Type: "string", Description: oauthv1.OAuthClient{}.SwaggerDoc()["secret"]},
+		{Name: "WWW-Challenge", Type: "bool", Description: oauthv1.OAuthClient{}.SwaggerDoc()["respondWithChallenges"]},
+		{Name: "Token-Max-Age", Type: "string", Description: oauthv1.OAuthClient{}.SwaggerDoc()["accessTokenMaxAgeSeconds"]},
+		{Name: "Redirect URIs", Type: "string", Description: oauthv1.OAuthClient{}.SwaggerDoc()["redirectURIs"]},
+	}
 	_ = h.TableHandler(apiServiceColumnDefinitions, printAPIService)
 	_ = h.TableHandler(clusterVersionDefinitions, printClusterVersion)
 	_ = h.TableHandler(customResourceDefinitionColumnDefinitions, printCustomResourceDefinitionv1)
 	_ = h.TableHandler(customResourceDefinitionColumnDefinitions, printCustomResourceDefinitionv1beta1)
 	_ = h.TableHandler(securitycontextconstraintsDefinitions, printSecurityContextConstraints)
+	_ = h.TableHandler(oauthClientColumnsDefinitions, printOAuthClient)
 }
 
 func printAPIService(obj *apiregistrationv1.APIService, options printers.GenerateOptions) ([]metav1.TableRow, error) {
@@ -188,5 +197,26 @@ func printSecurityContextConstraints(obj *securityv1.SecurityContextConstraints,
 		volumes = volumes + "]"
 	}
 	row.Cells = append(row.Cells, obj.Name, obj.AllowPrivilegedContainer, caps, obj.SELinuxContext.Type, obj.RunAsUser.Type, obj.FSGroup.Type, obj.SupplementalGroups.Type, priority, obj.ReadOnlyRootFilesystem, volumes)
+	return []metav1.TableRow{row}, nil
+}
+
+func printOAuthClient(oauthClient *oauthapi.OAuthClient, options printers.GenerateOptions) ([]metav1.TableRow, error) {
+	row := metav1.TableRow{
+		Object: runtime.RawExtension{Object: oauthClient},
+	}
+
+	var maxAge string
+	switch {
+	case oauthClient.AccessTokenMaxAgeSeconds == nil:
+		maxAge = "default"
+	case *oauthClient.AccessTokenMaxAgeSeconds == 0:
+		maxAge = "unexpiring"
+	default:
+		duration := time.Duration(*oauthClient.AccessTokenMaxAgeSeconds) * time.Second
+		maxAge = duration.String()
+	}
+
+	row.Cells = append(row.Cells, oauthClient.Name, oauthClient.Secret, oauthClient.RespondWithChallenges, maxAge, strings.Join(oauthClient.RedirectURIs, ","))
+
 	return []metav1.TableRow{row}, nil
 }

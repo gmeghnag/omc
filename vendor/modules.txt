@@ -390,6 +390,7 @@ github.com/openshift/api/config/v1alpha1
 github.com/openshift/api/image/docker10
 github.com/openshift/api/image/dockerpre012
 github.com/openshift/api/image/v1
+github.com/openshift/api/oauth/v1
 github.com/openshift/api/operator/v1
 github.com/openshift/api/operator/v1alpha1
 github.com/openshift/api/pkg/serialization
@@ -449,6 +450,9 @@ github.com/openshift/machine-config-operator/pkg/generated/informers/externalver
 github.com/openshift/machine-config-operator/pkg/generated/informers/externalversions/machineconfiguration.openshift.io
 github.com/openshift/machine-config-operator/pkg/generated/informers/externalversions/machineconfiguration.openshift.io/v1
 github.com/openshift/machine-config-operator/pkg/generated/listers/machineconfiguration.openshift.io/v1
+# github.com/openshift/oauth-apiserver v0.0.0-20220302102027-77c670a66f82
+## explicit; go 1.17
+github.com/openshift/oauth-apiserver/pkg/oauth/apis/oauth
 # github.com/openshift/openshift-apiserver v0.0.0-alpha.0.0.20230503155233-aac3dd5bf054
 ## explicit; go 1.20
 github.com/openshift/openshift-apiserver/pkg/api

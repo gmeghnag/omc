@@ -217,7 +217,7 @@ clusterlogforwarders:
   group: logging.openshift.io
   name: clusterlogforwarder
   namespaced: true
-  plural: clusterlogforwarders 
+  plural: clusterlogforwarders
 cl:
   group: logging.openshift.io
   name: clusterlogging
@@ -232,7 +232,7 @@ clusterloggings:
   group: logging.openshift.io
   name: clusterlogging
   namespaced: true
-  plural: clusterloggings  
+  plural: clusterloggings
 node:
   group: core
   name: node
@@ -878,3 +878,13 @@ horizontalpodautoscaler:
   name: horizontalpodautoscaler
   namespaced: true
   plural: horizontalpodautoscalers
+oauthclient:
+  group: oauth.openshift.io
+  name: oauthclient
+  namespaced: false
+  plural: oauthclients
+oauthclients:
+  group: oauth.openshift.io
+  name: oauthclient
+  namespaced: false
+  plural: oauthclients
