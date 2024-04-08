@@ -100,6 +100,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/openshift/client-go v0.0.0-20230120202327-72f107311084 // indirect
 	github.com/openshift/library-go v0.0.0-20230307165833-3e3a8a28de0c // indirect
+	github.com/openshift/oauth-apiserver v0.0.0-20220302102027-77c670a66f82
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect

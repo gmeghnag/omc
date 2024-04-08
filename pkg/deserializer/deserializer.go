@@ -47,6 +47,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	//
+	oauthapi "github.com/openshift/oauth-apiserver/pkg/oauth/apis/oauth"
 	admissionregistration "k8s.io/kubernetes/pkg/apis/admissionregistration"
 	apiserverinternal "k8s.io/kubernetes/pkg/apis/apiserverinternal"
 	apps "k8s.io/kubernetes/pkg/apis/apps"
@@ -224,6 +225,8 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &storage.VolumeAttachment{}
 	case *template.Template:
 		return &template.Template{}
+	case *oauthapi.OAuthClient:
+		return &oauthapi.OAuthClient{}
 	}
 	//fmt.Println("RUNTIME UNKNOW")
 	return &runtime.Unknown{}

@@ -2,6 +2,7 @@ package get
 
 // specific labels https://github.com/seans3/kubernetes/blob/6108dac6708c026b172f3928e137c206437791da/pkg/printers/internalversion/printers_test.go#L1979
 import (
+	oauthapi "github.com/openshift/oauth-apiserver/pkg/oauth/apis/oauth"
 	appsv1 "github.com/openshift/openshift-apiserver/pkg/apps/apis/apps"
 
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -366,6 +367,15 @@ func addConfigV1Types(scheme *runtime.Scheme) error {
 	GroupVersion := schema.GroupVersion{Group: "config.openshift.io", Version: "v1"}
 	types := []runtime.Object{
 		&configv1.ClusterVersion{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
+func addOAuthV1Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "oauth.openshift.io", Version: "v1"}
+	types := []runtime.Object{
+		&oauthapi.OAuthClient{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil

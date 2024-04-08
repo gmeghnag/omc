@@ -7,3 +7,4 @@ omc-darwin-amd64
 omc-linux-amd64
 omc-win-amd64
 cmd/describe/apps
+.vscode/launch.json
