@@ -888,3 +888,13 @@ oauthclients:
   name: oauthclient
   namespaced: false
   plural: oauthclients
+automationcontroller:
+  group: automationcontroller.ansible.com
+  name: automationcontroller
+  namespaced: true
+  plural: automationcontrollers
+automationcontrollers:
+  group: automationcontroller.ansible.com
+  name: automationcontroller
+  namespaced: true
+  plural: automationcontrollers
