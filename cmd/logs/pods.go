@@ -45,8 +45,20 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
 	_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: namespace "+defaultConfigNamespace+" not found.")
-		os.Exit(1)
+		// Sometimes the core/pods.yaml might be empty due to unknown reasons when MG is collected
+		// In such cases, we need to look for the pod in the pods directory
+		_file, err = ioutil.ReadFile(CurrentNamespacePath + "/pods/" + podName + "/" + podName + ".yaml")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error: pod "+podName+" not found.")
+			os.Exit(1)
+		}
+		// We create a Pod object and append it to the _Items PodList
+		var pod v1.Pod
+		if err := yaml.Unmarshal([]byte(_file), &pod); err != nil {
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/pods/"+podName+"/"+podName+".yaml")
+			os.Exit(1)
+		}
+		_Items.Items = append(_Items.Items, pod)
 	}
 	if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/core/pods.yaml")

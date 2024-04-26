@@ -205,7 +205,7 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 		resourcePath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
 		_file, err := ioutil.ReadFile(resourcePath)
-		if err != nil {
+		if err != nil && resourceNamePlural != "pods" {
 			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
 			_, err = os.Stat(resourceDir)
 			if err == nil {
@@ -229,7 +229,28 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 				}
 			}
 		} else {
-			if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
+			// Sometimes the core/pods.yaml might be empty due to unknown reasons when MG is collected
+			// We handle this situation by looking for the pod in the pods directory
+			if resourceNamePlural == "pods" {
+				// tranverse the pods directory and fill in UnstructuredItems.Items
+				podsDir := fmt.Sprintf("%s/namespaces/%s/pods", vars.MustGatherRootPath, namespace)
+				pods, _ := ioutil.ReadDir(podsDir)
+				for _, pod := range pods {
+					podName := pod.Name()
+					podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
+					_file, err := ioutil.ReadFile(podPath)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, "error: namespace "+namespace+" not found.")
+						os.Exit(1)
+					}
+					var podItem unstructured.Unstructured
+					if err := yaml.Unmarshal(_file, &podItem); err != nil {
+						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podPath)
+						os.Exit(1)
+					}
+					UnstructuredItems.Items = append(UnstructuredItems.Items, podItem)
+				}
+			} else if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
