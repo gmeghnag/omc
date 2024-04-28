@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -51,15 +50,19 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 
-	config := types.Config{}
 	var contexts []types.Context
 	var NewContexts []types.Context
 	contexts = omcConfigJson.Contexts
 	var found bool
-	var ctxId string
+	var ctxId, configId string
+	defaultProject := omcConfigJson.DefaultProject
+	if defaultProject == "" {
+		defaultProject = "default"
+	}
 	for _, c := range contexts {
 		if c.Id == idFlag || c.Path == path {
 			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project})
+			configId = c.Id
 			found = true
 		} else {
 			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project})
@@ -67,7 +70,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	}
 	if !found {
 		if idFlag != "" {
-			NewContexts = append(NewContexts, types.Context{Id: idFlag, Path: path, Current: "*", Project: "default"})
+			NewContexts = append(NewContexts, types.Context{Id: idFlag, Path: path, Current: "*", Project: defaultProject})
 		} else {
 			ctxId = helpers.RandString(8)
 			var namespaces []string
@@ -77,23 +80,26 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 			}
 			if len(namespaces) == 1 {
 				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: namespaces[0]})
-			} else if len(namespaces) > 1 && slices.Contains(namespaces, "openshift-logging") {
-				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: "openshift-logging"})
 			} else {
-				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: "default"})
+				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: defaultProject})
 			}
 		}
 
 	}
 
-	config.Contexts = NewContexts
-	config.Id = idFlag
 	if !found {
 		if idFlag != "" {
-			config.Id = idFlag
+			configId = idFlag
 		} else {
-			config.Id = ctxId
+			configId = ctxId
 		}
+	}
+	config := types.Config{
+		Id:             configId,
+		Contexts:       NewContexts,
+		DiffCmd:        omcConfigJson.DiffCmd,
+		DefaultProject: omcConfigJson.DefaultProject,
+		UseLocalCRDs:   omcConfigJson.UseLocalCRDs,
 	}
 	file, _ = json.MarshalIndent(config, "", " ")
 	_ = os.WriteFile(omcConfigFile, file, 0644)

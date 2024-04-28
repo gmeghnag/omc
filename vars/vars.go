@@ -10,7 +10,7 @@ import (
 	"k8s.io/kubernetes/pkg/printers"
 )
 
-var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, LabelSelectorStringVar, Id, Container, OMCVersionHash, OMCVersionTag, DiffCmd, CurrentKind, LastKind string
+var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, LabelSelectorStringVar, Id, Container, OMCVersionHash, OMCVersionTag, DiffCmd, CurrentKind, LastKind, DefaultProject string
 var AllNamespaceBoolVar, ShowLabelsBoolVar, Previous, AllContainers, UseLocalCRDs, SingleResource, Wide, ShowKind, ShowNamespace, ShowManagedFields, NoHeaders, InsecureLogs bool
 
 var GetArgs map[string]map[string]struct{}
