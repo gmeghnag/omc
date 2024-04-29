@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,6 +38,8 @@ var ConfigCmd = &cobra.Command{
 func init() {
 	ConfigCmd.PersistentFlags().BoolVarP(&vars.UseLocalCRDs, "use-local-crds", "", false, "If set to true, omc will search for valid CRDs also in ~/.omc/customresourcedefinitions")
 	ConfigCmd.PersistentFlags().StringVarP(&vars.DiffCmd, "diff-command", "", "", "Set the binary tool to use to execute \"omc mc diff <machineConfig1> <machineConfig2>\"")
+	ConfigCmd.PersistentFlags().StringVarP(&vars.DefaultProject, "default-project", "", "", "Set the default context project \"omc config --default-project=<NS>\"")
+
 }
 
 func SetConfig() {
@@ -47,6 +49,7 @@ func SetConfig() {
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	omcConfigJson.UseLocalCRDs = vars.UseLocalCRDs
 	omcConfigJson.DiffCmd = vars.DiffCmd
+	omcConfigJson.DefaultProject = vars.DefaultProject
 	file, _ = json.MarshalIndent(omcConfigJson, "", " ")
 	_ = ioutil.WriteFile(home+"/.omc/omc.json", file, 0644)
 
