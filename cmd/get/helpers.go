@@ -63,19 +63,10 @@ func validateArgs(args []string) error {
 				if err == nil {
 					_, ok := vars.GetArgs[resourceNamePlural+"."+resourceGroup]
 					if !ok {
-						if !strings.Contains(resourceType, ".") {
-							vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
-							vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
-						} else {
-							vars.GetArgs[resourceType] = make(map[string]struct{})
-							vars.GetArgs[resourceType][resourceName] = struct{}{}
-						}
+						vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
+						vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 					} else {
-						if !strings.Contains(resourceType, ".") {
-							vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
-						} else {
-							vars.GetArgs[resourceType][resourceName] = struct{}{}
-						}
+						vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 					}
 				} else {
 					return fmt.Errorf("resource type \"%s\" not known.", resourceType)
@@ -91,11 +82,7 @@ func validateArgs(args []string) error {
 		resourceType := args[0]
 		resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
 		if err == nil {
-			if !strings.Contains(resourceType, ".") {
-				vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
-			} else {
-				vars.GetArgs[resourceType] = make(map[string]struct{})
-			}
+			vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
 		} else {
 			return fmt.Errorf("resource type \"%s\" not known.", resourceType)
 		}
@@ -106,11 +93,7 @@ func validateArgs(args []string) error {
 			if strings.Contains(resourceName, "/") {
 				return fmt.Errorf("there is no need to specify a resource type as a separate argument when passing arguments in resource/name form (e.g. 'omc get resource/<resource_name>' instead of 'omc get resource resource/<resource_name>'")
 			}
-			if !strings.Contains(resourceType, ".") {
-				vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
-			} else {
-				vars.GetArgs[resourceType][resourceName] = struct{}{}
-			}
+			vars.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 		}
 	}
 	return nil
