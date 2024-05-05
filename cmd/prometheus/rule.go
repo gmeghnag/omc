@@ -115,7 +115,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 			if outputFlag == "wide" {
 				showGroup = true
 			}
-			data = helpers.GetData(data, showGroup, false, "", outputFlag, 6, _list)
+			data = helpers.GetData(data, showGroup, false, "", outputFlag, 7, _list)
 		}
 	}
 
