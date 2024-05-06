@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"log"
@@ -279,22 +280,27 @@ func PrintOutput(resource interface{}, columns int16, outputFlag string, resourc
 
 func Cat(filePath string) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, "error: file "+filePath+" does not exist")
+		fmt.Fprintln(os.Stderr, "error: could not find file "+filePath)
 		os.Exit(1)
 	}
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: can't open file "+filePath)
+		fmt.Fprintln(os.Stderr, "error: could not open file "+filePath)
 		os.Exit(1)
 	}
-	defer file.Close()
+	defer func() {
+		if err = file.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, "error: could not close file "+filePath)
+			os.Exit(1)
+		}
+	}()
 
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error: could not read file "+filePath)
+		os.Exit(1)
 	}
+	fmt.Print(string(fileBytes[:]))
 }
 
 func GetJsonTemplate(outputStringVar string) string {
