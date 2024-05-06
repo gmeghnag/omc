@@ -111,13 +111,13 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 func InternalUnstructuredApiResource(unstruct unstructured.Unstructured) (*metav1.Table, error) {
 	resourceKind := strings.ToLower(unstruct.GetKind())
 	table := &metav1.Table{}
-	if vars.ShowNamespace == true && unstruct.GetNamespace() != "" {
+	if vars.ShowNamespace && unstruct.GetNamespace() != "" {
 		table.ColumnDefinitions = []metav1.TableColumnDefinition{
 			{Name: "Namespace", Type: "string", Format: "name"},
 			{Name: "Name", Type: "string", Format: "string"},
 			{Name: "Created At", Type: "date"},
 		}
-		if vars.ShowKind == true || vars.Namespace == "" {
+		if vars.ShowKind || vars.Namespace == "" {
 			table.Rows = []metav1.TableRow{{Cells: []interface{}{unstruct.GetNamespace(), resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
 		} else {
 			table.Rows = []metav1.TableRow{{Cells: []interface{}{unstruct.GetNamespace(), unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
@@ -128,7 +128,7 @@ func InternalUnstructuredApiResource(unstruct unstructured.Unstructured) (*metav
 			{Name: "Name", Type: "string", Format: "name"},
 			{Name: "Created At", Type: "date"},
 		}
-		if vars.ShowKind == true || vars.Namespace == "" {
+		if vars.ShowKind || vars.Namespace == "" {
 			table.Rows = []metav1.TableRow{{Cells: []interface{}{resourceKind + "." + strings.Split(unstruct.GetAPIVersion(), "/")[0] + "/" + unstruct.GetName(), unstruct.GetCreationTimestamp().Time.UTC().Format("2006-01-02T15:04:05")}}}
 
 		} else {
