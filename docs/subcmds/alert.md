@@ -4,7 +4,7 @@ It allows to retrieve the alerting rules [<sup class="omc-apex">1</sup>](https:/
 ## `groups`
 Retrieve `PrometheusRules` grouped by component:
 ```yaml
-omc alert groups
+omc prometheus alertgroup insights -oyaml
 ```
 
 1.  :man_raising_hand: I'm a code annotation! I can contain `code`, __formatted
@@ -12,6 +12,7 @@ omc alert groups
 
 <details>
 <summary>OUTPUT</summary>
+
 ```yaml
 data:
   groups:
@@ -88,7 +89,7 @@ status: success
 ## `rules`
 PrometheusRules present in the cluster; it's possible to filter them, as an example by the status, if we are interested only for the `firing` ones we can execute:
 ``` 
-$ omc alert rules -s firing 
+$ omc prometheus alertrules -s firing
 RULE                                 STATE    AGE   ALERTS   ACTIVE SINCE
 ClusterNotUpgradeable                firing   10s   1        10 Jan 23 10:20 UTC
 UpdateAvailable                      firing   17s   1        22 Jan 23 04:59 UTC
@@ -103,8 +104,9 @@ CsvAbnormalFailedOver2Min            firing   21s   1        12 Jan 23 10:14 UTC
 
 <details>
 <summary> Get AlertingRules by group name</summary>
+
 ```
-$ omc alert rule --group etcd
+$ omc prometheus alertrule --group etcd
 RULE                              STATE      AGE   ALERTS   ACTIVE SINCE
 etcdMembersDown                   inactive   9s    0        ----
 etcdNoLeader                      inactive   9s    0        ----
