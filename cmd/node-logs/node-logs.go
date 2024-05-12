@@ -11,6 +11,7 @@ import (
 
 var NodeLogs = &cobra.Command{
 	Use: "node-logs",
+	Short: "Display and filter node logs.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			fmt.Println("The following node services logs are available to be read:")
