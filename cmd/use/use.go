@@ -33,16 +33,16 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func useContext(path string, omcConfigFile string, idFlag string) {
+func useContext(path string, omcConfigFile string, idFlag string) error {
 	if path != "" {
 		_path, err := findMustGatherIn(path)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 		l := strings.Split(_path, "/")
 		path = strings.Join(l[0:(len(l)-1)], "/")
 		path = strings.TrimSuffix(path, "/")
+		vars.MustGatherRootPath = path
 	}
 
 	// read json omcConfigFile
@@ -103,7 +103,7 @@ func useContext(path string, omcConfigFile string, idFlag string) {
 	}
 	file, _ = json.MarshalIndent(config, "", " ")
 	_ = os.WriteFile(omcConfigFile, file, 0644)
-
+	return nil
 }
 
 func findMustGatherIn(path string) (string, error) {
@@ -145,6 +145,22 @@ func findMustGatherIn(path string) (string, error) {
 	return findMustGatherIn(path + "/" + dirName)
 }
 
+func MustGatherInfo() {
+	fmt.Printf("Must-Gather  : %s\nProject      : %s\n", vars.MustGatherRootPath, vars.Namespace)
+	InfrastrctureFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+	if InfrastrctureFilePathExists {
+		_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+		infrastructureList := configv1.InfrastructureList{}
+		if err := yaml.Unmarshal([]byte(_file), &infrastructureList); err != nil {
+			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+			os.Exit(1)
+		} else {
+			fmt.Printf("ApiServerURL : %s\n", infrastructureList.Items[0].Status.APIServerURL)
+			fmt.Printf("Platform     : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
+		}
+	}
+}
+
 // useCmd represents the use command
 var UseCmd = &cobra.Command{
 	Use:   "use",
@@ -159,19 +175,7 @@ var UseCmd = &cobra.Command{
 		path := ""
 		isCompressedFile := false
 		if len(args) == 0 && idFlag == "" {
-			fmt.Printf("Must-Gather  : %s\nProject      : %s\n", vars.MustGatherRootPath, vars.Namespace)
-			InfrastrctureFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
-			if InfrastrctureFilePathExists {
-				_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
-				infrastructureList := configv1.InfrastructureList{}
-				if err := yaml.Unmarshal([]byte(_file), &infrastructureList); err != nil {
-					fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
-					os.Exit(1)
-				} else {
-					fmt.Printf("ApiServerURL : %s\n", infrastructureList.Items[0].Status.APIServerURL)
-					fmt.Printf("Platform     : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
-				}
-			}
+			MustGatherInfo()
 			os.Exit(0)
 		}
 		if len(args) > 1 {
@@ -216,7 +220,12 @@ var UseCmd = &cobra.Command{
 			path = rootfile
 		}
 
-		useContext(path, viper.ConfigFileUsed(), idFlag)
+		err = useContext(path, viper.ConfigFileUsed(), idFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		MustGatherInfo()
 	},
 }
 
