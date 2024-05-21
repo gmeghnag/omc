@@ -248,7 +248,9 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podPath)
 						os.Exit(1)
 					}
-					UnstructuredItems.Items = append(UnstructuredItems.Items, podItem)
+					if podItem.Object != nil {
+						UnstructuredItems.Items = append(UnstructuredItems.Items, podItem)
+					}
 				}
 			} else if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
 				fmt.Fprintln(os.Stderr, err)
