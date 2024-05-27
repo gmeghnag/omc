@@ -1,0 +1,3 @@
+2023-11-02T06:12:08.604390676Z I1102 06:12:08.604739       1 test_app.go:242] My Info LogMessage
+2023-11-02T06:12:08.604740676Z W1103 06:12:08.604740       1 test_app_go:542] My Warning LogMessage
+2023-11-02T06:12:08.604741676Z E1106 06:12:08.604741       1 test_app_go:542] My Error LogMessage

@@ -20,27 +20,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/gmeghnag/omc/cmd/helpers"
-	"github.com/gmeghnag/omc/vars"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
-func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, allContainersFlag bool, logLevels []string) {
-	var logFile string
-	if previousFlag {
-		if vars.InsecureLogs {
-			logFile = "previous.insecure.log"
-		} else {
-			logFile = "previous.log"
-		}
-	} else {
-		if vars.InsecureLogs {
-			logFile = "current.insecure.log"
-		} else {
-			logFile = "current.log"
-		}
-	}
+func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, rotatedFlag bool, allContainersFlag bool, logLevels []string) {
+	var logFilter logLineFilter = NewCRILogFilter(logLevels, nil)
 	var _Items v1.PodList
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
 	_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
@@ -77,11 +62,15 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		} else {
 			if allContainersFlag {
 				for _, c := range Pod.Spec.Containers {
-					if len(logLevels) > 0 {
-						FilterCatLogs(CurrentNamespacePath+"/pods/"+Pod.Name+"/"+c.Name+"/"+c.Name+"/logs/"+logFile, logLevels)
-					} else {
-						helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs/" + logFile)
+					log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs")
+					log.WithFilter(logFilter)
+					if previousFlag {
+						log.FromPrevious()
 					}
+					if rotatedFlag {
+						log.FromRotated()
+					}
+					log.Read(os.Stdout)
 				}
 				return
 			} else {
@@ -114,11 +103,15 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 				os.Exit(1)
 			}
 		} else {
-			if len(logLevels) > 0 {
-				FilterCatLogs(CurrentNamespacePath+"/pods/"+Pod.Name+"/"+containerMatch+"/"+containerMatch+"/logs/"+logFile, logLevels)
-			} else {
-				helpers.Cat(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/" + logFile)
+			log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/")
+			log.WithFilter(logFilter)
+			if previousFlag {
+				log.FromPrevious()
 			}
+			if rotatedFlag {
+				log.FromRotated()
+			}
+			log.Read(os.Stdout)
 		}
 	}
 	if podMatch == "" {

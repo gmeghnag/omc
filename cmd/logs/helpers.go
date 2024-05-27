@@ -18,17 +18,6 @@ var (
 	tagDelimiter = []byte(":")
 )
 
-const (
-	// RFC3339NanoFixed is the fixed width version of time.RFC3339Nano.
-	RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
-	// RFC3339NanoLenient is the variable width RFC3339 time format for lenient parsing of strings into timestamps.
-	RFC3339NanoLenient = "2006-01-02T15:04:05.999999999Z07:00"
-	// timeFormatOut is the format for writing timestamps to output.
-	timeFormatOut = RFC3339NanoFixed
-	// timeFormatIn is the format for parsing timestamps from other logs.
-	timeFormatIn = RFC3339NanoLenient
-)
-
 // logMessage is the CRI internal log type.
 type logMessage struct {
 	timestamp time.Time
