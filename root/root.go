@@ -27,6 +27,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/describe"
 	"github.com/gmeghnag/omc/cmd/etcd"
 	"github.com/gmeghnag/omc/cmd/get"
+	"github.com/gmeghnag/omc/cmd/haproxy"
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
@@ -86,6 +87,7 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	RootCmd.AddCommand(
+		haproxy.Haproxy,
 		certs.Certs,
 		cmd.VersionCmd,
 		cmd.ProjectCmd,
