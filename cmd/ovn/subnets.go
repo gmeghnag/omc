@@ -85,12 +85,27 @@ var SubnetsCmd = &cobra.Command{
 						ipv4Array = append(ipv4Array, ip)
 					}
 				}
-				if len(ipv4Array) != 0 {
-					ipv4String = strings.Join(ipv4Array, ",")
+			}
+			// "k8s.ovn.org/host-addresses" was renamed to "k8s.ovn.org/host-cidrs" in 4.14
+			hostCIDRS := Node.ObjectMeta.Annotations["k8s.ovn.org/host-cidrs"]
+			if hostCIDRS != "" {
+				err := yaml.Unmarshal([]byte(hostCIDRS), &ipsArray)
+				if err != nil {
+					panic(err)
 				}
-				if len(ipv6Array) != 0 {
-					ipv6String = strings.Join(ipv6Array, ",")
+				for _, ip := range ipsArray {
+					if strings.Contains(ip, ":") {
+						ipv6Array = append(ipv6Array, ip)
+					} else {
+						ipv4Array = append(ipv4Array, ip)
+					}
 				}
+			}
+			if len(ipv4Array) != 0 {
+				ipv4String = strings.Join(ipv4Array, ",")
+			}
+			if len(ipv6Array) != 0 {
+				ipv6String = strings.Join(ipv6Array, ",")
 			}
 			if ipv6String != "" {
 				row = append(row, ipv6String)
