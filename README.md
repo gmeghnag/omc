@@ -94,3 +94,10 @@ builder-token-9f5cx        Secret      47h   ca-bundle   CN=*.apps.example.com  
 builder-token-9f5cx        Secret      47h   ca-bundle   CN=ingress-operator@1683105658                      2023-05-03 09:20:57 +0000 UTC 　2025-05-02 09:20:58 +0000 UTC
 <...>
 ```
+- Retreive HAProxy backends (of any namespace) from the ingresscontroller (HAProxy) config in the must-gather:
+```
+$ omc haproxy backends
+NAMESPACE       NAME                            INGRESSCONTROLLER    SERVICES                        PORT            TERMINATION
+testdata        rails-postgresql-example        default              rails-postgresql-example        web(8080)       http
+other-testdata  hello-node-secure               default              hello-node                      8080            edge/Redirect
+```
