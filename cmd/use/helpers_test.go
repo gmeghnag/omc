@@ -2,6 +2,7 @@ package use
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -11,6 +12,7 @@ func TestDecompression(t *testing.T) {
 		"testdata/must-gather.zip":    ExtractZip,
 		"testdata/must-gather.tar":    ExtractTar,
 		"testdata/must-gather.tar.gz": ExtractTarGz,
+		"testdata/must-gather.tar.xz": extractTarXZ,
 	}
 
 	for path, f := range tests {
@@ -20,7 +22,7 @@ func TestDecompression(t *testing.T) {
 		}
 		defer clearTestFiles(t)
 
-		if want != mgRootDir {
+		if filepath.Clean(want) != filepath.Clean(mgRootDir) {
 			t.Errorf("expected %q, got %q", want, mgRootDir)
 		}
 		clearTestFiles(t)
