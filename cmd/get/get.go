@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strings"
 
 	goyaml "gopkg.in/yaml.v2"
@@ -478,6 +479,7 @@ func handleOutput(w io.Writer) {
 			includesClusterScoped = true
 		}
 	}
+	sort.Strings(_resources)
 	resources := strings.Join(_resources, ",")
 	if vars.OutputStringVar == "json" {
 		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
