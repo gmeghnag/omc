@@ -8,8 +8,8 @@ import (
 func TestDecompression(t *testing.T) {
 	want := "testdata/must-gather.sample"
 	tests := map[string]func(string, string) (string, error){
-		"testdata/must-gather.zip": ExtractZip,
-		"testdata/must-gather.tar": ExtractTar,
+		"testdata/must-gather.zip":    ExtractZip,
+		"testdata/must-gather.tar":    ExtractTar,
 		"testdata/must-gather.tar.gz": ExtractTarGz,
 	}
 
