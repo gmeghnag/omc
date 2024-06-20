@@ -2,12 +2,14 @@ package use
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/gmeghnag/omc/types"
+	"github.com/gmeghnag/omc/vars"
 )
 
 func TestUseContext(t *testing.T) {
@@ -152,6 +154,9 @@ func TestUseContext(t *testing.T) {
 			if !compareConfig(actualConfig, expectedConfig, tc.ignoreConfigID) {
 				t.Errorf("Expected file content %+v, got %+v", expectedConfig, actualConfig)
 			}
+
+			// Ensure state matches the current path and project
+			checkContextConsistency(t, actualConfig)
 		})
 	}
 }
@@ -194,4 +199,37 @@ func compareConfig(actualConfig types.Config, expectedConfig types.Config, ignor
 
 	// This line executes after all the condition checks.
 	return compareContexts(actualConfig.Contexts, expectedConfig.Contexts, ignoreConfigID)
+}
+
+// check that what's stored in memory matches the currently selected context
+func checkContextConsistency(t *testing.T, config types.Config) {
+	t.Helper()
+	c, err := currentContext(config.Contexts)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if c.Path != vars.MustGatherRootPath {
+		t.Errorf("in-memory path does not match current context. Want %q, got %q",
+			c.Path,
+			vars.MustGatherRootPath,
+		)
+	}
+
+	if c.Project != vars.Namespace {
+		t.Errorf("in-memory project does not match current context. Want %q, got %q",
+			c.Project,
+			vars.Namespace,
+		)
+	}
+}
+
+func currentContext(contexts []types.Context) (types.Context, error) {
+	for _, c := range contexts {
+		if c.Current == "*" {
+			return c, nil
+		}
+	}
+
+	return types.Context{}, errors.New("could not find current context")
 }

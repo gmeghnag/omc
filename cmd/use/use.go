@@ -64,6 +64,7 @@ func useContext(path string, omcConfigFile string, idFlag string) error {
 			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project})
 			configId = c.Id
 			found = true
+			vars.Namespace = c.Project
 		} else {
 			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project})
 		}
@@ -80,8 +81,10 @@ func useContext(path string, omcConfigFile string, idFlag string) error {
 			}
 			if len(namespaces) == 1 {
 				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: namespaces[0]})
+				vars.Namespace = namespaces[0]
 			} else {
 				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: defaultProject})
+				vars.Namespace = defaultProject
 			}
 		}
 
