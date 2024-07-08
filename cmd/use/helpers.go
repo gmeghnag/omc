@@ -15,6 +15,15 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/ulikunitz/xz"
+)
+
+const (
+	fileTypeTar     string = "tar"
+	fileTypeTarGzip string = "tar.gz"
+	fileTypeXZ      string = "tar.xz"
+	fileTypeZip     string = "zip"
 )
 
 func humanizeBytes(bytes int64) string {
@@ -102,11 +111,10 @@ func isTarFile(path string) (bool, error) {
 		return false, err
 	}
 	defer file.Close()
-
 	tarReader := tar.NewReader(file)
 	_, err = tarReader.Next()
 	if err != nil {
-		return false, nil
+		return false, fmt.Errorf("unable to read tarbal file: %w", err)
 	}
 
 	return true, nil
@@ -128,24 +136,48 @@ func isGzip(path string) (bool, error) {
 	return false, err
 }
 
-func IsCompressedFile(path string) (bool, error) {
+func isXZ(path string) (bool, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	_, err = xz.NewReader(file)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func IsCompressedFile(path string) (bool, string, error) {
 	result, err := isGzip(path)
 	if err != nil {
-		return false, err
-	} else if result == true {
-		return result, nil
+		return false, "", err
+	} else if result {
+		return result, fileTypeTarGzip, nil
 	}
+
 	result, err = isZip(path)
 	if err != nil {
-		return false, err
-	} else if result == true {
-		return result, nil
+		return false, "", err
+	} else if result {
+		return result, fileTypeZip, nil
 	}
+
+	result, err = isXZ(path)
+	if err != nil {
+		return false, "", err
+	} else if result {
+		return result, fileTypeXZ, nil
+	}
+
 	result, err = isTarFile(path)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	return result, nil
+
+	return result, fileTypeTar, nil
 }
 
 func IsRemoteFile(path string) bool {
@@ -220,28 +252,22 @@ func CopyFile(path string, destinationfile string) error {
 	return err
 }
 
-func DecompressFile(path string, outpath string) (string, error) {
+func DecompressFile(path string, outpath string, fileType string) (string, error) {
 	fmt.Println("decompressing file " + path + " in " + outpath)
+	var err error
 	var mgRootDir string = ""
-	result, err := isGzip(path)
-	if err == nil {
-		if result {
-			mgRootDir, err = ExtractTarGz(path, outpath)
-		} else {
-			result, err := isTarFile(path)
-			if err == nil {
-				if result {
-					mgRootDir, err = ExtractTar(path, outpath)
-				} else {
-					result, err := isZip(path)
-					if err == nil {
-						if result {
-							mgRootDir, err = ExtractZip(path, outpath)
-						}
-					}
-				}
-			}
-		}
+
+	switch fileType {
+	case fileTypeTar:
+		mgRootDir, err = ExtractTar(path, outpath)
+	case fileTypeTarGzip:
+		mgRootDir, err = ExtractTarGz(path, outpath)
+	case fileTypeXZ:
+		mgRootDir, err = extractTarXZ(path, outpath)
+	case fileTypeZip:
+		mgRootDir, err = ExtractZip(path, outpath)
+	default:
+		return "", fmt.Errorf("unable to decompress file: unknown file type %s", fileType)
 	}
 
 	return mgRootDir, err
@@ -396,4 +422,18 @@ func ExtractTarGz(gzipfile string, destinationdir string) (string, error) {
 		return "", err
 	}
 	return ExtractTarStream(uncompressedStream, destinationdir)
+}
+
+func extractTarXZ(xzFile string, destinationdir string) (string, error) {
+	stream, err := os.Open(xzFile)
+	if err != nil {
+		return "", fmt.Errorf("error: cannot open %q: %w", xzFile, err)
+	}
+	defer stream.Close()
+
+	xzReader, err := xz.NewReader(stream)
+	if err != nil {
+		return "", fmt.Errorf("error: cannot uncompress xz file %q: %w", xzFile, err)
+	}
+	return ExtractTarStream(xzReader, destinationdir)
 }

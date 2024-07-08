@@ -176,6 +176,7 @@ var UseCmd = &cobra.Command{
 		var err error
 		idFlag, _ := cmd.Flags().GetString("id")
 		path := ""
+		fileType := ""
 		isCompressedFile := false
 		if len(args) == 0 && idFlag == "" {
 			MustGatherInfo()
@@ -205,7 +206,7 @@ var UseCmd = &cobra.Command{
 
 			isDir, _ := helpers.IsDirectory(path)
 			if !isDir {
-				isCompressedFile, _ = IsCompressedFile(path)
+				isCompressedFile, fileType, _ = IsCompressedFile(path)
 				if !isCompressedFile {
 					fmt.Fprintln(os.Stderr, "Error: "+path+" is not a directory not a compressed file.")
 					os.Exit(1)
@@ -215,7 +216,7 @@ var UseCmd = &cobra.Command{
 
 		if isCompressedFile {
 			outputpath := filepath.Dir(path)
-			rootfile, err := DecompressFile(path, outputpath)
+			rootfile, err := DecompressFile(path, outputpath, fileType)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
 				os.Exit(1)
