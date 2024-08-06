@@ -888,8 +888,3 @@ oauthclients:
   name: oauthclient
   namespaced: false
   plural: oauthclients
-podnetworkconnectivitychecks:
-  group: controlplane.operator.openshift.io
-  name: podnetworkconnectivitychecks
-  namespaced: false
-  plural: podnetworkconnectivitychecks
