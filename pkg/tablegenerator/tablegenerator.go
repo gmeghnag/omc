@@ -171,8 +171,15 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Ta
 			if len(vars.CRD.Spec.Versions[i].AdditionalPrinterColumns) > 0 {
 				for _, column := range vars.CRD.Spec.Versions[i].AdditionalPrinterColumns {
 					table.ColumnDefinitions = append(table.ColumnDefinitions, metav1.TableColumnDefinition{Name: column.Name, Format: "string"})
-					if column.Name == "Age" || column.Type == "date" {
+					if column.Name == "Age" {
 						cells = append(cells, helpers.TranslateTimestamp(unstruct.GetCreationTimestamp()))
+					}
+					if column.Name == "Since" {
+						v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
+						parsedTime, _ := time.Parse(time.RFC3339, v)
+						metav1Time := metav1.Time{Time: parsedTime}
+						v = helpers.TranslateTimestamp(metav1Time)
+						cells = append(cells, v)
 					} else {
 						v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
 						cells = append(cells, v)
