@@ -56,6 +56,35 @@ func TestRotatedFiles(t *testing.T) {
 	}
 }
 
+func TestFromInsecure(t *testing.T) {
+	tests := []struct {
+		name      string
+		logReader *LogReader
+		expected  *[]string
+	}{
+		{
+			name:      "Handle insecure logs given a list of requested log files",
+			logReader: NewLogReader(""), // defaults to current.log
+			expected:  &[]string{"current.insecure.log"},
+		},
+		{
+			name:      "Handle insecure logs but only touch files suffixed .log",
+			logReader: &LogReader{"", &[]string{"current.log", "current.fakelog"}, nil},
+			expected:  &[]string{"current.insecure.log"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.logReader.FromInsecure()
+
+			if !reflect.DeepEqual(tc.logReader.files, tc.expected) {
+				t.Fatalf("Expected : %v, got: %v", tc.expected, tc.logReader.files)
+			}
+		})
+	}
+}
+
 func TestOpen(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -86,7 +115,7 @@ func TestOpen(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := open(tc.fixture)
-			if err == nil && tc.expectedError {
+			if tc.expectedError && err == nil {
 				t.Errorf("Expected error, got %v", got)
 			}
 			expectedType := reflect.TypeOf(tc.expected)
