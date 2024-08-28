@@ -66,6 +66,7 @@ var Logs = &cobra.Command{
 		containerName, _ := cmd.Flags().GetString("container")
 		previousFlag, _ := cmd.Flags().GetBool("previous")
 		rotatedFlag, _ := cmd.Flags().GetBool("rotated")
+		insecureFlag, _ := cmd.Flags().GetBool("insecure")
 		allContainersFlag, _ := cmd.Flags().GetBool("all-containers")
 		logLevels := []string{}
 		if LogLevel != "" {
@@ -85,10 +86,10 @@ var Logs = &cobra.Command{
 					fmt.Fprintln(os.Stderr, "arguments in resource/name form must have a single resource and name")
 					os.Exit(1)
 				}
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
 			} else {
 				podName = s[0]
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
 			}
 		}
 		if len(args) == 2 {
@@ -103,7 +104,7 @@ var Logs = &cobra.Command{
 						os.Exit(1)
 					}
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
 				}
 			} else {
 				if containerName != "" {
@@ -112,7 +113,7 @@ var Logs = &cobra.Command{
 				} else {
 					podName = args[0]
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
 				}
 			}
 		}
