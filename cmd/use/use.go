@@ -162,6 +162,17 @@ func MustGatherInfo() {
 			fmt.Printf("Platform     : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
 		}
 	}
+	clusterversionFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
+	if clusterversionFilePathExists {
+		_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
+		ClusterVersion := configv1.ClusterVersion{}
+		if err := yaml.Unmarshal([]byte(_file), &ClusterVersion); err != nil {
+			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
+			os.Exit(1)
+		} else {
+			fmt.Printf("ClusterID    : %s\n", ClusterVersion.Spec.ClusterID)
+		}
+	}
 }
 
 // useCmd represents the use command
