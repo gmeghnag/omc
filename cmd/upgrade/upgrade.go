@@ -28,6 +28,8 @@ import (
 
 var DesiredVersion string
 
+const omcDarwinFile = "omc_Darwin"
+
 func upgradeBinary(repoName string) {
 	ex, err := os.Executable()
 	if err != nil {
@@ -59,9 +61,11 @@ func upgradeBinary(repoName string) {
 		fmt.Println("This command is not available for windows.")
 		fmt.Println("Open an issue on the GitHub repo https://github.com/gmeghnag/omc if you want it impemented.")
 	case "darwin":
-		omcUrl := "https://github.com/" + repoName + "/releases/download/" + DesiredVersion + "/omc_Darwin_x86_64"
+		arch := runtime.GOARCH
+		omcBinFile := omcDarwinFile + "_" + arch
+		omcUrl := "https://github.com/" + repoName + "/releases/download/" + DesiredVersion + "/" + omcBinFile
 		if DesiredVersion == "latest" {
-			omcUrl = "https://github.com/" + repoName + "/releases/" + DesiredVersion + "/download/omc_Darwin_x86_64"
+			omcUrl = "https://github.com/" + repoName + "/releases/" + DesiredVersion + "/download/" + omcBinFile
 		}
 		err = updateOmcExecutable(omcExecutablePath, omcUrl, DesiredVersion)
 		if err != nil {
