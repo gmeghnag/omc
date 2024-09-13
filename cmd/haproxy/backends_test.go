@@ -35,6 +35,7 @@ func TestParseHAProxyConfig(t *testing.T) {
 			includeOpenShiftNamespaces: false,
 			expected: []*backend{
 				&backend{namespace: "testdata", routeName: "rails-postgresql-example", ingressController: "default", service: &service{serviceName: "rails-postgresql-example", port: &port{portNr: 8080, portName: "web"}}, termination: "be_http"},
+				&backend{namespace: "testdata", routeName: "app.example.com", ingressController: "default", service: &service{serviceName: "hello-node", port: &port{portNr: 8080, portName: ""}}, termination: "be_http"},
 				&backend{namespace: "other-testdata", routeName: "hello-node-secure", ingressController: "default", service: &service{serviceName: "hello-node", port: &port{portNr: 8080, portName: ""}}, termination: "be_edge_http"}},
 		},
 		{
@@ -45,6 +46,7 @@ func TestParseHAProxyConfig(t *testing.T) {
 			expected: []*backend{
 				&backend{namespace: "openshift-monitoring", routeName: "thanos-querier", ingressController: "default", service: &service{serviceName: "thanos-querier", port: &port{portNr: 9091, portName: "web"}}, termination: "be_secure"},
 				&backend{namespace: "testdata", routeName: "rails-postgresql-example", ingressController: "default", service: &service{serviceName: "rails-postgresql-example", port: &port{portNr: 8080, portName: "web"}}, termination: "be_http"},
+				&backend{namespace: "testdata", routeName: "app.example.com", ingressController: "default", service: &service{serviceName: "hello-node", port: &port{portNr: 8080, portName: ""}}, termination: "be_http"},
 				&backend{namespace: "other-testdata", routeName: "hello-node-secure", ingressController: "default", service: &service{serviceName: "hello-node", port: &port{portNr: 8080, portName: ""}}, termination: "be_edge_http"}},
 		},
 		{
@@ -52,7 +54,9 @@ func TestParseHAProxyConfig(t *testing.T) {
 			configFile:                 "../../testdata/ingress_controllers/default/router-default-abc123-a1b1c3/haproxy.config",
 			wantedNamespace:            "testdata",
 			includeOpenShiftNamespaces: true,
-			expected:                   []*backend{&backend{namespace: "testdata", routeName: "rails-postgresql-example", ingressController: "default", service: &service{serviceName: "rails-postgresql-example", port: &port{portNr: 8080, portName: "web"}}, termination: "be_http"}},
+			expected: []*backend{
+				&backend{namespace: "testdata", routeName: "rails-postgresql-example", ingressController: "default", service: &service{serviceName: "rails-postgresql-example", port: &port{portNr: 8080, portName: "web"}}, termination: "be_http"},
+				&backend{namespace: "testdata", routeName: "app.example.com", ingressController: "default", service: &service{serviceName: "hello-node", port: &port{portNr: 8080, portName: ""}}, termination: "be_http"}},
 		},
 	}
 
@@ -133,6 +137,12 @@ func TestIsBackendBlock(t *testing.T) {
 			line:             "backend be_edge_http:testdata:hello-node",
 			includeOpenShift: true,
 			expected:         &backend{termination: "be_edge_http", namespace: "testdata", routeName: "hello-node", ingressController: "", service: (*service)(nil)},
+		},
+		{
+			name:             "return backend from valid backend block including dot in route",
+			line:             "backend be_edge_http:testdata:hello-node.example.com",
+			includeOpenShift: true,
+			expected:         &backend{termination: "be_edge_http", namespace: "testdata", routeName: "hello-node.example.com", ingressController: "", service: (*service)(nil)},
 		},
 		{
 			name:             "return nil from invalid backend block",

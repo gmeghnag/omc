@@ -149,7 +149,7 @@ func newBackendFromLine(raw []string) *backend {
 }
 
 func isBackendBlock(line string) *backend {
-	backendRe := `^backend ([a-z0-9\-\_]*):([a-z0-9\-\_]*):([a-z0-9\-\_]*)$`
+	backendRe := `^backend ([a-z0-9\-\_]*):([a-z0-9\-\_]*):([a-z0-9\-\_\.]*)$`
 	re := regexp.MustCompile(backendRe)
 
 	matches := re.FindStringSubmatch(line)
