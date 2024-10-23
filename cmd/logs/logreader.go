@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // logReader reads (current/previous/rotated) logs from a tree in a base directory:
@@ -63,7 +64,19 @@ func (l *LogReader) WithFilter(llf logLineFilter) {
 }
 
 func (l *LogReader) FromPrevious() {
-	l.files = &[]string{previousLogFile, previousInsecureLogFile}
+	l.files = &[]string{previousLogFile}
+}
+
+func (l *LogReader) FromInsecure() {
+	// iterate selected logs and read from its insecure siblings instead
+	insecure := []string{}
+	for _, f := range *l.files {
+		nf := strings.TrimSuffix(f, ".log")
+		if f != nf {
+			insecure = append(insecure, nf+".insecure.log")
+		}
+	}
+	*l.files = insecure
 }
 
 func (l *LogReader) FromRotated() {
@@ -77,7 +90,10 @@ func (l *LogReader) Read(w io.Writer) {
 	for _, filename := range *l.files {
 		reader, err := open(l.dirname + "/" + filename)
 		if err != nil {
-			fmt.Println(err)
+			if !os.IsNotExist(err) {
+				// since we're scanning through logs dynamically don't error out if log files do not exist
+				fmt.Errorf("failed to open log file: %v", err)
+			}
 			continue
 		}
 		defer reader.Close()
@@ -117,7 +133,7 @@ func (l *LogReader) applyFilter(raw []byte) []byte {
 func open(filename string) (io.ReadCloser, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %v", err)
+		return nil, err
 	}
 	var reader io.ReadCloser
 	reader, err = gzip.NewReader(file)

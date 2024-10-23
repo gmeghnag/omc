@@ -47,12 +47,18 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 	}
 	defer resp.Body.Close()
 
-	err = os.Remove(omcExecutablePath)
+	tempFile, err := os.CreateTemp("", "omcExecutable_*.tmp")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return err
 	}
-	f, err := os.OpenFile(omcExecutablePath, os.O_CREATE|os.O_WRONLY, 0777)
+	defer tempFile.Close()
+
+	err = tempFile.Chmod(0755)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.OpenFile(tempFile.Name(), os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		return err
 	}
@@ -65,6 +71,11 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 	)
 
 	_, err = io.Copy(io.MultiWriter(f, bar), resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = os.Rename(tempFile.Name(), omcExecutablePath)
 	if err != nil {
 		return err
 	}

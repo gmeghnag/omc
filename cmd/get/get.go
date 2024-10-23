@@ -95,14 +95,10 @@ var GetCmd = &cobra.Command{
 				klog.V(1).ErrorS(err, "ERROR")
 				os.Exit(1)
 			}
-			// namespaces, clusterloggings and clusterlogforwarders locations
+			// namespaces and projects resources
 			// are exceptions to must-gather resources structure
 			if resourceNamePlural == "namespaces" || resourceNamePlural == "projects" {
 				getNamespacesResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
-			} else if resourceNamePlural == "clusterloggings" {
-				getClusterLoggingResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
-			} else if resourceNamePlural == "clusterlogforwarders" {
-				getClusterLogForwarderResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if resourceNamePlural == "podnetworkconnectivitychecks" {
 				getPodNetworkConnectivityChecksResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if namespaced {
@@ -273,41 +269,6 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 	}
 }
 
-func getClusterLogForwarderResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
-	resourcesYamlPath := vars.MustGatherRootPath + "/cluster-logging/clo/clusterlogforwarder_instance.yaml"
-	_file, err := ioutil.ReadFile(resourcesYamlPath)
-	if err == nil {
-		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourcesYamlPath)
-			os.Exit(1)
-		}
-		for _, item := range UnstructuredItems.Items {
-			_, ok := resources[item.GetName()]
-			if ok || len(resources) == 0 {
-				handleObject(item)
-			}
-		}
-	}
-}
-
-func getClusterLoggingResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
-	resourcesYamlPath := vars.MustGatherRootPath + "/cluster-logging/clo/clusterlogging_instance.yaml"
-	_file, err := ioutil.ReadFile(resourcesYamlPath)
-	if err == nil {
-		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourcesYamlPath)
-			os.Exit(1)
-		}
-		for _, item := range UnstructuredItems.Items {
-			_, ok := resources[item.GetName()]
-			if ok || len(resources) == 0 {
-				handleObject(item)
-			}
-		}
-	}
-}
 
 func getNamespacesResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	if len(resources) > 0 {
