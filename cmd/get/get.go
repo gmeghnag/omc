@@ -99,6 +99,8 @@ var GetCmd = &cobra.Command{
 			// are exceptions to must-gather resources structure
 			if resourceNamePlural == "namespaces" || resourceNamePlural == "projects" {
 				getNamespacesResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+			} else if resourceNamePlural == "podnetworkconnectivitychecks" {
+				getPodNetworkConnectivityChecksResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if namespaced {
 				getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else {
@@ -502,6 +504,24 @@ func handleOutput(w io.Writer) {
 			}
 		} else {
 			vars.Output.WriteTo(w)
+		}
+	}
+}
+
+func getPodNetworkConnectivityChecksResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	resourcesYamlPath := vars.MustGatherRootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
+	_file, err := ioutil.ReadFile(resourcesYamlPath)
+	if err == nil {
+		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourcesYamlPath)
+			os.Exit(1)
+		}
+		for _, item := range UnstructuredItems.Items {
+			_, ok := resources[item.GetName()]
+			if ok || len(resources) == 0 {
+				handleObject(item)
+			}
 		}
 	}
 }
