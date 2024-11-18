@@ -173,6 +173,7 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured) (*metav1.Ta
 					table.ColumnDefinitions = append(table.ColumnDefinitions, metav1.TableColumnDefinition{Name: column.Name, Format: "string"})
 					if column.Name == "Age" {
 						cells = append(cells, helpers.TranslateTimestamp(unstruct.GetCreationTimestamp()))
+						continue
 					}
 					if column.Name == "Since" {
 						v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
