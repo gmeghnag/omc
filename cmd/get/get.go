@@ -233,13 +233,17 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			if resourceNamePlural == "pods" {
 				// tranverse the pods directory and fill in UnstructuredItems.Items
 				podsDir := fmt.Sprintf("%s/namespaces/%s/pods", vars.MustGatherRootPath, namespace)
-				pods, _ := ioutil.ReadDir(podsDir)
+				pods, _ := os.ReadDir(podsDir)
 				for _, pod := range pods {
+					// skip dot-prefixed files (e.g. "AppleDouble encoded Macintosh file")
+					if pod.Name()[0] == '.' {
+						continue
+					}
 					podName := pod.Name()
 					podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
 					_file, err := ioutil.ReadFile(podPath)
 					if err != nil {
-						fmt.Fprintln(os.Stderr, "error: namespace "+namespace+" not found.")
+						fmt.Fprintf(os.Stderr, "error reading %s: %s\n", podPath, err)
 						os.Exit(1)
 					}
 					var podItem unstructured.Unstructured
@@ -268,7 +272,6 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 		}
 	}
 }
-
 
 func getNamespacesResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	if len(resources) > 0 {
