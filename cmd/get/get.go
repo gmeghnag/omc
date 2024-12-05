@@ -208,7 +208,10 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
 			_, err = os.Stat(resourceDir)
 			if err == nil {
-				resourcesFiles, _ := ioutil.ReadDir(resourceDir)
+				resourcesFiles, rErr := ReadDirForResources(resourceDir)
+				if rErr != nil {
+					klog.V(3).ErrorS(err, "Failed to read resources:")
+				}
 				for _, f := range resourcesFiles {
 					resourceYamlPath := resourceDir + "/" + f.Name()
 					_file, _ := ioutil.ReadFile(resourceYamlPath)
@@ -233,12 +236,11 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			if resourceNamePlural == "pods" {
 				// tranverse the pods directory and fill in UnstructuredItems.Items
 				podsDir := fmt.Sprintf("%s/namespaces/%s/pods", vars.MustGatherRootPath, namespace)
-				pods, _ := os.ReadDir(podsDir)
+				pods, rErr := ReadDirForResources(podsDir)
+				if rErr != nil {
+					klog.V(3).ErrorS(err, "Failed to read resources:")
+				}
 				for _, pod := range pods {
-					// skip dot-prefixed files (e.g. "AppleDouble encoded Macintosh file")
-					if pod.Name()[0] == '.' {
-						continue
-					}
 					podName := pod.Name()
 					podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
 					_file, err := ioutil.ReadFile(podPath)
@@ -310,7 +312,10 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 	_file, err := ioutil.ReadFile(resourcePath)
 	if err != nil {
 		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
-		resourcesFiles, _ := ioutil.ReadDir(resourceDir)
+		resourcesFiles, rErr := ReadDirForResources(resourceDir)
+		if rErr != nil {
+			klog.V(3).ErrorS(err, "Failed to read resources:")
+		}
 		for _, f := range resourcesFiles {
 			resourceYamlPath := resourceDir + "/" + f.Name()
 			_file, _ := ioutil.ReadFile(resourceYamlPath)

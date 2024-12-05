@@ -2,12 +2,15 @@ package get
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gmeghnag/omc/vars"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
 )
@@ -144,7 +147,10 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 	crdsPath := vars.MustGatherRootPath + "/cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/"
 	_, err := Exists(crdsPath)
 	if err == nil {
-		crds, _ := ioutil.ReadDir(crdsPath)
+		crds, rErr := ReadDirForResources(crdsPath)
+		if rErr != nil {
+			fmt.Fprintln(os.Stderr, rErr)
+		}
 		for _, f := range crds {
 			crdYamlPath := crdsPath + f.Name()
 			crdByte, _ := ioutil.ReadFile(crdYamlPath)
@@ -188,7 +194,10 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 	}
 	home, _ := os.UserHomeDir()
 	omcCrdsPath := home + "/.omc/customresourcedefinitions/"
-	crds, _ := ioutil.ReadDir(omcCrdsPath)
+	crds, rErr := ReadDirForResources(omcCrdsPath)
+	if rErr != nil {
+		fmt.Fprintln(os.Stderr, rErr)
+	}
 	for _, f := range crds {
 		crdYamlPath := omcCrdsPath + f.Name()
 		crdByte, _ := ioutil.ReadFile(crdYamlPath)
@@ -250,4 +259,35 @@ func Exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func ReadDirForResources(path string) ([]os.DirEntry, error) {
+	klog.V(5).Info("INFO ", fmt.Sprintf("opening '%s'\n", path))
+	return readDirForResources(os.DirFS(path))
+}
+
+// readdir wraps around fs.ReadDir and only return valid resource yaml files
+func readDirForResources(in fs.FS) ([]os.DirEntry, error) {
+	resources := make([]os.DirEntry, 0)
+	files, err := fs.ReadDir(in, ".")
+	if err == nil {
+		for _, file := range files {
+			fileName := file.Name()
+			// validate filename as per k8s validation of a resource
+			if len(validation.IsDNS1123Subdomain(fileName)) == 0 {
+				// only dirs or yaml files are expected as valid resources, e.g.:
+				//  router-default-abcde12345-fgh678 or rendered-worker-abcdef123456.yaml
+				if filepath.Ext(fileName) == ".yaml" || file.IsDir() {
+					fInfo, _ := file.Info()
+					// ignore empty files
+					if fInfo.Size() > 0 {
+						resources = append(resources, file)
+					}
+				}
+			}
+		}
+	} else {
+		err = fmt.Errorf("failed to read dir: %s", err)
+	}
+	return resources, err
 }
