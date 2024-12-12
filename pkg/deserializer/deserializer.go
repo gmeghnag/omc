@@ -20,6 +20,9 @@ import (
 
 	"k8s.io/kubernetes/pkg/apis/coordination"
 	"k8s.io/kubernetes/pkg/apis/networking"
+	networkingv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/networking"
+	policyv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/policy"
+	resourcev1_30 "k8s.io/kubernetes/v1_30/pkg/apis/resource"
 	"k8s.io/kubernetes/pkg/apis/rbac"
 
 	template "github.com/openshift/openshift-apiserver/pkg/template/apis/template"
@@ -167,8 +170,8 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &imagev1.ImageStreamTag{}
 	case *imagev1.ImageTag:
 		return &imagev1.ImageTag{}
-	case *networking.ClusterCIDR:
-		return &networking.ClusterCIDR{}
+	case *networkingv1_28.ClusterCIDR:
+		return &networkingv1_28.ClusterCIDR{}
 	case *networking.IngressClass:
 		return &networking.IngressClass{}
 	case *networking.Ingress:
@@ -179,16 +182,16 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &nodeapi.RuntimeClass{}
 	case *policy.PodDisruptionBudget:
 		return &policy.PodDisruptionBudget{}
-	case *policy.PodSecurityPolicy:
-		return &policy.PodSecurityPolicy{}
+	case *policyv1_28.PodSecurityPolicy:
+		return &policyv1_28.PodSecurityPolicy{}
 	case *project.Project:
 		return &project.Project{}
 	case *project.ProjectRequest:
 		return &project.ProjectRequest{}
 	case *quotav1.AppliedClusterResourceQuota:
 		return &quotav1.AppliedClusterResourceQuota{}
-	case *resource.ResourceClass:
-		return &resource.ResourceClass{}
+	case *resourcev1_30.ResourceClass:
+		return &resourcev1_30.ResourceClass{}
 	case *resource.ResourceClaim:
 		return &resource.ResourceClaim{}
 	case *resource.ResourceClaimTemplate:
