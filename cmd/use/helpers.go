@@ -3,6 +3,7 @@ package use
 import (
 	"archive/tar"
 	"archive/zip"
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -436,4 +437,58 @@ func extractTarXZ(xzFile string, destinationdir string) (string, error) {
 		return "", fmt.Errorf("error: cannot uncompress xz file %q: %w", xzFile, err)
 	}
 	return ExtractTarStream(xzReader, destinationdir)
+}
+
+func extractClientVersion(mustGatherLogsFilePath string) string {
+	filePath := mustGatherLogsFilePath
+	clientVersion := ""
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	// Initialize a scanner to read the file line by line
+	scanner := bufio.NewScanner(file)
+
+	// Variable to store the matching line
+	var clientVersionLine string
+
+	// Counter for the first 20 lines
+	lineCount := 0
+
+	// Read the file line by line
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineCount++
+
+		// Check if the line starts with "ClientVersion: "
+		if strings.HasPrefix(line, "ClientVersion: ") {
+			clientVersionLine = line
+			break // Exit the loop as we found the line
+		}
+
+		// Stop checking after 20 lines as it should be at line 4
+		if lineCount >= 20 {
+			break
+		}
+	}
+
+	// Handle potential scanning error
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+		return ""
+	}
+
+	// Check if we found the line and print the result
+	if clientVersionLine != "" {
+		parts := strings.Split(clientVersionLine, ":")
+		if len(parts) == 2 {
+			// Trim spaces and get the version part
+			clientVersion = strings.TrimSpace(parts[1])
+			return clientVersion
+		}
+	}
+	return ""
 }

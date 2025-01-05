@@ -33,6 +33,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+var singleNamespaceInMustGather bool
+
 func useContext(path string, omcConfigFile string, idFlag string) error {
 	if path != "" {
 		_path, err := findMustGatherIn(path)
@@ -82,6 +84,7 @@ func useContext(path string, omcConfigFile string, idFlag string) error {
 			if len(namespaces) == 1 {
 				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: namespaces[0]})
 				vars.Namespace = namespaces[0]
+				singleNamespaceInMustGather = true
 			} else {
 				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: defaultProject})
 				vars.Namespace = defaultProject
@@ -149,7 +152,12 @@ func findMustGatherIn(path string) (string, error) {
 }
 
 func MustGatherInfo() {
-	fmt.Printf("Must-Gather  : %s\nProject      : %s\n", vars.MustGatherRootPath, vars.Namespace)
+	fmt.Printf("Must-Gather    : %s\n", vars.MustGatherRootPath)
+	if singleNamespaceInMustGather {
+		fmt.Printf("Project        : %s (single project)\n", vars.Namespace)
+	} else {
+		fmt.Printf("Project        : %s\n", vars.Namespace)
+	}
 	InfrastrctureFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
 	if InfrastrctureFilePathExists {
 		_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
@@ -158,8 +166,8 @@ func MustGatherInfo() {
 			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
 			os.Exit(1)
 		} else {
-			fmt.Printf("ApiServerURL : %s\n", infrastructureList.Items[0].Status.APIServerURL)
-			fmt.Printf("Platform     : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
+			fmt.Printf("ApiServerURL   : %s\n", infrastructureList.Items[0].Status.APIServerURL)
+			fmt.Printf("Platform       : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
 		}
 	}
 	clusterversionFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
@@ -170,9 +178,34 @@ func MustGatherInfo() {
 			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
 			os.Exit(1)
 		} else {
-			fmt.Printf("ClusterID    : %s\n", ClusterVersion.Spec.ClusterID)
+			clusterversion := ""
+			versionHistory := ClusterVersion.Status.History
+			for _, version := range versionHistory {
+				if version.State == "Completed" {
+					clusterversion = version.Version
+					break
+				}
+			}
+
+			fmt.Printf("ClusterID      : %s\n", ClusterVersion.Spec.ClusterID)
+			fmt.Printf("ClusterVersion : %s\n", clusterversion)
 		}
 	}
+	mustGatherSplitPath := strings.Split(vars.MustGatherRootPath, "/")
+	mustGatherParentPath := strings.Join(mustGatherSplitPath[0:(len(mustGatherSplitPath)-1)], "/")
+	clientVersion := extractClientVersion(mustGatherParentPath + "/must-gather.logs")
+	if clientVersion != "" {
+		fmt.Printf("ClientVersion  : %s\n", clientVersion)
+	}
+	parts := strings.Split(vars.MustGatherRootPath, "/")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		if strings.Contains(lastPart, "-sha256") {
+			mustGatherImage := strings.Split(lastPart, "-sha256")[0]
+			fmt.Printf("Image          : %s\n", mustGatherImage)
+		}
+	}
+
 }
 
 // useCmd represents the use command
