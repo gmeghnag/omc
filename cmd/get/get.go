@@ -313,7 +313,7 @@ func getNamespacesResources(resourceNamePlural string, resourceGroup string, res
 func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
-	_file, err := ioutil.ReadFile(resourcePath)
+	_file, err := os.ReadFile(resourcePath)
 	if err != nil {
 		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
 		resourcesFiles, rErr := ReadDirForResources(resourceDir)
@@ -322,10 +322,14 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		}
 		for _, f := range resourcesFiles {
 			resourceYamlPath := resourceDir + "/" + f.Name()
-			_file, _ := ioutil.ReadFile(resourceYamlPath)
+			_file, _ := os.ReadFile(resourceYamlPath)
 			item := unstructured.Unstructured{}
 			if err := yaml.Unmarshal(_file, &item); err != nil {
 				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
+				os.Exit(1)
+			}
+			if item.IsList() {
+				fmt.Fprintln(os.Stderr, "error: file \""+resourceYamlPath+"\" contains a \"List\" objectKind, while it should contain a single resource.")
 				os.Exit(1)
 			}
 			if len(resources) > 0 {
