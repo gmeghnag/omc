@@ -6,7 +6,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IngressControllerTuningOptionsApplyConfiguration represents an declarative configuration of the IngressControllerTuningOptions type for use
+// IngressControllerTuningOptionsApplyConfiguration represents a declarative configuration of the IngressControllerTuningOptions type for use
 // with apply.
 type IngressControllerTuningOptionsApplyConfiguration struct {
 	HeaderBufferBytes           *int32       `json:"headerBufferBytes,omitempty"`
@@ -17,13 +17,14 @@ type IngressControllerTuningOptionsApplyConfiguration struct {
 	ServerTimeout               *v1.Duration `json:"serverTimeout,omitempty"`
 	ServerFinTimeout            *v1.Duration `json:"serverFinTimeout,omitempty"`
 	TunnelTimeout               *v1.Duration `json:"tunnelTimeout,omitempty"`
+	ConnectTimeout              *v1.Duration `json:"connectTimeout,omitempty"`
 	TLSInspectDelay             *v1.Duration `json:"tlsInspectDelay,omitempty"`
 	HealthCheckInterval         *v1.Duration `json:"healthCheckInterval,omitempty"`
 	MaxConnections              *int32       `json:"maxConnections,omitempty"`
 	ReloadInterval              *v1.Duration `json:"reloadInterval,omitempty"`
 }
 
-// IngressControllerTuningOptionsApplyConfiguration constructs an declarative configuration of the IngressControllerTuningOptions type for use with
+// IngressControllerTuningOptionsApplyConfiguration constructs a declarative configuration of the IngressControllerTuningOptions type for use with
 // apply.
 func IngressControllerTuningOptions() *IngressControllerTuningOptionsApplyConfiguration {
 	return &IngressControllerTuningOptionsApplyConfiguration{}
@@ -90,6 +91,14 @@ func (b *IngressControllerTuningOptionsApplyConfiguration) WithServerFinTimeout(
 // If called multiple times, the TunnelTimeout field is set to the value of the last call.
 func (b *IngressControllerTuningOptionsApplyConfiguration) WithTunnelTimeout(value v1.Duration) *IngressControllerTuningOptionsApplyConfiguration {
 	b.TunnelTimeout = &value
+	return b
+}
+
+// WithConnectTimeout sets the ConnectTimeout field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the ConnectTimeout field is set to the value of the last call.
+func (b *IngressControllerTuningOptionsApplyConfiguration) WithConnectTimeout(value v1.Duration) *IngressControllerTuningOptionsApplyConfiguration {
+	b.ConnectTimeout = &value
 	return b
 }
 
