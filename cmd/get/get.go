@@ -90,7 +90,7 @@ var GetCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		for resource := range vars.GetArgs {
-			resourceNamePlural, resourceGroup, namespaced, err := kindGroupNamespaced(resource)
+			resourceNamePlural, resourceGroup, _, namespaced, err := KindGroupNamespaced(resource)
 			if err != nil {
 				klog.V(1).ErrorS(err, "ERROR")
 				os.Exit(1)
@@ -445,7 +445,7 @@ func handleOutput(w io.Writer) {
 	for resource := range vars.GetArgs {
 		_resources = append(_resources, resource)
 		// if at least one resource is cluster-scoped, never include a namespace in the output if no resources are found of the kind
-		_, _, namespaced, _ := kindGroupNamespaced(resource)
+		_, _, _, namespaced, _ := KindGroupNamespaced(resource)
 		if !namespaced {
 			includesClusterScoped = true
 		}
