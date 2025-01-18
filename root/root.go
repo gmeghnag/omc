@@ -26,6 +26,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/config"
 	"github.com/gmeghnag/omc/cmd/describe"
 	"github.com/gmeghnag/omc/cmd/etcd"
+	"github.com/gmeghnag/omc/cmd/events"
 	"github.com/gmeghnag/omc/cmd/get"
 	"github.com/gmeghnag/omc/cmd/haproxy"
 	"github.com/gmeghnag/omc/cmd/helpers"
@@ -104,6 +105,7 @@ func init() {
 		machineconfig.MachineConfig,
 		ovn.OvnCmd,
 		prometheus.PrometheusCmd,
+		events.EventsCmd,
 		upgrade.Upgrade,
 	)
 	loadOmcConfigs()
