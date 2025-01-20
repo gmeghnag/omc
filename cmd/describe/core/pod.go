@@ -44,7 +44,7 @@ func describePod(currentContextPath string, defaultConfigNamespace string, args 
 			c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
 			d := describe.PodDescriber{c}
 			out, _ := d.Describe(defaultConfigNamespace, pod.GetName(), describe.DescriberSettings{ShowEvents: false})
-			fmt.Printf(out)
+			fmt.Printf("%s", out)
 		}
 	}
 }

@@ -174,7 +174,7 @@ func (c CertDetail) MarshalJSON() ([]byte, error) {
 
 func printParseFailure(w io.Writer, f string) {
 	if showParseFailure {
-		fmt.Fprintf(w, f)
+		fmt.Fprintf(w, "%s", f)
 	}
 }
 
