@@ -22,6 +22,9 @@ import (
 	"io/ioutil"
 	"sort"
 	"strings"
+	"slices"
+	"bytes"
+	"regexp"
 
 	goyaml "gopkg.in/yaml.v2"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -36,6 +39,7 @@ import (
 	printersinternal "k8s.io/kubernetes/pkg/printers/internalversion"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/util/jsonpath"
 	metav1beta1 "k8s.io/apimachinery/pkg/apis/meta/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -69,6 +73,8 @@ var outputStringVar string
 var allNamespaceBoolVar, showLabelsBoolVar bool
 var emptyslice []string
 var resourcesAndObjects [][]string
+
+var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 
 //go:embed known-resources.yaml
 var yamlData []byte
@@ -118,6 +124,7 @@ func init() {
 	GetCmd.PersistentFlags().BoolVarP(&vars.ShowLabelsBoolVar, "show-labels", "", false, "When printing, show all labels as the last column (default hide labels column)")
 	GetCmd.PersistentFlags().StringVarP(&vars.OutputStringVar, "output", "o", "", "Output format. One of: json|yaml|wide|jsonpath|custom-columns=...")
 	GetCmd.PersistentFlags().StringVarP(&vars.LabelSelectorStringVar, "selector", "l", "", "selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
+	GetCmd.PersistentFlags().StringVarP(&vars.SortBy, "sort-by", "", "", "If non-empty, sort list types using this field specification. The field specification is expressed as a JSONPath expression (e.g. '{.metadata.name}').")
 }
 
 func init() {
@@ -189,6 +196,7 @@ func init() {
 }
 
 func getNamespacedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	var objects []unstructured.Unstructured
 	var namespaces []string
 	if vars.AllNamespaceBoolVar {
 		vars.Namespace = ""
@@ -239,20 +247,13 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 					os.Exit(1)
 				}
 			}
-			for _, item := range UnstructuredItems.Items {
-				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
-					}
-				} else {
-					handleObject(item)
-				}
-			}
+
+			objects = append(objects, UnstructuredItems.Items...)
 		} else { // the resources are customresources so, stored in a single file per resource
 			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
 			_, err = os.Stat(resourceDir)
 			if err == nil {
+				var objects []unstructured.Unstructured
 				resourcesFiles, rErr := ReadDirForResources(resourceDir)
 				if rErr != nil {
 					klog.V(3).ErrorS(err, "Failed to read resources:")
@@ -265,21 +266,31 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 						os.Exit(1)
 					}
-					if len(resources) > 0 {
-						_, ok := resources[item.GetName()]
-						if ok {
-							handleObject(item)
-						}
-					} else {
-						handleObject(item)
-					}
+
+					objects = append(objects, item)
 				}
 			}
+
+		}
+	}
+
+	objects = sortResources(objects, vars.SortBy)
+
+	for _, item := range objects {
+		if len(resources) > 0 {
+			_, ok := resources[item.GetName()]
+			if ok {
+				handleObject(item)
+			}
+		} else {
+			handleObject(item)
 		}
 	}
 }
 
 func getNamespacesResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+	var objects []unstructured.Unstructured
+
 	if len(resources) > 0 {
 		for namespace := range resources {
 			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", vars.MustGatherRootPath, namespace, namespace)
@@ -290,7 +301,8 @@ func getNamespacesResources(resourceNamePlural string, resourceGroup string, res
 					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 					os.Exit(1)
 				}
-				handleObject(item)
+
+				objects = append(objects, item)
 			}
 		}
 	} else {
@@ -304,15 +316,22 @@ func getNamespacesResources(resourceNamePlural string, resourceGroup string, res
 					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 					os.Exit(1)
 				}
-				handleObject(item)
+				objects = append(objects, item)
 			}
 		}
+	}
+
+	objects = sortResources(objects, vars.SortBy)
+	for _, item := range objects {
+		handleObject(item)
 	}
 }
 
 func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
 	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
+	var objects []unstructured.Unstructured
+
 	_file, err := os.ReadFile(resourcePath)
 	if err != nil {
 		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
@@ -320,44 +339,46 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		if rErr != nil {
 			klog.V(3).ErrorS(err, "Failed to read resources:")
 		}
+
 		for _, f := range resourcesFiles {
 			resourceYamlPath := resourceDir + "/" + f.Name()
+
 			_file, _ := os.ReadFile(resourceYamlPath)
+
 			item := unstructured.Unstructured{}
 			if err := yaml.Unmarshal(_file, &item); err != nil {
 				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 				os.Exit(1)
 			}
+
 			if item.IsList() {
 				fmt.Fprintln(os.Stderr, "error: file \""+resourceYamlPath+"\" contains a \"List\" objectKind, while it should contain a single resource.")
 				os.Exit(1)
 			}
-			if len(resources) > 0 {
-				_, ok := resources[item.GetName()]
-				if ok {
-					handleObject(item)
-				}
-			} else {
-				handleObject(item)
-			}
+
+			objects = append(objects, item)
 		}
 	} else {
 		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		for _, item := range UnstructuredItems.Items {
-			if len(resources) > 0 {
-				_, ok := resources[item.GetName()]
-				if ok {
-					handleObject(item)
-				}
-			} else {
-				handleObject(item)
-			}
-		}
+
+		objects = append(objects, UnstructuredItems.Items...)
 	}
 
+	objects = sortResources(objects, vars.SortBy)
+
+	for _, v := range objects {
+		if len(resources) > 0 {
+			_, ok := resources[v.GetName()]
+			if ok {
+				handleObject(v)
+			}
+		} else {
+			handleObject(v)
+		}
+	}
 }
 
 func handleObject(obj unstructured.Unstructured) error {
@@ -522,6 +543,61 @@ func handleOutput(w io.Writer) {
 			vars.Output.WriteTo(w)
 		}
 	}
+}
+
+func sortResources(list []unstructured.Unstructured, sortBy string) []unstructured.Unstructured {
+	if sortBy == "" {
+		// no need to sort. Return original list
+		return list
+	}
+
+	// relaxed jsonpath like kubectl/oc
+	submatches := jsonRegexp.FindStringSubmatch(sortBy)
+	if submatches == nil {
+		fmt.Println("Failed to identify relaxed jsonpath, skipping")
+		return list
+	}
+	if len(submatches) != 3 {
+		fmt.Println("unexpected submatch list: ", submatches)
+		return list
+	}
+	if len(submatches[1]) != 0 {
+		sortBy = submatches[1]
+	} else {
+		sortBy = submatches[2]
+	}
+	sortBy = fmt.Sprintf("{.%s}", sortBy)
+
+	jpath := jsonpath.New("out")
+	jpath.AllowMissingKeys(false)
+	jpath.EnableJSONOutput(true)
+	jpath.Parse(sortBy)
+
+	var newlist []unstructured.Unstructured
+	newlist = append([]unstructured.Unstructured(nil), list...)
+
+	fmt.Println("Running sort")
+	slices.SortFunc(newlist, func(a, b unstructured.Unstructured) int {
+		abuf := new(bytes.Buffer)
+		bbuf := new(bytes.Buffer)
+
+		err := jpath.Execute(abuf, a.UnstructuredContent())
+		if err != nil {
+			fmt.Println("error in jsonpath: ", err)
+			fmt.Println("  for object:", a)
+			return 0
+		}
+		err = jpath.Execute(bbuf, b.UnstructuredContent())
+		if err != nil {
+			fmt.Println("error in jsonpath: ", err)
+			fmt.Println("  for object:", b)
+			return 0
+		}
+
+		return strings.Compare(abuf.String(), bbuf.String())
+	})
+
+	return newlist
 }
 
 func getPodNetworkConnectivityChecksResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
