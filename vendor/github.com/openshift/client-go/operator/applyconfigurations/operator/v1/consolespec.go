@@ -7,7 +7,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
-// ConsoleSpecApplyConfiguration represents an declarative configuration of the ConsoleSpec type for use
+// ConsoleSpecApplyConfiguration represents a declarative configuration of the ConsoleSpec type for use
 // with apply.
 type ConsoleSpecApplyConfiguration struct {
 	OperatorSpecApplyConfiguration `json:",inline"`
@@ -15,9 +15,10 @@ type ConsoleSpecApplyConfiguration struct {
 	Providers                      *ConsoleProvidersApplyConfiguration     `json:"providers,omitempty"`
 	Route                          *ConsoleConfigRouteApplyConfiguration   `json:"route,omitempty"`
 	Plugins                        []string                                `json:"plugins,omitempty"`
+	Ingress                        *IngressApplyConfiguration              `json:"ingress,omitempty"`
 }
 
-// ConsoleSpecApplyConfiguration constructs an declarative configuration of the ConsoleSpec type for use with
+// ConsoleSpecApplyConfiguration constructs a declarative configuration of the ConsoleSpec type for use with
 // apply.
 func ConsoleSpec() *ConsoleSpecApplyConfiguration {
 	return &ConsoleSpecApplyConfiguration{}
@@ -94,5 +95,13 @@ func (b *ConsoleSpecApplyConfiguration) WithPlugins(values ...string) *ConsoleSp
 	for i := range values {
 		b.Plugins = append(b.Plugins, values[i])
 	}
+	return b
+}
+
+// WithIngress sets the Ingress field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Ingress field is set to the value of the last call.
+func (b *ConsoleSpecApplyConfiguration) WithIngress(value *IngressApplyConfiguration) *ConsoleSpecApplyConfiguration {
+	b.Ingress = value
 	return b
 }

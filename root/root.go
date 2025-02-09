@@ -34,6 +34,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/machineconfig"
 	nodelogs "github.com/gmeghnag/omc/cmd/node-logs"
 	"github.com/gmeghnag/omc/cmd/ovn"
+	"github.com/gmeghnag/omc/cmd/insights"
 	"github.com/gmeghnag/omc/cmd/prometheus"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
@@ -107,6 +108,7 @@ func init() {
 		prometheus.PrometheusCmd,
 		events.EventsCmd,
 		upgrade.Upgrade,
+		insights.InsightsCmd,
 	)
 	loadOmcConfigs()
 }

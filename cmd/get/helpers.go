@@ -147,8 +147,7 @@ func KindGroupNamespaced(alias string) (string, string, string, bool, error) {
 
 func kindGroupNamespacedFromCrds(alias string) (string, string, string, bool, error) {
 	crdsPath := vars.MustGatherRootPath + "/cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/"
-	_, err := Exists(crdsPath)
-	if err == nil {
+	if ok, _ := Exists(crdsPath); ok {
 		crds, rErr := ReadDirForResources(crdsPath)
 		if rErr != nil {
 			fmt.Fprintln(os.Stderr, rErr)
@@ -196,48 +195,49 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, string, bool, er
 	}
 	home, _ := os.UserHomeDir()
 	omcCrdsPath := home + "/.omc/customresourcedefinitions/"
-	crds, rErr := ReadDirForResources(omcCrdsPath)
-	if rErr != nil {
-		fmt.Fprintln(os.Stderr, rErr)
-	}
-	for _, f := range crds {
-		crdYamlPath := omcCrdsPath + f.Name()
-		crdByte, _ := ioutil.ReadFile(crdYamlPath)
-		_crd := &apiextensionsv1.CustomResourceDefinition{}
-		if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
-			continue
+	if ok, _ := Exists(omcCrdsPath); ok {
+		crds, rErr := ReadDirForResources(omcCrdsPath)
+		if rErr != nil {
+			fmt.Fprintln(os.Stderr, rErr)
 		}
-		if strings.Contains(alias, ".") {
-			split := strings.Split(alias, ".")
-			if len(split) > 1 {
-				group := strings.Join(split[1:], ".")
-				if !strings.HasPrefix(_crd.Spec.Group, group) {
-					continue
-				} else {
-					_alias := strings.Join(split[:1], ".")
-					if strings.ToLower(_crd.Spec.Names.Plural) == _alias || strings.ToLower(_crd.Spec.Names.Singular) == _alias || StringInSlice(_alias, _crd.Spec.Names.ShortNames) {
-						namespaced := false
-						if _crd.Spec.Scope == "Namespaced" {
-							namespaced = true
+		for _, f := range crds {
+			crdYamlPath := omcCrdsPath + f.Name()
+			crdByte, _ := ioutil.ReadFile(crdYamlPath)
+			_crd := &apiextensionsv1.CustomResourceDefinition{}
+			if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
+				continue
+			}
+			if strings.Contains(alias, ".") {
+				split := strings.Split(alias, ".")
+				if len(split) > 1 {
+					group := strings.Join(split[1:], ".")
+					if !strings.HasPrefix(_crd.Spec.Group, group) {
+						continue
+					} else {
+						_alias := strings.Join(split[:1], ".")
+						if strings.ToLower(_crd.Spec.Names.Plural) == _alias || strings.ToLower(_crd.Spec.Names.Singular) == _alias || StringInSlice(_alias, _crd.Spec.Names.ShortNames) {
+							namespaced := false
+							if _crd.Spec.Scope == "Namespaced" {
+								namespaced = true
+							}
+							vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+							return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 						}
-
-						vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-						return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 					}
 				}
 			}
-		}
-		vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-		if strings.ToLower(_crd.Spec.Names.Kind) == alias || strings.ToLower(_crd.Spec.Names.Plural) == alias || strings.ToLower(_crd.Spec.Names.Singular) == alias || StringInSlice(alias, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == alias {
-			vars.AliasToCrd[alias] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-			klog.V(4).Info("INFO ", fmt.Sprintf("Alias  \"%s\" found in path \"%s\".", alias, crdYamlPath))
-			namespaced := false
-			if _crd.Spec.Scope == "Namespaced" {
-				namespaced = true
+			vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+			if strings.ToLower(_crd.Spec.Names.Kind) == alias || strings.ToLower(_crd.Spec.Names.Plural) == alias || strings.ToLower(_crd.Spec.Names.Singular) == alias || StringInSlice(alias, _crd.Spec.Names.ShortNames) || _crd.Spec.Names.Singular+"."+_crd.Spec.Group == alias {
+				vars.AliasToCrd[alias] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+				klog.V(4).Info("INFO ", fmt.Sprintf("Alias  \"%s\" found in path \"%s\".", alias, crdYamlPath))
+				namespaced := false
+				if _crd.Spec.Scope == "Namespaced" {
+					namespaced = true
+				}
+				return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 			}
-			return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
+			klog.V(5).Info("INFO ", fmt.Sprintf("Alias \"%s\" not found in path \"%s\".", alias, crdYamlPath))
 		}
-		klog.V(5).Info("INFO ", fmt.Sprintf("Alias \"%s\" not found in path \"%s\".", alias, crdYamlPath))
 	}
 	klog.V(4).Info("INFO ", fmt.Sprintf("No customResource found with name or alias \"%s\" in path: \"%s\".", alias, omcCrdsPath))
 	return alias, "", "", false, fmt.Errorf("No customResource found with name or alias \"%s\".", alias)
