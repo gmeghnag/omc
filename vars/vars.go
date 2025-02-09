@@ -10,9 +10,10 @@ import (
 	"k8s.io/kubernetes/pkg/printers"
 )
 
-var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, LabelSelectorStringVar, Id, Container, OMCVersionHash, OMCVersionTag, DiffCmd, CurrentKind, LastKind, DefaultProject string
+var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, LabelSelectorStringVar, Id, Container, OMCVersionHash, OMCVersionTag, DiffCmd, CurrentKind, LastKind, DefaultProject, ForResource string
 var AllNamespaceBoolVar, ShowLabelsBoolVar, Previous, Rotated, AllContainers, UseLocalCRDs, SingleResource, Wide, ShowKind, ShowNamespace, ShowManagedFields, NoHeaders, InsecureLogs bool
 
+var EventTypes []string
 var GetArgs map[string]map[string]struct{}
 var AliasToCrd map[string]apiextensionsv1.CustomResourceDefinition
 var ArgPresent map[string]bool

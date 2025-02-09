@@ -29,7 +29,7 @@ func validateArgs(args []string) error {
 			vars.ShowKind = true
 			resourcesTypes := strings.Split(strings.TrimPrefix(strings.TrimSuffix(args[0], ","), ","), ",")
 			for _, resourceType := range resourcesTypes {
-				resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
+				resourceNamePlural, resourceGroup, _, _, err := KindGroupNamespaced(resourceType)
 				if err == nil {
 					if !strings.Contains(resourceType, ".") {
 						vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
@@ -43,7 +43,7 @@ func validateArgs(args []string) error {
 			}
 		} else {
 			resourceType := args[0]
-			resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
+			resourceNamePlural, resourceGroup, _, _, err := KindGroupNamespaced(resourceType)
 			if err == nil {
 				if !strings.Contains(resourceType, ".") {
 					vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
@@ -62,7 +62,7 @@ func validateArgs(args []string) error {
 			if strings.Contains(arg, "/") {
 				resource := strings.Split(arg, "/")
 				resourceType, resourceName := resource[0], resource[1]
-				resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
+				resourceNamePlural, resourceGroup, _, _, err := KindGroupNamespaced(resourceType)
 				if err == nil {
 					_, ok := vars.GetArgs[resourceNamePlural+"."+resourceGroup]
 					if !ok {
@@ -83,7 +83,7 @@ func validateArgs(args []string) error {
 		}
 	} else if len(args) > 1 && !strings.Contains(args[0], "/") {
 		resourceType := args[0]
-		resourceNamePlural, resourceGroup, _, err := kindGroupNamespaced(resourceType)
+		resourceNamePlural, resourceGroup, _, _, err := KindGroupNamespaced(resourceType)
 		if err == nil {
 			vars.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
 		} else {
@@ -102,7 +102,7 @@ func validateArgs(args []string) error {
 	return nil
 }
 
-func kindGroupNamespaced(alias string) (string, string, bool, error) {
+func KindGroupNamespaced(alias string) (string, string, string, bool, error) {
 	// when it si called the second time
 	if strings.Contains(alias, ".") {
 		split := strings.Split(alias, ".")
@@ -113,10 +113,11 @@ func kindGroupNamespaced(alias string) (string, string, bool, error) {
 			if ok {
 				klog.V(3).Info("INFO ", fmt.Sprintf("Alias \"%s\" is a known resource.", alias))
 				resourceNamePlural := value["plural"].(string)
+				resourceNameSingular := value["name"].(string)
 				resourceGroup := value["group"].(string)
 				namespaced := value["namespaced"].(bool)
 				if strings.HasPrefix(resourceGroup, group) {
-					return resourceNamePlural, resourceGroup, namespaced, nil
+					return resourceNamePlural, resourceGroup, resourceNameSingular, namespaced, nil
 				}
 			}
 		}
@@ -125,9 +126,10 @@ func kindGroupNamespaced(alias string) (string, string, bool, error) {
 	if ok {
 		klog.V(3).Info("INFO ", fmt.Sprintf("Alias \"%s\" is a known resource.", alias))
 		resourceNamePlural := value["plural"].(string)
+		resourceNameSingular := value["name"].(string)
 		resourceGroup := value["group"].(string)
 		namespaced := value["namespaced"].(bool)
-		return resourceNamePlural, resourceGroup, namespaced, nil
+		return resourceNamePlural, resourceGroup, resourceNameSingular, namespaced, nil
 	} else {
 		klog.V(3).Info("INFO ", fmt.Sprintf("Alias \"%s\" resource not known.", alias))
 		crd, ok := vars.AliasToCrd[alias]
@@ -137,13 +139,13 @@ func kindGroupNamespaced(alias string) (string, string, bool, error) {
 			if _crd.Spec.Scope == "Namespaced" {
 				namespaced = true
 			}
-			return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
+			return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 		}
 		return kindGroupNamespacedFromCrds(alias)
 	}
 }
 
-func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
+func kindGroupNamespacedFromCrds(alias string) (string, string, string, bool, error) {
 	crdsPath := vars.MustGatherRootPath + "/cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/"
 	if ok, _ := Exists(crdsPath); ok {
 		crds, rErr := ReadDirForResources(crdsPath)
@@ -172,7 +174,7 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 							}
 
 							vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-							return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
+							return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 						}
 					}
 				}
@@ -185,7 +187,7 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 				if _crd.Spec.Scope == "Namespaced" {
 					namespaced = true
 				}
-				return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
+				return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 			}
 			klog.V(5).Info("INFO ", fmt.Sprintf("Alias \"%s\" not found in path \"%s\".", alias, crdYamlPath))
 		}
@@ -219,7 +221,7 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 								namespaced = true
 							}
 							vars.AliasToCrd[strings.ToLower(_crd.Spec.Names.Kind)+"."+_crd.Spec.Group] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
-							return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
+							return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 						}
 					}
 				}
@@ -232,13 +234,13 @@ func kindGroupNamespacedFromCrds(alias string) (string, string, bool, error) {
 				if _crd.Spec.Scope == "Namespaced" {
 					namespaced = true
 				}
-				return _crd.Spec.Names.Plural, _crd.Spec.Group, namespaced, nil
+				return _crd.Spec.Names.Plural, _crd.Spec.Group, _crd.Spec.Names.Singular, namespaced, nil
 			}
 			klog.V(5).Info("INFO ", fmt.Sprintf("Alias \"%s\" not found in path \"%s\".", alias, crdYamlPath))
 		}
 	}
 	klog.V(4).Info("INFO ", fmt.Sprintf("No customResource found with name or alias \"%s\" in path: \"%s\".", alias, omcCrdsPath))
-	return alias, "", false, fmt.Errorf("No customResource found with name or alias \"%s\".", alias)
+	return alias, "", "", false, fmt.Errorf("No customResource found with name or alias \"%s\".", alias)
 }
 
 func StringInSlice(a string, list []string) bool {
