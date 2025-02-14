@@ -47,7 +47,7 @@ func describeNode(currentContextPath string, namespace string, args []string) {
 			c := &types.DescribeClient{Namespace: namespace, Interface: fake}
 			d := desc.NodeDescriber{c}
 			out, _ := d.Describe(namespace, _Node.GetName(), desc.DescriberSettings{ShowEvents: false})
-			fmt.Printf(out)
+			fmt.Printf("%s", out)
 		}
 	}
 }

@@ -43,7 +43,7 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("error: Expected status code 200 requesting " + url + ", received " + strconv.Itoa(resp.StatusCode))
+		return fmt.Errorf("error: Expected status code 200 requesting %s, received ", strconv.Itoa(resp.StatusCode))
 	}
 	defer resp.Body.Close()
 
