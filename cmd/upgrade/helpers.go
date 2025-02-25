@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -75,10 +76,16 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 		return err
 	}
 
-	cmd := exec.Command("mv", tempFile.Name(), omcExecutablePath)
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/C", "move", tempFile.Name(), omcExecutablePath)
+	default:
+		cmd = exec.Command("mv", tempFile.Name(), omcExecutablePath)
+	}
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("mv command failed: %w\nOutput: %s", err, string(output))
+		return fmt.Errorf("exec mv or move command failed: %w\nOutput: %s", err, string(output))
 	}
 	return nil
 }
