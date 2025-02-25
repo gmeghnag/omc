@@ -22,7 +22,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/coreos/go-semver/semver"
@@ -43,7 +44,7 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("error: Expected status code 200 requesting " + url + ", received " + strconv.Itoa(resp.StatusCode))
+		return fmt.Errorf("error: Expected status code 200 requesting %s, received %d", url, resp.StatusCode)
 	}
 	defer resp.Body.Close()
 
@@ -75,9 +76,16 @@ func updateOmcExecutable(omcExecutablePath string, url string, desiredVersion st
 		return err
 	}
 
-	err = os.Rename(tempFile.Name(), omcExecutablePath)
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/C", "move", tempFile.Name(), omcExecutablePath)
+	default:
+		cmd = exec.Command("mv", tempFile.Name(), omcExecutablePath)
+	}
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return err
+		return fmt.Errorf("exec mv or move command failed: %w\nOutput: %s", err, string(output))
 	}
 	return nil
 }
