@@ -106,7 +106,19 @@ func extractIgnitionConfigStorage(ignConfig ign3types.Config, extractedMachineCo
 }
 
 var Extract = &cobra.Command{
-	Use: "extract",
+	Use:   "extract <machine-config-name>",
+	Short: "Extract files from a MachineConfig",
+	Long: `Extract files from a MachineConfig resource and save them to the local filesystem.
+
+The command requires the name of the MachineConfig as an argument.
+
+Examples:
+  omc machine-config extract 00-master
+  omc machine-config extract 00-worker
+  omc machine-config extract rendered-master-1234567890
+
+To list available MachineConfigs, use:
+  omc get machineconfigs`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			fmt.Fprintln(os.Stderr, "error: one argument expected, found ", strconv.Itoa(len(args)))
