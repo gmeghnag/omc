@@ -105,26 +105,102 @@ func extractIgnitionConfigStorage(ignConfig ign3types.Config, extractedMachineCo
 	}
 }
 
+func extractMachineConfig(machineConfigName string) error {
+	machineconfigYamlPath := vars.MustGatherRootPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/" + machineConfigName + ".yaml"
+	_file, err := os.ReadFile(machineconfigYamlPath)
+	if err != nil {
+		return fmt.Errorf("failed to read machine config %s: %w", machineConfigName, err)
+	}
+
+	machineConfig := mcfgv1.MachineConfig{}
+	if err := yaml.Unmarshal([]byte(_file), &machineConfig); err != nil {
+		return fmt.Errorf("failed to unmarshal machine config %s: %w", machineConfigName, err)
+	}
+
+	ignConfig, err := ctrlcommon.ParseAndConvertConfig(machineConfig.Spec.Config.Raw)
+	if err != nil {
+		return fmt.Errorf("failed to parse ignition config for %s: %w", machineConfigName, err)
+	}
+
+	extractedMachineConfigPath := vars.MustGatherRootPath + "/extracted-machine-configs/" + machineConfig.Name
+	_ = os.MkdirAll(extractedMachineConfigPath, os.ModePerm)
+
+	fmt.Printf("Extracting machine config: %s\n", machineConfig.Name)
+	extractIgnitionConfigStorage(ignConfig, extractedMachineConfigPath)
+
+	return nil
+}
+
+var extractAll bool
+
 var Extract = &cobra.Command{
-	Use: "extract",
+	Use:   "extract [machine-config-name]",
+	Short: "Extract files from a MachineConfig",
+	Long: `Extract files from a MachineConfig resource and save them to the local filesystem.
+
+The command requires either the name of a specific MachineConfig as an argument, or the --all flag to extract all MachineConfigs.
+
+Examples:
+  omc machine-config extract 00-master
+  omc machine-config extract 00-worker
+  omc machine-config extract rendered-master-1234567890
+  omc machine-config extract --all
+
+To list available MachineConfigs, use:
+  omc get machineconfigs`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			fmt.Fprintln(os.Stderr, "error: one argument expected, found ", strconv.Itoa(len(args)))
-			os.Exit(1)
+		if extractAll {
+			if len(args) > 0 {
+				fmt.Fprintln(os.Stderr, "error: cannot specify machine config name when using --all flag")
+				os.Exit(1)
+			}
+
+			// Extract all machine configs
+			machineConfigsDir := vars.MustGatherRootPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/"
+			files, err := os.ReadDir(machineConfigsDir)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "error: failed to read machine configs directory: %v\n", err)
+				os.Exit(1)
+			}
+
+			var machineConfigNames []string
+			for _, file := range files {
+				if !file.IsDir() && strings.HasSuffix(file.Name(), ".yaml") {
+					// Remove .yaml extension to get the machine config name
+					name := strings.TrimSuffix(file.Name(), ".yaml")
+					machineConfigNames = append(machineConfigNames, name)
+				}
+			}
+
+			if len(machineConfigNames) == 0 {
+				fmt.Fprintln(os.Stderr, "error: no machine configs found")
+				os.Exit(1)
+			}
+
+			fmt.Printf("Found %d machine config(s) to extract\n", len(machineConfigNames))
+
+			for _, name := range machineConfigNames {
+				if err := extractMachineConfig(name); err != nil {
+					fmt.Fprintf(os.Stderr, "error extracting %s: %v\n", name, err)
+				}
+			}
+
+			fmt.Printf("Extraction complete. Files saved to: %s/extracted-machine-configs/\n", vars.MustGatherRootPath)
+		} else {
+			// Extract single machine config
+			if len(args) != 1 {
+				fmt.Fprintln(os.Stderr, "error: one argument expected, found ", strconv.Itoa(len(args)))
+				os.Exit(1)
+			}
+
+			if err := extractMachineConfig(args[0]); err != nil {
+				fmt.Fprintf(os.Stderr, "error: %v\n", err)
+				os.Exit(1)
+			}
 		}
-		machineconfigYamlPath := vars.MustGatherRootPath + "/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/" + args[0] + ".yaml"
-		_file, err := os.ReadFile(machineconfigYamlPath)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		machineConfig := mcfgv1.MachineConfig{}
-		if err := yaml.Unmarshal([]byte(_file), &machineConfig); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+machineconfigYamlPath)
-			os.Exit(1)
-		}
-		ignConfig, err := ctrlcommon.ParseAndConvertConfig(machineConfig.Spec.Config.Raw)
-		extractedMachineConfigPath := vars.MustGatherRootPath + "/extracted-machine-configs/" + machineConfig.Name
-		_ = os.Mkdir(extractedMachineConfigPath, os.ModePerm)
-		extractIgnitionConfigStorage(ignConfig, extractedMachineConfigPath)
 	},
+}
+
+func init() {
+	Extract.Flags().BoolVar(&extractAll, "all", false, "Extract all available machine configs")
 }
