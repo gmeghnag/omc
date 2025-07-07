@@ -274,7 +274,9 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 		}
 	}
 
-	objects = sortResources(objects, vars.SortBy)
+	if vars.SortBy != "" {
+		objects = sortResources(objects, vars.SortBy)
+	}
 
 	for _, item := range objects {
 		if len(resources) > 0 {
@@ -321,7 +323,9 @@ func getNamespacesResources(resourceNamePlural string, resourceGroup string, res
 		}
 	}
 
-	objects = sortResources(objects, vars.SortBy)
+	if vars.SortBy != "" {
+		objects = sortResources(objects, vars.SortBy)
+	}
 	for _, item := range objects {
 		handleObject(item)
 	}
@@ -367,7 +371,9 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		objects = append(objects, UnstructuredItems.Items...)
 	}
 
-	objects = sortResources(objects, vars.SortBy)
+	if vars.SortBy != "" {
+		objects = sortResources(objects, vars.SortBy)
+	}
 
 	for _, v := range objects {
 		if len(resources) > 0 {
@@ -554,11 +560,11 @@ func sortResources(list []unstructured.Unstructured, sortBy string) []unstructur
 	// relaxed jsonpath like kubectl/oc
 	submatches := jsonRegexp.FindStringSubmatch(sortBy)
 	if submatches == nil {
-		fmt.Println("Failed to identify relaxed jsonpath, skipping")
+		klog.V(3).Info("Failed to identify relaxed jsonpath, skipping")
 		return list
 	}
 	if len(submatches) != 3 {
-		fmt.Println("unexpected submatch list: ", submatches)
+		klog.V(3).Info("unexpected submatch list: ", submatches)
 		return list
 	}
 	if len(submatches[1]) != 0 {
@@ -576,21 +582,18 @@ func sortResources(list []unstructured.Unstructured, sortBy string) []unstructur
 	var newlist []unstructured.Unstructured
 	newlist = append([]unstructured.Unstructured(nil), list...)
 
-	fmt.Println("Running sort")
 	slices.SortFunc(newlist, func(a, b unstructured.Unstructured) int {
 		abuf := new(bytes.Buffer)
 		bbuf := new(bytes.Buffer)
 
 		err := jpath.Execute(abuf, a.UnstructuredContent())
 		if err != nil {
-			fmt.Println("error in jsonpath: ", err)
-			fmt.Println("  for object:", a)
+			klog.V(3).ErrorS(fmt.Errorf("field %s not found in object %s/%s", vars.SortBy, b.GetKind(), b.GetName()), "jsonpath error")
 			return 0
 		}
 		err = jpath.Execute(bbuf, b.UnstructuredContent())
 		if err != nil {
-			fmt.Println("error in jsonpath: ", err)
-			fmt.Println("  for object:", b)
+			klog.V(3).ErrorS(fmt.Errorf("field %s not found in object %s/%s", vars.SortBy, b.GetKind(), b.GetName()), "jsonpath error")
 			return 0
 		}
 
