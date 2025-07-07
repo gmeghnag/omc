@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	cliprint "k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -64,12 +64,13 @@ func getCRDGroupVersionResource() schema.GroupVersionResource {
 
 func saveCRDToFile(crd unstructured.Unstructured, outputDir string) {
 	name := crd.GetName()
-	filename := filepath.Join(outputDir, strings.ToLower(name)+".json")
-	data, err := crd.MarshalJSON()
+	filename := filepath.Join(outputDir, strings.ToLower(name)+".yaml")
+	newFile, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
-	err = ioutil.WriteFile(filename, data, 0644)
+	printer := cliprint.YAMLPrinter{}
+	err = printer.PrintObj(&crd, newFile)
 	if err != nil {
 		panic(err)
 	}
