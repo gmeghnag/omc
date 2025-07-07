@@ -29,3 +29,5 @@ var JsonPathList types.JsonPathList
 var Output bytes.Buffer
 
 var Table metav1.Table
+
+var SortBy string
