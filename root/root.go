@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/gmeghnag/omc/cmd"
+	"github.com/gmeghnag/omc/cmd/admin"
 	"github.com/gmeghnag/omc/cmd/certs"
 	"github.com/gmeghnag/omc/cmd/config"
 	"github.com/gmeghnag/omc/cmd/describe"
@@ -30,11 +31,11 @@ import (
 	"github.com/gmeghnag/omc/cmd/get"
 	"github.com/gmeghnag/omc/cmd/haproxy"
 	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/cmd/insights"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
 	nodelogs "github.com/gmeghnag/omc/cmd/node-logs"
 	"github.com/gmeghnag/omc/cmd/ovn"
-	"github.com/gmeghnag/omc/cmd/insights"
 	"github.com/gmeghnag/omc/cmd/prometheus"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
@@ -89,6 +90,7 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	RootCmd.AddCommand(
+		admin.Admin,
 		haproxy.Haproxy,
 		certs.Certs,
 		cmd.VersionCmd,

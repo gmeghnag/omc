@@ -17,6 +17,7 @@ replace (
 )
 
 require (
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/bverschueren/in2un v0.2.0
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/ignition/v2 v2.20.0
