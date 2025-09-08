@@ -1,9 +1,13 @@
 {
-    "search.exclude": {
-        "**/.git": true,
-        "**/vendor": true,
-        "**/resources": true,
-        "**/staging": true,
-        "**/TEST": true,
-    },
+  "search.exclude": {
+    "**/.git": true,
+    "**/vendor": true,
+    "**/resources": true,
+    "**/staging": true,
+    "**/TEST": true,
+  },
+  "editor.formatOnSave": true,
+  "[go]": {
+    "editor.defaultFormatter": "golang.go"
+  }
 }

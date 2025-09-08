@@ -29,6 +29,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/etcd"
 	"github.com/gmeghnag/omc/cmd/events"
 	"github.com/gmeghnag/omc/cmd/get"
+	getsource "github.com/gmeghnag/omc/cmd/get-source"
 	"github.com/gmeghnag/omc/cmd/haproxy"
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/cmd/insights"
@@ -102,6 +103,7 @@ func init() {
 		nodelogs.NodeLogs,
 		config.ConfigCmd,
 		get.GetCmd,
+		getsource.GetSource,
 		describe.DescribeCmd,
 		etcd.Etcd,
 		logs.Logs,
