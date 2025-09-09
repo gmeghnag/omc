@@ -35,5 +35,6 @@ var OvnCmd = &cobra.Command{
 func init() {
 	OvnCmd.AddCommand(
 		SubnetsCmd,
+		HostnetinfoCmd,
 	)
 }
