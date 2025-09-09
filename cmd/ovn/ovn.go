@@ -21,9 +21,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// alertCmd represents the alert command
+// OvnCmd represents the ovn command
 var OvnCmd = &cobra.Command{
-	Use: "ovn",
+	Use:     "ovn",
+	Short:   "Prints information related to OVN-Kubernetes",
+	Aliases: []string{"ovn-kubernetes", "ovnk"},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(0)
@@ -33,5 +35,6 @@ var OvnCmd = &cobra.Command{
 func init() {
 	OvnCmd.AddCommand(
 		SubnetsCmd,
+		HostnetinfoCmd,
 	)
 }
