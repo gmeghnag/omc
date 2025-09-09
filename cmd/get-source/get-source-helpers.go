@@ -11,10 +11,18 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gmeghnag/omc/vars"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+)
+
+const (
+	imageManifest = "application/vnd.oci.image.manifest.v1+json"
+	imageIndex    = "application/vnd.oci.image.index.v1+json"
+	amd64         = "amd64"
+	linux         = "linux"
 )
 
 // Structs to parse JSON responses
@@ -71,8 +79,19 @@ func getRegistryAccessToken(registry string, repository string, authfile string)
 		os.Exit(1)
 	}
 
+	registryAuthMethod, err := detectRegistryAuth(registry)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error detecting auth method for registry \"%s\": %v\n", registry, err)
+		os.Exit(1)
+	}
+	var url string
+	if registryAuthMethod == "keycloak" {
+		url = fmt.Sprintf("https://%s/auth/realms/rhcc/protocol/redhat-docker-v2/auth?scope=repository:%s:pull&service=docker-registry", registry, repository)
+	} else {
+		url = fmt.Sprintf("https://%s/v2/auth?service=%s&scope=repository:%s:pull", registry, registry, repository)
+	}
+
 	// Create HTTP request
-	url := fmt.Sprintf("https://%s/v2/auth?service=%s&scope=repository:%s:pull", registry, registry, repository)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating request: %v\n", err)
@@ -104,10 +123,64 @@ func getRegistryAccessToken(registry string, repository string, authfile string)
 	return tokenResp.Token
 }
 
+// DetectRegistryAuth fa una richiesta a https://<registry>/v2/
+// e ritorna "classic", "keycloak" o "none" in base al tipo di autenticazione.
+func detectRegistryAuth(registry string) (string, error) {
+	url := fmt.Sprintf("https://%s/v2/", registry)
+
+	client := &http.Client{
+		Timeout: 1 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	authHeader := resp.Header.Get("Www-Authenticate")
+	if authHeader == "" {
+		return "none", nil
+	}
+
+	// Normalizziamo lowercase per sicurezza
+	h := strings.ToLower(authHeader)
+
+	switch {
+	case strings.Contains(h, "/v2/auth"):
+		return "classic", nil
+	case strings.Contains(h, "/auth/realms/"):
+		return "keycloak", nil
+	default:
+		// Se c'è l'header ma non matcha i pattern noti
+		return "unknown", nil
+	}
+}
+
 type Manifest struct {
-	Config struct {
+	MediaType string `json:"mediaType"`
+	Config    struct {
 		Digest string `json:"digest"`
-	} `json:"config"`
+	} `json:"config,omitempty"`
+	Manifests []ArchManifest `json:"manifests,omitempty"`
+}
+
+type ArchManifest struct {
+	MediaType string   `json:"mediaType"`
+	Digest    string   `json:"digest"`
+	Size      int      `json:"size"`
+	Platform  Platform `json:"platform"`
+}
+
+type Platform struct {
+	Architecture string `json:"architecture"`
+	OS           string `json:"os"`
+	Variant      string `json:"variant,omitempty"` // optional
 }
 
 func getRegistryRepositoryImageDigest(image string) (string, string, string) {
@@ -169,8 +242,18 @@ func getManifestDigest(registry string, repository string, token string, openshi
 		os.Exit(1)
 	}
 
-	// Print the digest
-	return manifest.Config.Digest
+	if manifest.Config.Digest != "" {
+		return manifest.Config.Digest
+	} else if len(manifest.Manifests) != 0 {
+		for _, arch := range manifest.Manifests {
+			if arch.Platform.Architecture == amd64 && arch.Platform.OS == linux {
+				return getManifestDigest(registry, repository, token, arch.Digest)
+			}
+		}
+	}
+	fmt.Fprintf(os.Stderr, "Error getting linux/amd64 image manifest from: %v\n", manifest)
+	os.Exit(1)
+	return ""
 }
 
 type Blob struct {
@@ -235,7 +318,7 @@ func getCommitUrl(registry string, repository string, token string, manifestDige
 	// Extract the specific label
 	commitURL, ok := blob.Config.Labels["io.openshift.build.commit.url"]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Label 'io.openshift.build.commit.url' not found")
+		fmt.Fprintf(os.Stderr, "Label 'io.openshift.build.commit.url' not found in image manifest\n")
 		os.Exit(1)
 	}
 	return commitURL
@@ -248,7 +331,7 @@ func parseCommitUrl(commitUrl string) (string, string, string) {
 	}
 	parts := strings.Split(strings.Trim(parsedUrl.Path, "/"), "/")
 	if len(parts) < 4 || parts[2] != "commit" {
-		fmt.Fprintf(os.Stderr, "Invalid commit URL format: %s", parsedUrl.Path)
+		fmt.Fprintf(os.Stderr, "Invalid commit URL format: %s\n", parsedUrl.Path)
 		os.Exit(1)
 	}
 
