@@ -24,7 +24,6 @@ import (
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 
-	"github.com/prometheus/prometheus/scrape"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +54,7 @@ var TargetSubCmd = &cobra.Command{
 		headers := []string{"TARGET", "SCRAPE URL", "HEALTH", "LAST ERROR"}
 		var data [][]string
 		for _, target := range targets.Data.ActiveTargets {
-			row := []string{target.DiscoveredLabels["__meta_kubernetes_endpoint_address_target_name"], target.ScrapeURL, string(target.Health), target.LastError}
+			row := []string{target.DiscoveredLabels["__meta_kubernetes_endpoint_address_target_name"], target.ScrapeURL, target.Health, target.LastError}
 			data = append(data, row)
 		}
 		helpers.PrintTable(headers, data)
@@ -80,7 +79,7 @@ type Target struct {
 	LastError          string              `json:"lastError"`
 	LastScrape         time.Time           `json:"lastScrape"`
 	LastScrapeDuration float64             `json:"lastScrapeDuration"`
-	Health             scrape.TargetHealth `json:"health"`
+	Health             string              `json:"health"`
 
 	ScrapeInterval string `json:"scrapeInterval"`
 	ScrapeTimeout  string `json:"scrapeTimeout"`
