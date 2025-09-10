@@ -45,8 +45,13 @@ var GetCode = &cobra.Command{
 		token := getRegistryAccessToken(registry, repository, AuthFile)
 		manifestDigest := getManifestDigest(registry, repository, token, imageDigest)
 		commitUrl := getCommitUrl(registry, repository, token, manifestDigest)
+		var filesFound []string
 		username, repository, commit := parseCommitUrl(commitUrl)
-		filesFound := searchFileInGitHubRepository(username, repository, commit, FileName, ExcludePrefix)
+		if FileName != "" {
+			filesFound = searchFileInGitHubRepository(username, repository, commit, FileName, ExcludePrefix)
+		} else {
+			filesFound = append(filesFound, fmt.Sprintf("https://github.com/%s/%s/tree/%s", username, repository, commit))
+		}
 		if len(filesFound) == 0 {
 			fmt.Fprintf(os.Stderr, "No match found for filename \"%s\" in repository \"https://github.com/%s/%s/blob/%s\"\n", FileName, username, repository, commit)
 			os.Exit(1)
