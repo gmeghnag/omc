@@ -31,8 +31,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var PrometheusInstance string
-
 var SubnetsCmd = &cobra.Command{
 	Use:     "subnets",
 	Aliases: []string{"subnet"},
@@ -43,8 +41,7 @@ var SubnetsCmd = &cobra.Command{
 		_nodes, _ := os.ReadDir(nodesFolderPath)
 
 		var data [][]string
-		var ipv4InHeaders, ipv6InHeaders, gatewayIPInHeaders,
-			primaryIfAddrInHeaders, nodeSubnetInHeaders, nodeGatewayRouterIpInHeaders bool
+		var nodeSubnetInHeaders, nodeGatewayRouterIpInHeaders bool
 		headers := []string{"HOST/NODE", "ROLE"}
 		for _, f := range _nodes {
 			nodeYamlPath := nodesFolderPath + f.Name()
@@ -67,94 +64,6 @@ var SubnetsCmd = &cobra.Command{
 			NodeRole = strings.Join(NodeRoles, ",")
 
 			row := []string{Node.Name, NodeRole}
-			ipv4String := Node.ObjectMeta.Annotations["alpha.kubernetes.io/provided-node-ip"]
-			ipv6String := ""
-			var ipsArray []string
-			var ipv4Array []string
-			var ipv6Array []string
-			hostAddresses := Node.ObjectMeta.Annotations["k8s.ovn.org/host-addresses"]
-			if hostAddresses != "" {
-				err := yaml.Unmarshal([]byte(hostAddresses), &ipsArray)
-				if err != nil {
-					panic(err)
-				}
-				for _, ip := range ipsArray {
-					if strings.Contains(ip, ":") {
-						ipv6Array = append(ipv6Array, ip)
-					} else {
-						ipv4Array = append(ipv4Array, ip)
-					}
-				}
-			}
-			// "k8s.ovn.org/host-addresses" was renamed to "k8s.ovn.org/host-cidrs" in 4.14
-			hostCIDRS := Node.ObjectMeta.Annotations["k8s.ovn.org/host-cidrs"]
-			if hostCIDRS != "" {
-				err := yaml.Unmarshal([]byte(hostCIDRS), &ipsArray)
-				if err != nil {
-					panic(err)
-				}
-				for _, ip := range ipsArray {
-					if strings.Contains(ip, ":") {
-						ipv6Array = append(ipv6Array, ip)
-					} else {
-						ipv4Array = append(ipv4Array, ip)
-					}
-				}
-			}
-			if len(ipv4Array) != 0 {
-				ipv4String = strings.Join(ipv4Array, ",")
-			}
-			if len(ipv6Array) != 0 {
-				ipv6String = strings.Join(ipv6Array, ",")
-			}
-			if ipv6String != "" {
-				row = append(row, ipv6String)
-				if !ipv6InHeaders {
-					headers = append(headers, "HOST IPV6-ADDRESSES")
-					ipv6InHeaders = true
-				}
-			}
-			if ipv4String != "" {
-				row = append(row, ipv4String)
-				if !ipv4InHeaders {
-					headers = append(headers, "HOST IP-ADDRESSES")
-					ipv4InHeaders = true
-				}
-			}
-
-			primaryIfAddr := ""
-			primaryIfAddrStrMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-primary-ifaddr"]
-			if primaryIfAddrStrMap != "" {
-				var ifaddr map[string]string
-				if err := yaml.Unmarshal([]byte(primaryIfAddrStrMap), &ifaddr); err != nil {
-					panic(err)
-				}
-				primaryIfAddr = ifaddr["ipv4"]
-			}
-			if primaryIfAddr != "" {
-				row = append(row, primaryIfAddr)
-				if !primaryIfAddrInHeaders {
-					headers = append(headers, "PRIMARY IF-ADDRESS")
-					primaryIfAddrInHeaders = true
-				}
-			}
-
-			gatewayIP := ""
-			GatewayConfigString := Node.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
-			if GatewayConfigString != "" {
-				var GatewayConf GatewayConfig
-				if err := yaml.Unmarshal([]byte(GatewayConfigString), &GatewayConf); err != nil {
-					panic(err)
-				}
-				gatewayIP = strings.Join(GatewayConf.Default.NextHops, ",")
-			}
-			if gatewayIP != "" {
-				row = append(row, gatewayIP)
-				if !gatewayIPInHeaders {
-					headers = append(headers, "HOST GATEWAY-IP")
-					gatewayIPInHeaders = true
-				}
-			}
 
 			nodeSubnet := ""
 			nodeSubnetStrMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-subnets"]
@@ -202,22 +111,6 @@ var SubnetsCmd = &cobra.Command{
 		}
 		helpers.PrintTable(headers, data)
 	},
-}
-
-type GatewayConfig struct {
-	Default Config `json:"default"`
-}
-
-type Config struct {
-	Mode           string   `json:"mode"`
-	InterfaceID    string   `json:"interface-id"`
-	MacAddress     string   `json:"mac-address"`
-	MacAddresses   []string `json:"ip-addresses"`
-	IpAddresses    string   `json:"ip-address"`
-	NextHops       []string `json:"next-hops"`
-	NextHop        string   `json:"next-hop"`
-	NodePortEnable string   `json:"node-port-enable"`
-	VlanId         string   `json:"vlan-id"`
 }
 
 func init() {
