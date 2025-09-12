@@ -41,7 +41,7 @@ var SubnetsCmd = &cobra.Command{
 		_nodes, _ := os.ReadDir(nodesFolderPath)
 
 		var data [][]string
-		var nodeSubnetInHeaders, nodeGatewayRouterIpInHeaders bool
+		var nodeSubnetInHeaders, nodeGatewayRouterIpInHeaders, nodeTransitSwitchIpInHeaders, nodeMasqueradeSubnetInHeaders bool
 		headers := []string{"HOST/NODE", "ROLE"}
 		for _, f := range _nodes {
 			nodeYamlPath := nodesFolderPath + f.Name()
@@ -88,24 +88,75 @@ var SubnetsCmd = &cobra.Command{
 				}
 			}
 
-			if vars.OutputStringVar == "wide" {
-				nodeGatewayRouterIp := ""
-				nodeGatewayRouterIpStrMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-gateway-router-lrp-ifaddr"]
-				if nodeGatewayRouterIpStrMap != "" {
-					var gatewayRouterIp map[string]string
-					if err := yaml.Unmarshal([]byte(nodeGatewayRouterIpStrMap), &gatewayRouterIp); err != nil {
-						panic(err)
-					}
+			nodeGatewayRouterIp := ""
+			nodeGatewayRouterIpStrMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-gateway-router-lrp-ifaddr"]
+			if nodeGatewayRouterIpStrMap != "" {
+				var gatewayRouterIp map[string]string
+				if err := yaml.Unmarshal([]byte(nodeGatewayRouterIpStrMap), &gatewayRouterIp); err != nil {
+					panic(err)
+				}
+				nodeGatewayRouterIp = gatewayRouterIp["ipv4"]
+			}
+
+			nodeGatewayRouterIpStrMapMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-gateway-router-lrp-ifaddrs"]
+			if nodeGatewayRouterIpStrMapMap != "" {
+				var gatewayRouterIps map[string]map[string]string
+				if err := yaml.Unmarshal([]byte(nodeGatewayRouterIpStrMapMap), &gatewayRouterIps); err != nil {
+					panic(err)
+				}
+				if gatewayRouterIp, ok := gatewayRouterIps["default"]; ok {
 					nodeGatewayRouterIp = gatewayRouterIp["ipv4"]
 				}
-				if nodeGatewayRouterIp != "" {
-					row = append(row, nodeGatewayRouterIp)
-					if !nodeGatewayRouterIpInHeaders {
-						headers = append(headers, "NODE GW-ROUTER-IP")
-						nodeGatewayRouterIpInHeaders = true
-					}
+			}
+
+			if nodeGatewayRouterIp != "" {
+				row = append(row, nodeGatewayRouterIp)
+				if !nodeGatewayRouterIpInHeaders {
+					headers = append(headers, "NODE GW-ROUTER-IP")
+					nodeGatewayRouterIpInHeaders = true
 				}
 			}
+
+			nodeTransitSwitchIp := ""
+			nodeTransitSwitchIpStrMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-transit-switch-port-ifaddr"]
+			if nodeTransitSwitchIpStrMap != "" {
+				var transitSwitchIp map[string]string
+				if err := yaml.Unmarshal([]byte(nodeTransitSwitchIpStrMap), &transitSwitchIp); err != nil {
+					panic(err)
+				}
+				nodeTransitSwitchIp = transitSwitchIp["ipv4"]
+			}
+
+			if nodeTransitSwitchIp != "" {
+				row = append(row, nodeTransitSwitchIp)
+				if !nodeTransitSwitchIpInHeaders {
+					headers = append(headers, "NODE TRANSIT-SWITCH-IP")
+					nodeTransitSwitchIpInHeaders = true
+				}
+			}
+
+			if vars.OutputStringVar == "wide" {
+
+				nodeMasqueradeSubnet := ""
+				nodeMasqueradeSubnetStrMap := Node.ObjectMeta.Annotations["k8s.ovn.org/node-masquerade-subnet"]
+				if nodeMasqueradeSubnetStrMap != "" {
+					var masqueradeSubnet map[string]string
+					if err := yaml.Unmarshal([]byte(nodeMasqueradeSubnetStrMap), &masqueradeSubnet); err != nil {
+						panic(err)
+					}
+					nodeMasqueradeSubnet = masqueradeSubnet["ipv4"]
+				}
+
+				if nodeMasqueradeSubnet != "" {
+					row = append(row, nodeMasqueradeSubnet)
+					if !nodeMasqueradeSubnetInHeaders {
+						headers = append(headers, "NODE MASQUERADE-SUBNET")
+						nodeMasqueradeSubnetInHeaders = true
+					}
+				}
+
+			}
+
 			data = append(data, row)
 
 		}
