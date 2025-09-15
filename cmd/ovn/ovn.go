@@ -36,5 +36,6 @@ func init() {
 	OvnCmd.AddCommand(
 		SubnetsCmd,
 		HostnetinfoCmd,
+		NodeExtraInfoCmd,
 	)
 }
