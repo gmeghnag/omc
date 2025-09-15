@@ -137,13 +137,13 @@ var HostnetinfoCmd = &cobra.Command{
 			}
 
 			gatewayIP := ""
-			GatewayConfigString := Node.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
-			if GatewayConfigString != "" {
-				var GatewayConf GatewayConfig
-				if err := yaml.Unmarshal([]byte(GatewayConfigString), &GatewayConf); err != nil {
+			gatewayConfigString := Node.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
+			if gatewayConfigString != "" {
+				var gatewayConf GatewayConfig
+				if err := yaml.Unmarshal([]byte(gatewayConfigString), &gatewayConf); err != nil {
 					panic(err)
 				}
-				gatewayIP = strings.Join(GatewayConf.Default.NextHops, ",")
+				gatewayIP = strings.Join(gatewayConf.Default.NextHops, ",")
 			}
 			if gatewayIP != "" {
 				row = append(row, gatewayIP)
