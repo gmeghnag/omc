@@ -41,7 +41,7 @@ var HostnetinfoCmd = &cobra.Command{
 		_nodes, _ := os.ReadDir(nodesFolderPath)
 
 		var data [][]string
-		var ipv4InHeaders, ipv6InHeaders, gatewayIPInHeaders, primaryIfAddrInHeaders bool
+		var ipv4InHeaders, ipv6InHeaders, gatewayIPInHeaders, primaryIfAddrInHeaders, nodeEncapIPInHeaders bool
 		headers := []string{"HOST/NODE", "ROLE"}
 		for _, f := range _nodes {
 			nodeYamlPath := nodesFolderPath + f.Name()
@@ -137,13 +137,13 @@ var HostnetinfoCmd = &cobra.Command{
 			}
 
 			gatewayIP := ""
-			GatewayConfigString := Node.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
-			if GatewayConfigString != "" {
-				var GatewayConf GatewayConfig
-				if err := yaml.Unmarshal([]byte(GatewayConfigString), &GatewayConf); err != nil {
+			gatewayConfigString := Node.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
+			if gatewayConfigString != "" {
+				var gatewayConf GatewayConfig
+				if err := yaml.Unmarshal([]byte(gatewayConfigString), &gatewayConf); err != nil {
 					panic(err)
 				}
-				gatewayIP = strings.Join(GatewayConf.Default.NextHops, ",")
+				gatewayIP = strings.Join(gatewayConf.Default.NextHops, ",")
 			}
 			if gatewayIP != "" {
 				row = append(row, gatewayIP)
@@ -153,9 +153,25 @@ var HostnetinfoCmd = &cobra.Command{
 				}
 			}
 
-			// if vars.OutputStringVar == "wide" {
-			// If something is to be displayed only with "wide" output, include here.
-			// }
+			if vars.OutputStringVar == "wide" {
+				nodeEncapIP := ""
+				nodeEncapIPs := Node.ObjectMeta.Annotations["k8s.ovn.org/node-encap-ips"]
+				if nodeEncapIPs != "" {
+					var nodeEncapIPsArray []string
+					if err := yaml.Unmarshal([]byte(nodeEncapIPs), &nodeEncapIPsArray); err != nil {
+						panic(err)
+					}
+					nodeEncapIP = strings.Join(nodeEncapIPsArray, ",")
+				}
+
+				if nodeEncapIP != "" {
+					row = append(row, nodeEncapIP)
+					if !nodeEncapIPInHeaders {
+						headers = append(headers, "HOST ENCAP-IPS")
+						nodeEncapIPInHeaders = true
+					}
+				}
+			}
 			data = append(data, row)
 
 		}
