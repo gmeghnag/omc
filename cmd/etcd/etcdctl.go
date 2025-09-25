@@ -12,7 +12,7 @@ import (
 	etcdserverpb "go.etcd.io/etcd/api/v3/etcdserverpb"
 )
 
-type Endpoint struct {
+type epStatus struct {
 	Endpoint string                      `json:"Endpoint"`
 	Resp     etcdserverpb.StatusResponse `json:"Status"`
 }
@@ -39,7 +39,7 @@ type memberList struct {
 
 func EndpointStatus(etcdFolderPath string) {
 	_file, _ := ioutil.ReadFile(etcdFolderPath + "endpoint_status.json")
-	var Endpoints []Endpoint
+	var Endpoints []epStatus
 	if err := json.Unmarshal([]byte(_file), &Endpoints); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
 		os.Exit(1)
