@@ -24,6 +24,19 @@ type epHealth struct {
 	Error  string `json:"error,omitempty"`
 }
 
+type member struct {
+	ID   uint64 `json:"id"` // from https://github.com/etcd-io/etcd/blob/main/client/pkg/types/id.go#L25C9-L25C15
+	Name string `json:"name,omitempty"`
+	//Status is not a field but just "started" unles Name is zero-length as per https://github.com/etcd-io/etcd/blob/4601818f511478980725a215e814e56fb8ee31ef/etcdctl/ctlv3/command/printer.go#L188-L191
+	ClientURLs []string `json:"clientURLs,omitempty"`
+	PeerURLs   []string `json:"peerURLs"`
+	IsLearner  bool     `json:"isLearner,omitempty"`
+}
+
+type memberList struct {
+	Members []member `json:"members"`
+}
+
 func EndpointStatus(etcdFolderPath string) {
 	_file, _ := ioutil.ReadFile(etcdFolderPath + "endpoint_status.json")
 	var Endpoints []Endpoint
@@ -70,6 +83,39 @@ func EndpointHealth(etcdFolderPath string) {
 			fmt.Sprintf("%v", h.Health),
 			h.Took,
 			h.Error,
+		})
+	}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader(hdr)
+	table.AppendBulk(rows)
+	table.Render()
+}
+
+func MemberList(etcdFolderPath string) {
+	_file, _ := ioutil.ReadFile(etcdFolderPath + "member_list.json")
+	var memberList memberList
+	if err := json.Unmarshal([]byte(_file), &memberList); err != nil {
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"member_list.json\":", err.Error())
+		os.Exit(1)
+	}
+	var rows [][]string
+	var hdr = []string{"ID", "status", "name", "peer addrs", "client addrs", "is learner"}
+	for _, m := range memberList.Members {
+		status := "started"
+		if len(m.Name) == 0 {
+			status = "unstarted"
+		}
+		isLearner := "false"
+		if m.IsLearner {
+			isLearner = "true"
+		}
+		rows = append(rows, []string{
+			fmt.Sprintf("%x", m.ID),
+			status,
+			m.Name,
+			strings.Join(m.PeerURLs, ","),
+			strings.Join(m.ClientURLs, ","),
+			isLearner,
 		})
 	}
 	table := tablewriter.NewWriter(os.Stdout)
