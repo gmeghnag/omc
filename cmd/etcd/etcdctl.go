@@ -3,7 +3,6 @@ package etcd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -38,7 +37,7 @@ type memberList struct {
 }
 
 func EndpointStatus(etcdFolderPath string) {
-	_file, _ := ioutil.ReadFile(etcdFolderPath + "endpoint_status.json")
+	_file, _ := os.ReadFile(etcdFolderPath + "endpoint_status.json")
 	var Endpoints []epStatus
 	if err := json.Unmarshal([]byte(_file), &Endpoints); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
@@ -69,7 +68,7 @@ func EndpointStatus(etcdFolderPath string) {
 }
 
 func EndpointHealth(etcdFolderPath string) {
-	_file, _ := ioutil.ReadFile(etcdFolderPath + "endpoint_health.json")
+	_file, _ := os.ReadFile(etcdFolderPath + "endpoint_health.json")
 	var healthList []epHealth
 	if err := json.Unmarshal([]byte(_file), &healthList); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
@@ -92,7 +91,7 @@ func EndpointHealth(etcdFolderPath string) {
 }
 
 func MemberList(etcdFolderPath string) {
-	_file, _ := ioutil.ReadFile(etcdFolderPath + "member_list.json")
+	_file, _ := os.ReadFile(etcdFolderPath + "member_list.json")
 	var memberList memberList
 	if err := json.Unmarshal([]byte(_file), &memberList); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"member_list.json\":", err.Error())
