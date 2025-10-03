@@ -16,6 +16,21 @@ type epStatus struct {
 	Resp     etcdserverpb.StatusResponse `json:"Status"`
 }
 
+var alarmType_name = map[int32]string{
+	0: "NONE",
+	1: "NOSPACE",
+	2: "CORRUPT",
+}
+
+type alarm struct {
+	MemberID uint64 `json:"memberID,omitempty"`
+	Alarm    int32  `json:"alarm,omitempty"`
+}
+
+type alarmList struct {
+	Alarms []alarm `json:"alarms,omitempty"`
+}
+
 type epHealth struct {
 	Ep     string `json:"endpoint"`
 	Health bool   `json:"health"`
@@ -88,6 +103,24 @@ func EndpointHealth(etcdFolderPath string) {
 	table.SetHeader(hdr)
 	table.AppendBulk(rows)
 	table.Render()
+}
+
+func AlarmList(etcdFolderPath string) {
+	_file, _ := os.ReadFile(etcdFolderPath + "alarm_list.json")
+	var reportedAlarmList alarmList
+	if err := json.Unmarshal([]byte(_file), &reportedAlarmList); err != nil {
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"alarm_list.json\":", err.Error())
+		os.Exit(1)
+	}
+	for _, reportedAlarm := range reportedAlarmList.Alarms {
+		memberAlarm := alarmType_name[reportedAlarm.Alarm]
+		if memberAlarm == "" {
+			fmt.Fprintf(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"alarm_list.json\": Member %d shows invalid alert %d\n", reportedAlarm.MemberID, reportedAlarm.Alarm)
+			os.Exit(1)
+		}
+		fmt.Printf("memberID:%d alarm:%s\n", reportedAlarm.MemberID, memberAlarm)
+	}
+
 }
 
 func MemberList(etcdFolderPath string) {
