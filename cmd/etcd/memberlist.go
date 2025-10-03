@@ -16,27 +16,22 @@ limitations under the License.
 package etcd
 
 import (
-	"os"
+	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
 )
 
-// etcdCmd represents the etcd command
-var Etcd = &cobra.Command{
-	Use:     "etcd",
-	Aliases: []string{"etcdctl"},
-	Short:   "Shows etcd health and status.",
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
-		os.Exit(0)
-	},
+func etcdMembersCommand(currentContextPath string) {
+	etcdFolderPath := currentContextPath + "/etcd_info/"
+	MemberList(etcdFolderPath)
 }
 
-func init() {
-	Etcd.AddCommand(
-		Health,
-		Status,
-		Members,
-		Alarm,
-	)
+// etcdCmd represents the etcd command
+var Members = &cobra.Command{
+	Use:     "members",
+	Aliases: []string{"memberlist", "member-list"},
+	Short:   "Etcd member list",
+	Run: func(cmd *cobra.Command, args []string) {
+		etcdMembersCommand(vars.MustGatherRootPath)
+	},
 }
