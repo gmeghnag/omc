@@ -28,9 +28,9 @@ var GetCode = &cobra.Command{
 	Short: "Retrieve OpenShift container image code.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if (len(args) == 0 && Image == "") || len(args) > 2 {
-			fmt.Fprintln(os.Stderr, "error: expected 'omc source manifest (POD_NAME | POD/POD_NAME) [-n NAMESPACE] [-c CONTAINER]'.")
-			fmt.Fprintln(os.Stderr, "POD or POD/POD_NAME is a required argument for the \"source manifest\" command (if --image is not provided)")
-			fmt.Fprintln(os.Stderr, "See 'omc source manifest -h' for help and examples")
+			fmt.Fprintln(os.Stderr, "error: expected 'omc source code (POD_NAME | POD/POD_NAME) [-n NAMESPACE] [-c CONTAINER]'.")
+			fmt.Fprintln(os.Stderr, "POD or POD/POD_NAME is a required argument for the \"source code\" command (if --image is not provided)")
+			fmt.Fprintln(os.Stderr, "See 'omc source code -h' for help and examples")
 			os.Exit(1)
 		}
 		var registry, repository, imageDigest string
