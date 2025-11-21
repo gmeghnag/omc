@@ -23,6 +23,10 @@ import (
 var OpenInBrowser bool
 var ExcludePrefix string
 
+type FilesFound struct {
+	Matches []string `json:"matches"`
+}
+
 var GetCode = &cobra.Command{
 	Use:   "code",
 	Short: "Retrieve OpenShift container image code.",
@@ -45,30 +49,32 @@ var GetCode = &cobra.Command{
 		token := getRegistryAccessToken(registry, repository, AuthFile)
 		manifestDigest := getManifestDigest(registry, repository, token, imageDigest)
 		commitUrl := getCommitUrl(registry, repository, token, manifestDigest)
-		var filesFound []string
+		var filesFound FilesFound
 		username, repository, commit := parseCommitUrl(commitUrl)
 		if FileName != "" {
-			filesFound = searchFileInGitHubRepository(username, repository, commit, FileName, ExcludePrefix)
+			filesFound.Matches = searchFileInGitHubRepository(username, repository, commit, FileName, ExcludePrefix)
 		} else {
-			filesFound = append(filesFound, fmt.Sprintf("https://github.com/%s/%s/tree/%s", username, repository, commit))
+			filesFound.Matches = append(filesFound.Matches, fmt.Sprintf("https://github.com/%s/%s/tree/%s", username, repository, commit))
 		}
-		if len(filesFound) == 0 {
-			fmt.Fprintf(os.Stderr, "No match found for filename \"%s\" in repository \"https://github.com/%s/%s/blob/%s\"\n", FileName, username, repository, commit)
-			os.Exit(1)
-		}
-		if OpenInBrowser {
-			if len(filesFound) > 1 {
-				p := tea.NewProgram(initialModel(filesFound))
+		if OpenInBrowser && len(filesFound.Matches) > 0 {
+			if len(filesFound.Matches) > 1 {
+				p := tea.NewProgram(initialModel(filesFound.Matches))
 				if _, err := p.Run(); err != nil {
 					fmt.Printf("Error running program: %v\n", err)
 					os.Exit(1)
 				}
 			} else {
-				openBrowser(filesFound[0])
+				openBrowser(filesFound.Matches[0])
 			}
 		} else {
-			for _, file := range filesFound {
-				fmt.Println(file)
+			if len(filesFound.Matches) == 0 {
+				jsonBytes, _ := json.MarshalIndent(FilesFound{Matches: []string{}}, "", "  ")
+				fmt.Fprintf(os.Stderr, "No match found for filename \"%s\" in repository \"https://github.com/%s/%s/blob/%s\"\n", FileName, username, repository, commit)
+				fmt.Println(string(jsonBytes))
+				os.Exit(1)
+			} else {
+				jsonBytes, _ := json.MarshalIndent(filesFound, "", "  ")
+				fmt.Println(string(jsonBytes))
 			}
 		}
 	},
