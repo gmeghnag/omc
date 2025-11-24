@@ -25,6 +25,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/openshift/api v0.0.0-20241211151016-1a7b90faeadf
+	//github.com/openshift/machine-config-operator v0.0.1-0.20251027203400-bb2aa85171d9
 	github.com/openshift/machine-config-operator v0.0.1-0.20230526005055-5843b7a4b27f
 	github.com/openshift/openshift-apiserver v0.0.0-alpha.0.0.20230503155233-aac3dd5bf054
 	github.com/schollz/progressbar/v3 v3.17.1

@@ -86,6 +86,17 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 	if resourceKind == "event" && table.ColumnDefinitions[0].Name == "Last Seen" {
 		var lastTimestamp metav1.Time
 		lastTimestampInterface := unstruct.Object["lastTimestamp"]
+		seriesRaw := unstruct.Object["series"]
+		seriesMap, ok := seriesRaw.(map[string]interface{})
+		if ok {
+			lastObservedRaw, ok := seriesMap["lastObservedTime"]
+			if ok {
+				lastObserved, ok := lastObservedRaw.(string)
+				if ok {
+					lastTimestampInterface = lastObserved
+				}
+			}
+		}
 		if lastTimestampInterface != nil {
 			lastTimestampTime, _ := time.Parse(time.RFC3339, fmt.Sprintf("%v", lastTimestampInterface))
 			lastTimestamp = metav1.NewTime(lastTimestampTime.UTC())
