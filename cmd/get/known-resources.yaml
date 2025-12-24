@@ -173,6 +173,16 @@ ev:
   name: event
   namespaced: true
   plural: events
+events.events.k8s.io:
+  group: events.k8s.io
+  name: event
+  namespaced: true
+  plural: events
+event.events.k8s.io:
+  group: events.k8s.io
+  name: event
+  namespaced: true
+  plural: events
 limitrange:
   group: core
   name: limitrange
@@ -378,6 +388,26 @@ validatingwebhookconfigurations:
   name: validatingwebhookconfiguration
   namespaced: false
   plural: validatingwebhookconfigurations
+validatingadmissionpolicy:
+  group: admissionregistration.k8s.io
+  name: validatingadmissionpolicy
+  namespaced: false
+  plural: validatingadmissionpolicies
+validatingadmissionpolicies:
+  group: admissionregistration.k8s.io
+  name: validatingadmissionpolicy
+  namespaced: false
+  plural: validatingadmissionpolicies
+validatingadmissionpolicybinding:
+  group: admissionregistration.k8s.io
+  name: validatingadmissionpolicybinding
+  namespaced: false
+  plural: validatingadmissionpolicybindings
+validatingadmissionpolicybindings:
+  group: admissionregistration.k8s.io
+  name: validatingadmissionpolicybinding
+  namespaced: false
+  plural: validatingadmissionpolicybindings
 customresourcedefinition:
   group: apiextensions.k8s.io
   name: customresourcedefinition
@@ -578,6 +608,16 @@ tokenreviews:
   name: tokenreview
   namespaced: false
   plural: tokenreviews
+selfsubjectreview:
+  group: authentication.k8s.io
+  name: selfsubjectreview
+  namespaced: false
+  plural: selfsubjectreviews
+selfsubjectreviews:
+  group: authentication.k8s.io
+  name: selfsubjectreview
+  namespaced: false
+  plural: selfsubjectreviews
 localsubjectaccessreview:
   group: authorization.k8s.io
   name: localsubjectaccessreview
@@ -713,6 +753,31 @@ netpol:
   name: networkpolicy
   namespaced: true
   plural: networkpolicies
+ipaddress:
+  group: networking.k8s.io
+  name: ipaddress
+  namespaced: false
+  plural: ipaddresses
+ipaddresses:
+  group: networking.k8s.io
+  name: ipaddress
+  namespaced: false
+  plural: ipaddresses
+ip:
+  group: networking.k8s.io
+  name: ipaddress
+  namespaced: false
+  plural: ipaddresses
+servicecidr:
+  group: networking.k8s.io
+  name: servicecidr
+  namespaced: false
+  plural: servicecidrs
+servicecidrs:
+  group: networking.k8s.io
+  name: servicecidr
+  namespaced: false
+  plural: servicecidrs
 runtimeclass:
   group: node.k8s.io
   name: runtimeclass
@@ -778,6 +843,46 @@ pc:
   name: priorityclass
   namespaced: false
   plural: priorityclasses
+deviceclass:
+  group: resource.k8s.io
+  name: deviceclass
+  namespaced: false
+  plural: deviceclasses
+deviceclasses:
+  group: resource.k8s.io
+  name: deviceclass
+  namespaced: false
+  plural: deviceclasses
+resourceclaim:
+  group: resource.k8s.io
+  name: resourceclaim
+  namespaced: true
+  plural: resourceclaims
+resourceclaims:
+  group: resource.k8s.io
+  name: resourceclaim
+  namespaced: true
+  plural: resourceclaims
+resourceclaimtemplate:
+  group: resource.k8s.io
+  name: resourceclaimtemplate
+  namespaced: true
+  plural: resourceclaimtemplates
+resourceclaimtemplates:
+  group: resource.k8s.io
+  name: resourceclaimtemplate
+  namespaced: true
+  plural: resourceclaimtemplates
+resourceslice:
+  group: resource.k8s.io
+  name: resourceslice
+  namespaced: false
+  plural: resourceslices
+resourceslices:
+  group: resource.k8s.io
+  name: resourceslice
+  namespaced: false
+  plural: resourceslices
 csidriver:
   group: storage.k8s.io
   name: csidriver
@@ -833,6 +938,21 @@ volumeattachments:
   name: volumeattachment
   namespaced: false
   plural: volumeattachments
+volumeattributesclass:
+  group: storage.k8s.io
+  name: volumeattributesclass
+  namespaced: false
+  plural: volumeattributesclasses
+volumeattributesclasses:
+  group: storage.k8s.io
+  name: volumeattributesclass
+  namespaced: false
+  plural: volumeattributesclasses
+vac:
+  group: storage.k8s.io
+  name: volumeattributesclass
+  namespaced: false
+  plural: volumeattributesclasses
 horizontalpodautoscalers:
   group: autoscaling
   name: horizontalpodautoscaler

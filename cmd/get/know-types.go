@@ -9,6 +9,7 @@ import (
 	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 	"k8s.io/kubernetes/pkg/apis/apiserverinternal"
 	"k8s.io/kubernetes/pkg/apis/apps"
+	"k8s.io/kubernetes/pkg/apis/authentication"
 	autoscaling "k8s.io/kubernetes/pkg/apis/autoscaling"
 	batch "k8s.io/kubernetes/pkg/apis/batch"
 	"k8s.io/kubernetes/pkg/apis/certificates"
@@ -21,9 +22,10 @@ import (
 	"k8s.io/kubernetes/pkg/apis/resource"
 	"k8s.io/kubernetes/pkg/apis/scheduling"
 	networkingv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/networking"
-        policyv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/policy"
-        resourcev1_30 "k8s.io/kubernetes/v1_30/pkg/apis/resource"
+	policyv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/policy"
+	resourcev1_30 "k8s.io/kubernetes/v1_30/pkg/apis/resource"
 
+	eventsv1 "k8s.io/api/events/v1"
 	discovery "k8s.io/kubernetes/pkg/apis/discovery"
 	storage "k8s.io/kubernetes/pkg/apis/storage"
 
@@ -122,6 +124,16 @@ func addCoordinationTypes(scheme *runtime.Scheme) error {
 	return nil
 }
 
+func addAuthenticationTypes(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "authentication.k8s.io", Version: "v1"}
+	types := []runtime.Object{
+		&authentication.SelfSubjectReview{},
+		&authentication.TokenReview{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
 func addAppsV1Types(scheme *runtime.Scheme) error {
 	GroupVersion := schema.GroupVersion{Group: "apps.openshift.io", Version: "v1"}
 	types := []runtime.Object{
@@ -208,10 +220,29 @@ func addFlowControlV1B2Types(scheme *runtime.Scheme) error {
 	return nil
 }
 
+func addFlowControlV1Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "flowcontrol.apiserver.k8s.io", Version: "v1"}
+	types := []runtime.Object{
+		&flowcontrol.FlowSchema{},
+		&flowcontrol.PriorityLevelConfiguration{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
 func addDiscoveryTypes(scheme *runtime.Scheme) error {
 	GroupVersion := schema.GroupVersion{Group: "discovery.k8s.io", Version: "v1"}
 	types := []runtime.Object{
 		&discovery.EndpointSlice{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
+func addEventsV1Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "events.k8s.io", Version: "v1"}
+	types := []runtime.Object{
+		&eventsv1.Event{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil
@@ -236,7 +267,9 @@ func addNetworkingTypes(scheme *runtime.Scheme) error {
 		&networkingv1_28.ClusterCIDR{},
 		&networking.IngressClass{},
 		&networking.Ingress{},
+		&networking.IPAddress{},
 		&networking.NetworkPolicy{},
+		&networking.ServiceCIDR{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil
@@ -305,7 +338,9 @@ func addStorageV1Types(scheme *runtime.Scheme) error {
 		&storage.StorageClass{},
 		&storage.CSINode{},
 		&storage.CSIDriver{},
+		&storage.CSIStorageCapacity{},
 		&storage.VolumeAttachment{},
+		&storage.VolumeAttributesClass{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil
@@ -326,6 +361,18 @@ func addResourceV1A2Types(scheme *runtime.Scheme) error {
 		&resourcev1_30.ResourceClass{},
 		&resource.ResourceClaim{},
 		&resource.ResourceClaimTemplate{},
+	}
+	scheme.AddKnownTypes(GroupVersion, types...)
+	return nil
+}
+
+func addResourceV1Types(scheme *runtime.Scheme) error {
+	GroupVersion := schema.GroupVersion{Group: "resource.k8s.io", Version: "v1"}
+	types := []runtime.Object{
+		&resource.DeviceClass{},
+		&resource.ResourceClaim{},
+		&resource.ResourceClaimTemplate{},
+		&resource.ResourceSlice{},
 	}
 	scheme.AddKnownTypes(GroupVersion, types...)
 	return nil

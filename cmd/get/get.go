@@ -68,7 +68,6 @@ import (
 	templateprinters "github.com/openshift/openshift-apiserver/pkg/template/printers/internalversion"
 )
 
-
 var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 
 //go:embed known-resources.yaml
@@ -146,6 +145,7 @@ func init() {
 	_ = addApiRegistrationTypes(vars.Schema)
 	_ = addAppsTypes(vars.Schema)
 	_ = addAppsV1Types(vars.Schema)
+	_ = addAuthenticationTypes(vars.Schema)
 	_ = addAuthorizationTypes(vars.Schema)
 	_ = addAutoscalingV1Types(vars.Schema)
 	_ = addAutoscalingV2Types(vars.Schema)
@@ -155,8 +155,10 @@ func init() {
 	_ = addConfigV1Types(vars.Schema)
 	_ = addCoordinationTypes(vars.Schema)
 	_ = addDiscoveryTypes(vars.Schema)
+	_ = addEventsV1Types(vars.Schema)
 	_ = addFlowControlTypes(vars.Schema)
 	_ = addFlowControlV1B2Types(vars.Schema)
+	_ = addFlowControlV1Types(vars.Schema)
 	_ = addImageTypes(vars.Schema)
 	_ = addNetworkingTypes(vars.Schema)
 	_ = addNodeTypes(vars.Schema)
@@ -165,6 +167,7 @@ func init() {
 	_ = addProjectV1Types(vars.Schema)
 	_ = addQuotaV1Types(vars.Schema)
 	_ = addResourceV1A2Types(vars.Schema)
+	_ = addResourceV1Types(vars.Schema)
 	_ = addRouteV1Types(vars.Schema)
 	_ = addRBACTypes(vars.Schema)
 	_ = addSchedulingTypes(vars.Schema)
@@ -242,7 +245,9 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 				}
 			}
 
-		    if vars.SortBy != "" {UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)}
+			if vars.SortBy != "" {
+				UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)
+			}
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
 					_, ok := resources[item.GetName()]
@@ -270,33 +275,33 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 						os.Exit(1)
 					}
-					if vars.SortBy!=""{
+					if vars.SortBy != "" {
 						sortObjects = append(sortObjects, item)
 					} else {
-					if len(resources) > 0 {
-						_, ok := resources[item.GetName()]
-						if ok {
+						if len(resources) > 0 {
+							_, ok := resources[item.GetName()]
+							if ok {
+								handleObject(item)
+							}
+						} else {
 							handleObject(item)
 						}
-					} else {
-						handleObject(item)
-					}
 					}
 				}
-				
-				if vars.SortBy!=""{
-		            sortObjects = sortResources(sortObjects, vars.SortBy)
-				    for _, item := range sortObjects {
-				    if len(resources) > 0 {
-				    		_, ok := resources[item.GetName()]
-				    		if ok {
-				    			handleObject(item)
-				    		}
-				    	} else {
-				    		handleObject(item)
-				    	}
-				    }
-			    }
+
+				if vars.SortBy != "" {
+					sortObjects = sortResources(sortObjects, vars.SortBy)
+					for _, item := range sortObjects {
+						if len(resources) > 0 {
+							_, ok := resources[item.GetName()]
+							if ok {
+								handleObject(item)
+							}
+						} else {
+							handleObject(item)
+						}
+					}
+				}
 			}
 		}
 	}
@@ -314,7 +319,11 @@ func getNamespacesResources(resources map[string]struct{}) {
 					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 					os.Exit(1)
 				}
-				if vars.SortBy != "" { sortObjects = append(sortObjects, item)} else {handleObject(item)}
+				if vars.SortBy != "" {
+					sortObjects = append(sortObjects, item)
+				} else {
+					handleObject(item)
+				}
 			}
 		}
 	} else {
@@ -328,15 +337,19 @@ func getNamespacesResources(resources map[string]struct{}) {
 					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
 					os.Exit(1)
 				}
-				if vars.SortBy != "" { sortObjects = append(sortObjects, item)} else {handleObject(item)}
+				if vars.SortBy != "" {
+					sortObjects = append(sortObjects, item)
+				} else {
+					handleObject(item)
+				}
 			}
 		}
 	}
 	if vars.SortBy != "" {
 		sortObjects = sortResources(sortObjects, vars.SortBy)
 		for _, item := range sortObjects {
-		    handleObject(item)
-	    }
+			handleObject(item)
+		}
 	}
 }
 
@@ -365,27 +378,27 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			if vars.SortBy != "" {
 				UnstructuredItems.Items = append(UnstructuredItems.Items, item)
 			} else {
-			    if len(resources) > 0 {
-			    	_, ok := resources[item.GetName()]
-			    	if ok {
-			    		handleObject(item)
-			    	}
-			    } else {
-			    	handleObject(item)
-			    }
+				if len(resources) > 0 {
+					_, ok := resources[item.GetName()]
+					if ok {
+						handleObject(item)
+					}
+				} else {
+					handleObject(item)
+				}
 			}
 		}
 		if vars.SortBy != "" {
 			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)
 			for _, item := range UnstructuredItems.Items {
-			    if len(resources) > 0 {
-			    	_, ok := resources[item.GetName()]
-			    	if ok {
-			    		handleObject(item)
-			    	}
-			    } else {
-			    	handleObject(item)
-			    }
+				if len(resources) > 0 {
+					_, ok := resources[item.GetName()]
+					if ok {
+						handleObject(item)
+					}
+				} else {
+					handleObject(item)
+				}
 			}
 		}
 	} else {
@@ -393,7 +406,9 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		if vars.SortBy != "" {UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)}
+		if vars.SortBy != "" {
+			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)
+		}
 		for _, item := range UnstructuredItems.Items {
 			if len(resources) > 0 {
 				_, ok := resources[item.GetName()]
@@ -551,7 +566,7 @@ func handleOutput(w io.Writer) {
 				fmt.Fprintf(w, "No resources %s found.\n", resources)
 			}
 		}
-	}  else {
+	} else {
 		if vars.LastKind == vars.CurrentKind {
 			err := printer.PrintObj(&vars.Table, &vars.Output)
 			if err != nil {
