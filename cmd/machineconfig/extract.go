@@ -24,9 +24,9 @@ import (
 	"strconv"
 	"strings"
 
-	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
+	ign3types "github.com/coreos/ignition/v2/config/v3_5/types"
 	"github.com/gmeghnag/omc/vars"
-	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	ctrlcommon "github.com/openshift/machine-config-operator/pkg/controller/common"
 	"github.com/spf13/cobra"
 	"github.com/vincent-petithory/dataurl"

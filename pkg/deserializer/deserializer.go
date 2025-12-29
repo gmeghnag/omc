@@ -20,10 +20,10 @@ import (
 
 	"k8s.io/kubernetes/pkg/apis/coordination"
 	"k8s.io/kubernetes/pkg/apis/networking"
+	"k8s.io/kubernetes/pkg/apis/rbac"
 	networkingv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/networking"
 	policyv1_28 "k8s.io/kubernetes/v1_28/pkg/apis/policy"
 	resourcev1_30 "k8s.io/kubernetes/v1_30/pkg/apis/resource"
-	"k8s.io/kubernetes/pkg/apis/rbac"
 
 	template "github.com/openshift/openshift-apiserver/pkg/template/apis/template"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
