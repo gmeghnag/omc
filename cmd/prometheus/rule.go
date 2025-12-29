@@ -123,7 +123,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 	if outputFlag == "" {
 		headers = _headers[1:]
 		if len(data) == 0 {
-			fmt.Println("No resources found.")
+			fmt.Fprintf(os.Stderr, "No resources found.\n")
 		} else {
 			helpers.PrintTable(headers, data)
 		}
@@ -131,7 +131,7 @@ func GetAlertRules(resourcesNames []string, outputFlag string, groupsNames strin
 	if outputFlag == "wide" {
 		headers = _headers[0:]
 		if len(data) == 0 {
-			fmt.Println("No resources found.")
+			fmt.Fprintf(os.Stderr, "No resources found.\n")
 		} else {
 			helpers.PrintTable(headers, data)
 		}
