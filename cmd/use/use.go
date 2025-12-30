@@ -35,6 +35,16 @@ import (
 
 var singleNamespaceInMustGather bool
 
+// findExistingContextByRootDir checks if a root directory is already in the contexts
+func findExistingContextByRootDir(rootDir string, contexts []types.Context) (string, bool) {
+	for _, ctx := range contexts {
+		if strings.HasSuffix(ctx.Path, rootDir) || strings.Contains(ctx.Path, rootDir+"/") {
+			return ctx.Path, true
+		}
+	}
+	return "", false
+}
+
 func useContext(path string, omcConfigFile string, idFlag string) error {
 	if path != "" {
 		_path, err := findMustGatherIn(path)
@@ -260,12 +270,66 @@ var UseCmd = &cobra.Command{
 
 		if isCompressedFile {
 			outputpath := filepath.Dir(path)
-			rootfile, err := DecompressFile(path, outputpath, fileType)
+
+			// Peek into the archive to determine what directory it will create
+			rootDirName, err := GetArchiveRootDir(path, fileType)
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
+				fmt.Fprintln(os.Stderr, "Error: unable to determine archive structure: "+err.Error())
 				os.Exit(1)
 			}
-			path = rootfile
+
+			expectedExtractedPath := filepath.Join(outputpath, rootDirName)
+
+			// Check if the directory already exists
+			if info, err := os.Stat(expectedExtractedPath); err == nil && info.IsDir() {
+				// Verify it looks like a must-gather directory
+				namespacesPath := filepath.Join(expectedExtractedPath, "namespaces")
+				clusterPath := filepath.Join(expectedExtractedPath, "cluster-scoped-resources")
+				timestampPath := filepath.Join(expectedExtractedPath, "timestamp")
+
+				isMustGather := false
+				if _, err := os.Stat(namespacesPath); err == nil {
+					isMustGather = true
+				} else if _, err := os.Stat(clusterPath); err == nil {
+					isMustGather = true
+				} else if _, err := os.Stat(timestampPath); err == nil {
+					isMustGather = true
+				}
+
+				if isMustGather {
+					fmt.Println("Archive already extracted at: " + expectedExtractedPath)
+					path = expectedExtractedPath
+					isCompressedFile = false
+				} else {
+					fmt.Println("Directory exists but doesn't appear to be a must-gather, extracting archive...")
+				}
+			} else {
+				// Directory doesn't exist, check if it's in omc.json (maybe extracted elsewhere)
+				file, _ := os.ReadFile(viper.ConfigFileUsed())
+				omcConfigJson := types.Config{}
+				_ = json.Unmarshal([]byte(file), &omcConfigJson)
+
+				if existingPath, found := findExistingContextByRootDir(rootDirName, omcConfigJson.Contexts); found {
+					// Verify the path still exists
+					if _, err := os.Stat(existingPath); err == nil {
+						fmt.Println("Archive already registered in omc.json, using: " + existingPath)
+						path = existingPath
+						isCompressedFile = false
+					} else {
+						fmt.Println("Previous extraction no longer exists at " + existingPath + ", extracting archive...")
+					}
+				}
+			}
+
+			// If still marked as compressed, extract it
+			if isCompressedFile {
+				rootfile, err := DecompressFile(path, outputpath, fileType)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error: decompressing "+path+" in "+outputpath+": "+err.Error())
+					os.Exit(1)
+				}
+				path = rootfile
+			}
 		}
 
 		err = useContext(path, viper.ConfigFileUsed(), idFlag)
