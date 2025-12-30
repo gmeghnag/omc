@@ -213,6 +213,7 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			err := yaml.Unmarshal(_file, &UnstructuredItems)
 			if err != nil { // unable to unmarshal the file, it may be empty or corrupted
 				// We handle this situation by looking for the pod in the pods directory
+				fmt.Println("heree")
 				fStat, _ := os.Stat(resourcesItemsPath)
 				fSize := fStat.Size()
 				if resourceNamePlural == "pods" && fSize == 0 {
@@ -268,6 +269,14 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 				}
 				var sortObjects []unstructured.Unstructured
 				for _, f := range resourcesFiles {
+					if f.IsDir() {
+						fmt.Fprintf(
+							os.Stderr,
+							"error: invalid must-gather structure, yaml files are expected in path \"/namespaces/%s/%s/%s\", found directory: \"%s\"\n",
+							namespace, resourceGroup, resourceNamePlural, f.Name(),
+						)
+						continue
+					}
 					resourceYamlPath := resourceDir + "/" + f.Name()
 					_file, _ := os.ReadFile(resourceYamlPath)
 					item := unstructured.Unstructured{}
