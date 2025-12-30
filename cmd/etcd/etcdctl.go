@@ -52,7 +52,11 @@ type memberList struct {
 }
 
 func EndpointStatus(etcdFolderPath string) {
-	_file, _ := os.ReadFile(etcdFolderPath + "endpoint_status.json")
+	_file, err := os.ReadFile(etcdFolderPath + "endpoint_status.json")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
+		os.Exit(1)
+	}
 	var Endpoints []epStatus
 	if err := json.Unmarshal([]byte(_file), &Endpoints); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
@@ -83,10 +87,14 @@ func EndpointStatus(etcdFolderPath string) {
 }
 
 func EndpointHealth(etcdFolderPath string) {
-	_file, _ := os.ReadFile(etcdFolderPath + "endpoint_health.json")
+	_file, err := os.ReadFile(etcdFolderPath + "endpoint_health.json")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading file \""+etcdFolderPath+"endpoint_health.json\":", err.Error())
+		os.Exit(1)
+	}
 	var healthList []epHealth
 	if err := json.Unmarshal([]byte(_file), &healthList); err != nil {
-		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_status.json\":", err.Error())
+		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"endpoint_health.json\":", err.Error())
 		os.Exit(1)
 	}
 	var rows [][]string
@@ -106,7 +114,11 @@ func EndpointHealth(etcdFolderPath string) {
 }
 
 func AlarmList(etcdFolderPath string) {
-	_file, _ := os.ReadFile(etcdFolderPath + "alarm_list.json")
+	_file, err := os.ReadFile(etcdFolderPath + "alarm_list.json")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading file \""+etcdFolderPath+"alarm_list.json\":", err.Error())
+		os.Exit(1)
+	}
 	var reportedAlarmList alarmList
 	if err := json.Unmarshal([]byte(_file), &reportedAlarmList); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"alarm_list.json\":", err.Error())
@@ -124,7 +136,11 @@ func AlarmList(etcdFolderPath string) {
 }
 
 func MemberList(etcdFolderPath string) {
-	_file, _ := os.ReadFile(etcdFolderPath + "member_list.json")
+	_file, err := os.ReadFile(etcdFolderPath + "member_list.json")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading file \""+etcdFolderPath+"member_list.json\":", err.Error())
+		os.Exit(1)
+	}
 	var memberList memberList
 	if err := json.Unmarshal([]byte(_file), &memberList); err != nil {
 		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file \""+etcdFolderPath+"member_list.json\":", err.Error())
