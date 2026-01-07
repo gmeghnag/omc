@@ -232,7 +232,28 @@ var UseCmd = &cobra.Command{
 		}
 		if len(args) == 1 {
 			path = args[0]
-			if IsRemoteFile(path) {
+
+			// Check if this is a Prow Job URL
+			if IsProwURL(path) {
+				gcswebURL, err := GetArtifactsURLFromProw(path)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error getting artifacts URL from Prow:", err)
+					os.Exit(1)
+				}
+
+				mustGatherURL, err := FindMustGatherInProw(gcswebURL)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "Error:", err)
+					os.Exit(1)
+				}
+
+				// Download the must-gather file
+				path, err = DownloadFile(mustGatherURL)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
+			} else if IsRemoteFile(path) {
 				path, err = DownloadFile(path)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, err)
@@ -273,6 +294,7 @@ var UseCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		fmt.Println("----")
 		MustGatherInfo()
 	},
 }

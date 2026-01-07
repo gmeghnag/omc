@@ -214,7 +214,7 @@ func DownloadFile(path string) (string, error) {
 	}
 
 	outpath := filepath.Join(tmpdir, filename)
-	fmt.Println("downloading file " + path + " in " + outpath)
+	fmt.Println("Downloading file " + path + " in " + outpath)
 
 	out, err := os.Create(outpath)
 	if err != nil {
@@ -254,7 +254,7 @@ func CopyFile(path string, destinationfile string) error {
 }
 
 func DecompressFile(path string, outpath string, fileType string) (string, error) {
-	fmt.Println("decompressing file " + path + " in " + outpath)
+	fmt.Println("Decompressing file " + path + " in " + outpath)
 	var err error
 	var mgRootDir string = ""
 
@@ -437,6 +437,242 @@ func extractTarXZ(xzFile string, destinationdir string) (string, error) {
 		return "", fmt.Errorf("error: cannot uncompress xz file %q: %w", xzFile, err)
 	}
 	return ExtractTarStream(xzReader, destinationdir)
+}
+
+const (
+	prowHost = "prow.ci.openshift.org"
+)
+
+// IsProwURL checks if the given URL is a Prow Job URL
+func IsProwURL(path string) bool {
+	parsedURL, err := url.Parse(path)
+	if err != nil {
+		return false
+	}
+	return parsedURL.Host == prowHost && strings.HasPrefix(parsedURL.Path, "/view/gs/")
+}
+
+// GetArtifactsURLFromProw fetches the Prow job page and extracts the Artifacts link
+func GetArtifactsURLFromProw(prowURL string) (string, error) {
+	fmt.Printf("Fetching Prow job page: %s\n", prowURL)
+
+	resp, err := http.Get(prowURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch Prow page: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code %d for Prow page", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read Prow page body: %w", err)
+	}
+
+	// Look for the Artifacts link in the page
+	// The link typically contains "gcsweb" and points to the artifacts directory
+	artifactsURL := findArtifactsLink(string(body), prowURL)
+	if artifactsURL == "" {
+		return "", fmt.Errorf("could not find Artifacts link in Prow page")
+	}
+
+	return artifactsURL, nil
+}
+
+// findArtifactsLink searches the HTML content for the Artifacts link
+func findArtifactsLink(content string, baseURL string) string {
+	// Parse base URL for resolving relative links
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return ""
+	}
+
+	// Look for links containing "gcsweb" or links with text "Artifacts"
+	// Common patterns:
+	// - <a href="https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/...">Artifacts</a>
+	// - Links with "PR Artifacts" text
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		// Check if line contains artifacts-related keywords
+		lineLower := strings.ToLower(line)
+		if !strings.Contains(lineLower, "artifact") && !strings.Contains(lineLower, "gcsweb") {
+			continue
+		}
+
+		// Extract href from the line
+		idx := strings.Index(line, `href="`)
+		if idx == -1 {
+			continue
+		}
+		start := idx + 6
+		end := strings.Index(line[start:], `"`)
+		if end == -1 {
+			continue
+		}
+		href := line[start : start+end]
+
+		// Check if this is a gcsweb link
+		if strings.Contains(href, "gcsweb") {
+			// Return the URL, ensuring it ends with /
+			if !strings.HasSuffix(href, "/") {
+				href += "/"
+			}
+			return href
+		}
+
+		// Handle relative URLs that might be artifacts links
+		if strings.Contains(lineLower, "artifact") {
+			refURL, err := url.Parse(href)
+			if err != nil {
+				continue
+			}
+			absURL := base.ResolveReference(refURL).String()
+			if strings.Contains(absURL, "gcsweb") {
+				if !strings.HasSuffix(absURL, "/") {
+					absURL += "/"
+				}
+				return absURL
+			}
+		}
+	}
+
+	return ""
+}
+
+// parseGCSWebLinks parses the HTML content from a gcsweb page and extracts directory and file links
+// It only returns links that are children of the baseURL (going downwards only)
+func parseGCSWebLinks(body []byte, current string) (dirs []string, files []string) {
+	content := string(body)
+
+	// Parse base URL to construct absolute URLs
+	currentURL, err := url.Parse(current)
+	if err != nil {
+		return nil, nil
+	}
+
+	hostname := currentURL.Hostname()
+	scheme := currentURL.Scheme
+
+	// Normalize current path for comparison (ensure it ends with /)
+	currentPath := currentURL.Path
+	if !strings.HasSuffix(currentPath, "/") {
+		currentPath += "/"
+	}
+
+	// Find all href attributes in anchor tags
+	// The gcsweb HTML has links like: <a href="artifacts/">artifacts/</a>
+	// We use a simple approach to find href="..." patterns
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		// Look for href patterns
+		idx := strings.Index(line, `href="`)
+		if idx == -1 {
+			continue
+		}
+		start := idx + 6 // len(`href="`)
+		end := strings.Index(line[start:], `"`)
+		if end == -1 {
+			continue
+		}
+		href := line[start : start+end]
+
+		// Skip parent directory links, empty hrefs, and any path with ..
+		if href == "" || href == ".." || href == "../" || strings.Contains(href, "..") {
+			continue
+		}
+		// Skip absolute URLs to other hosts
+		if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
+			continue
+		}
+
+		// Add a leading slash if it's not there
+		if !strings.HasPrefix(href, "/") {
+			href = "/" + href
+		}
+
+		// Construct absolute URL - href already has leading slash
+		absURLStr := scheme + "://" + hostname + href
+		refURL, err := url.Parse(absURLStr)
+		if err != nil {
+			continue
+		}
+
+		// Only include URLs that are children of the current URL (going downwards)
+		if !strings.HasPrefix(refURL.Path, currentPath) {
+			continue
+		}
+
+		// Categorize as directory or file
+		if strings.HasSuffix(href, "/") {
+			dirs = append(dirs, refURL.String())
+		} else {
+			files = append(files, refURL.String())
+		}
+	}
+
+	return dirs, files
+}
+
+// isMustGatherFile checks if a filename matches must-gather patterns
+func isMustGatherFile(filename string) bool {
+	base := pathlib.Base(filename)
+	// Match must-gather.tar, must-gather.tar.gz, must-gather.tar.xz, etc.
+	return strings.HasPrefix(base, "must-gather") && strings.Contains(base, ".tar")
+}
+
+// FindMustGatherInProw uses breadth-first search to find the first must-gather.tar file
+// It stops as soon as it finds one and returns it
+func FindMustGatherInProw(gcswebURL string) (string, error) {
+	fmt.Printf("Searching for must-gather files starting from %s\n", gcswebURL)
+
+	// Queue for BFS
+	queue := []string{gcswebURL}
+
+	for len(queue) > 0 {
+		// Dequeue
+		currentURL := queue[0]
+		queue = queue[1:]
+
+		fmt.Printf(".")
+
+		// Fetch the page
+		resp, err := http.Get(currentURL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to fetch %s: %v\n", currentURL, err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			fmt.Fprintf(os.Stderr, "warning: unexpected status code %d for %s\n", resp.StatusCode, currentURL)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to read response body for %s: %v\n", currentURL, err)
+			continue
+		}
+
+		dirs, files := parseGCSWebLinks(body, currentURL)
+
+		// Check files for must-gather - return immediately if found
+		for _, file := range files {
+			if isMustGatherFile(file) {
+				fmt.Println()
+				fmt.Printf("Found must-gather: %s\n", file)
+				return file, nil
+			}
+		}
+
+		// Add directories to the queue for further exploration
+		queue = append(queue, dirs...)
+	}
+
+	return "", fmt.Errorf("no must-gather file found")
 }
 
 func extractClientVersion(mustGatherLogsFilePath string) string {
