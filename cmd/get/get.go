@@ -74,8 +74,9 @@ var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 var yamlData []byte
 
 var GetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
+	Use:               "get",
+	Short:             "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
+	ValidArgsFunction: GetResourceCompletionFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Help()
