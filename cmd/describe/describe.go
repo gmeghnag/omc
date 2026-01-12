@@ -28,8 +28,9 @@ import (
 
 // DescribeCmd represents the describe command
 var DescribeCmd = &cobra.Command{
-	Use: "describe",
-	Short: "Show details of a specific resource or group of resources",
+	Use:               "describe",
+	Short:             "Show details of a specific resource or group of resources",
+	ValidArgsFunction: DescribeResourceCompletionFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Help()

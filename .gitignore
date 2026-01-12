@@ -1,6 +1,7 @@
 GUIDE.md
 TEST
 omc
+omc-test
 .DS_Store
 **/.DS_Store
 omc-darwin-amd64
@@ -8,3 +9,13 @@ omc-linux-amd64
 omc-win-amd64
 cmd/describe/apps
 .vscode/launch.json
+
+# Build directories
+build/
+dist/
+coverage/
+
+# Completion scripts (generated)
+*.bash
+*.zsh
+*.fish
