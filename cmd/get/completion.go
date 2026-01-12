@@ -3,18 +3,19 @@ package get
 import (
 	"strings"
 
+	"github.com/gmeghnag/omc/cmd/completion"
 	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
 )
 
-// GetResourceCompletionFunc provides completion for resource types
+// GetResourceCompletionFunc provides completion for resource types and resource names
 func GetResourceCompletionFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	var completions []string
 
-	// If we already have an argument, don't offer more resource types
-	// (we're now completing resource names, which we can't do with must-gather)
+	// If we already have a resource type argument, complete resource names
 	if len(args) > 0 {
-		return nil, cobra.ShellCompDirectiveNoFileComp
+		resourceType := args[0]
+		return completion.GetResourceNames(resourceType, toComplete, KindGroupNamespaced), cobra.ShellCompDirectiveNoFileComp
 	}
 
 	// Get all known resource types from vars.KnownResources
@@ -43,7 +44,6 @@ func GetResourceCompletionFunc(cmd *cobra.Command, args []string, toComplete str
 		"cm", "configmap", "configmaps",
 		"secret", "secrets",
 		"sa", "serviceaccount", "serviceaccounts",
-		"deploy", "deployment", "deployments",
 		"ds", "daemonset", "daemonsets",
 		"rs", "replicaset", "replicasets",
 		"sts", "statefulset", "statefulsets",
