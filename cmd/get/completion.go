@@ -10,7 +10,7 @@ import (
 // GetResourceCompletionFunc provides completion for resource types
 func GetResourceCompletionFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	var completions []string
-	
+
 	// If we already have an argument, don't offer more resource types
 	// (we're now completing resource names, which we can't do with must-gather)
 	if len(args) > 0 {
@@ -21,7 +21,7 @@ func GetResourceCompletionFunc(cmd *cobra.Command, args []string, toComplete str
 	seen := make(map[string]bool)
 	for resourceKey := range vars.KnownResources {
 		resourceLower := strings.ToLower(resourceKey)
-		
+
 		// Only add if it starts with what user has typed
 		if strings.HasPrefix(resourceLower, strings.ToLower(toComplete)) {
 			if !seen[resourceLower] {

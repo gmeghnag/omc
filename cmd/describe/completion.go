@@ -9,7 +9,7 @@ import (
 // DescribeResourceCompletionFunc provides completion for resource types
 func DescribeResourceCompletionFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	var completions []string
-	
+
 	// If we already have an argument, don't offer more resource types
 	// (we're now completing resource names, which we can't do with must-gather)
 	if len(args) > 0 {

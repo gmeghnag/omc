@@ -34,7 +34,6 @@ import (
 
 var IncludeNotRecommended bool
 
-
 func admUpgradeCommand(currentContextPath string) {
 	cv := configv1.ClusterVersion{}
 	clusterVersionFilePath := currentContextPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml"
@@ -44,7 +43,7 @@ func admUpgradeCommand(currentContextPath string) {
 		if err := yaml.Unmarshal([]byte(_file), &cv); err != nil {
 			fmt.Println("Error trying to unmarshal file: " + clusterVersionFilePath)
 			os.Exit(1)
-		} 
+		}
 	}
 	if cv.Spec.Channel != "" {
 		if cv.Spec.Upstream == "" {
@@ -60,10 +59,10 @@ func admUpgradeCommand(currentContextPath string) {
 	}
 	if len(cv.Status.AvailableUpdates) > 0 {
 		fmt.Fprintf(os.Stdout, "\nRecommended updates:\n\n")
-			// set the minimal cell width to 14 to have a larger space between the columns for shorter versions
+		// set the minimal cell width to 14 to have a larger space between the columns for shorter versions
 		w := tabwriter.NewWriter(os.Stdout, 14, 2, 1, ' ', 0)
 		fmt.Fprintf(w, "  VERSION\tIMAGE\n")
-			// TODO: add metadata about version
+		// TODO: add metadata about version
 		sortReleasesBySemanticVersions(cv.Status.AvailableUpdates)
 		for _, update := range cv.Status.AvailableUpdates {
 			fmt.Fprintf(w, "  %s\t%s\n", update.Version, update.Image)
@@ -93,7 +92,7 @@ func admUpgradeCommand(currentContextPath string) {
 		} else {
 			fmt.Fprintf(os.Stdout, "\nNo updates which are not recommended based on your cluster configuration are available.\n")
 		}
-    } else if containsNotRecommendedUpdate(cv.Status.ConditionalUpdates) {
+	} else if containsNotRecommendedUpdate(cv.Status.ConditionalUpdates) {
 		qualifier := ""
 		for _, upgrade := range cv.Status.ConditionalUpdates {
 			if c := findCondition(upgrade.Conditions, "Recommended"); c != nil && c.Status != metav1.ConditionTrue && c.Status != metav1.ConditionFalse {
@@ -105,20 +104,19 @@ func admUpgradeCommand(currentContextPath string) {
 	}
 }
 
-
 var Upgrade = &cobra.Command{
-	Use:   "upgrade",
+	Use: "upgrade",
 	Run: func(cmd *cobra.Command, args []string) {
 		admUpgradeCommand(vars.MustGatherRootPath)
 	},
 }
+
 func init() {
 	Upgrade.AddCommand(
 		UpgradeRecommend,
 	)
 	Upgrade.PersistentFlags().BoolVar(&IncludeNotRecommended, "include-not-recommended", false, "Display additional updates which are not recommended based on your cluster configuration.")
 }
-
 
 // sortConditionalUpdatesBySemanticVersions sorts the input slice in decreasing order.
 func sortConditionalUpdatesBySemanticVersions(updates []configv1.ConditionalUpdate) {
@@ -138,7 +136,6 @@ func sortConditionalUpdatesBySemanticVersions(updates []configv1.ConditionalUpda
 	})
 }
 
-
 func findCondition(conditions []metav1.Condition, name string) *metav1.Condition {
 	for i := range conditions {
 		if conditions[i].Type == name {
@@ -155,8 +152,6 @@ func containsNotRecommendedUpdate(updates []configv1.ConditionalUpdate) bool {
 	}
 	return false
 }
-
-
 
 // sortReleasesBySemanticVersions sorts the input slice in decreasing order.
 func sortReleasesBySemanticVersions(versions []configv1.Release) {
