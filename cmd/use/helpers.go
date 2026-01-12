@@ -329,7 +329,8 @@ func ExtractTarStream(st io.Reader, destinationdir string) (string, error) {
 			}
 			outFile.Close()
 		default:
-			fmt.Fprintf(os.Stderr, "unknown type(%s) in %s: "+err.Error(), header.Typeflag, header.Name)
+			err := fmt.Errorf("unknown type %d in %s", header.Typeflag, header.Name)
+			fmt.Fprintln(os.Stderr, err.Error())
 			return "", err
 		}
 	}
@@ -437,6 +438,121 @@ func extractTarXZ(xzFile string, destinationdir string) (string, error) {
 		return "", fmt.Errorf("error: cannot uncompress xz file %q: %w", xzFile, err)
 	}
 	return ExtractTarStream(xzReader, destinationdir)
+}
+
+// peekTarRootDir peeks into a tar archive to determine the root directory name
+func peekTarRootDir(reader io.Reader) (string, error) {
+	tarReader := tar.NewReader(reader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", err
+		}
+
+		// First directory in the archive
+		if header.Typeflag == tar.TypeDir {
+			// Extract just the root directory name
+			parts := strings.Split(strings.TrimSuffix(header.Name, "/"), "/")
+			if len(parts) > 0 {
+				return parts[0], nil
+			}
+		}
+
+		// First file in the archive - get its parent directory
+		if header.Typeflag == tar.TypeReg {
+			dirPath := filepath.Dir(header.Name)
+			if dirPath != "." {
+				parts := strings.Split(dirPath, "/")
+				if len(parts) > 0 {
+					return parts[0], nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("unable to determine root directory from archive")
+}
+
+// peekZipRootDir peeks into a zip archive to determine the root directory name
+func peekZipRootDir(zipfile string) (string, error) {
+	archive, err := zip.OpenReader(zipfile)
+	if err != nil {
+		return "", err
+	}
+	defer archive.Close()
+
+	for _, f := range archive.File {
+		if f.FileInfo().IsDir() {
+			// First directory in the archive
+			parts := strings.Split(strings.TrimSuffix(f.Name, "/"), "/")
+			if len(parts) > 0 {
+				return parts[0], nil
+			}
+		} else {
+			// First file - get its parent directory
+			dirPath := filepath.Dir(f.Name)
+			if dirPath != "." {
+				parts := strings.Split(dirPath, "/")
+				if len(parts) > 0 {
+					return parts[0], nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("unable to determine root directory from zip archive")
+}
+
+// GetArchiveRootDir determines what root directory an archive will create when extracted
+func GetArchiveRootDir(archivePath string, fileType string) (string, error) {
+	switch fileType {
+	case fileTypeTar:
+		file, err := os.Open(archivePath)
+		if err != nil {
+			return "", err
+		}
+		defer file.Close()
+		return peekTarRootDir(file)
+
+	case fileTypeTarGzip:
+		file, err := os.Open(archivePath)
+		if err != nil {
+			return "", err
+		}
+		defer file.Close()
+
+		gzipReader, err := gzip.NewReader(file)
+		if err != nil {
+			return "", err
+		}
+		defer gzipReader.Close()
+
+		return peekTarRootDir(gzipReader)
+
+	case fileTypeXZ:
+		file, err := os.Open(archivePath)
+		if err != nil {
+			return "", err
+		}
+		defer file.Close()
+
+		xzReader, err := xz.NewReader(file)
+		if err != nil {
+			return "", err
+		}
+
+		return peekTarRootDir(xzReader)
+
+	case fileTypeZip:
+		return peekZipRootDir(archivePath)
+
+	default:
+		return "", fmt.Errorf("unsupported archive type: %s", fileType)
+	}
 }
 
 func extractClientVersion(mustGatherLogsFilePath string) string {
