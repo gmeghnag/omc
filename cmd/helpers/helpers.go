@@ -325,37 +325,37 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func MatchLabels(labels string, selector string) bool {
-	isMatching := true
-	if selector == "" {
-		return isMatching
-	}
-	selectorArray := strings.Split(selector, ",")
-	labelsArray := strings.Split(labels, ",")
+// func MatchLabels(labels string, selector string) bool {
+// 	isMatching := true
+// 	if selector == "" {
+// 		return isMatching
+// 	}
+// 	selectorArray := strings.Split(selector, ",")
+// 	labelsArray := strings.Split(labels, ",")
 
-	for _, s := range selectorArray {
-		if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
-			s = "app=" + s
-		}
-		if strings.Contains(s, "!=") {
-			if StringInSlice(strings.ReplaceAll(s, "!=", "="), labelsArray) {
-				isMatching = false
-				break
-			}
-		} else if strings.Contains(s, "==") {
-			if !StringInSlice(strings.ReplaceAll(s, "==", "="), labelsArray) {
-				isMatching = false
-				break
-			}
-		} else if strings.Contains(s, "=") {
-			if !StringInSlice(s, labelsArray) {
-				isMatching = false
-				break
-			}
-		}
-	}
-	return isMatching
-}
+// 	for _, s := range selectorArray {
+// 		if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
+// 			s = "app=" + s
+// 		}
+// 		if strings.Contains(s, "!=") {
+// 			if StringInSlice(strings.ReplaceAll(s, "!=", "="), labelsArray) {
+// 				isMatching = false
+// 				break
+// 			}
+// 		} else if strings.Contains(s, "==") {
+// 			if !StringInSlice(strings.ReplaceAll(s, "==", "="), labelsArray) {
+// 				isMatching = false
+// 				break
+// 			}
+// 		} else if strings.Contains(s, "=") {
+// 			if !StringInSlice(s, labelsArray) {
+// 				isMatching = false
+// 				break
+// 			}
+// 		}
+// 	}
+// 	return isMatching
+// }
 
 func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error) {
 	if selector == "" {
