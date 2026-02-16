@@ -325,37 +325,37 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func MatchLabels(labels string, selector string) bool {
-	isMatching := true
-	if selector == "" {
-		return isMatching
-	}
-	selectorArray := strings.Split(selector, ",")
-	labelsArray := strings.Split(labels, ",")
+// func MatchLabels(labels string, selector string) bool {
+// 	isMatching := true
+// 	if selector == "" {
+// 		return isMatching
+// 	}
+// 	selectorArray := strings.Split(selector, ",")
+// 	labelsArray := strings.Split(labels, ",")
 
-	for _, s := range selectorArray {
-		if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
-			s = "app=" + s
-		}
-		if strings.Contains(s, "!=") {
-			if StringInSlice(strings.ReplaceAll(s, "!=", "="), labelsArray) {
-				isMatching = false
-				break
-			}
-		} else if strings.Contains(s, "==") {
-			if !StringInSlice(strings.ReplaceAll(s, "==", "="), labelsArray) {
-				isMatching = false
-				break
-			}
-		} else if strings.Contains(s, "=") {
-			if !StringInSlice(s, labelsArray) {
-				isMatching = false
-				break
-			}
-		}
-	}
-	return isMatching
-}
+// 	for _, s := range selectorArray {
+// 		if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
+// 			s = "app=" + s
+// 		}
+// 		if strings.Contains(s, "!=") {
+// 			if StringInSlice(strings.ReplaceAll(s, "!=", "="), labelsArray) {
+// 				isMatching = false
+// 				break
+// 			}
+// 		} else if strings.Contains(s, "==") {
+// 			if !StringInSlice(strings.ReplaceAll(s, "==", "="), labelsArray) {
+// 				isMatching = false
+// 				break
+// 			}
+// 		} else if strings.Contains(s, "=") {
+// 			if !StringInSlice(s, labelsArray) {
+// 				isMatching = false
+// 				break
+// 			}
+// 		}
+// 	}
+// 	return isMatching
+// }
 
 func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error) {
 	if selector == "" {
@@ -397,16 +397,17 @@ func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error)
 			if val != value || !isPresent {
 				return false, nil
 			}
-		} else if !strings.Contains(s, "!=") && !strings.Contains(s, "=") && !strings.Contains(s, "==") {
-			s = "app=" + s
-			split := strings.Split(s, "=")
-			if len(split) != 2 {
+		} else if strings.HasPrefix(s, "!") {
+			if strings.Contains(s, "=") || strings.Contains(s[1:], "!") {
 				return false, fmt.Errorf("invalid labels input")
 			}
-			key := split[0]
-			val := split[1]
-			value, _ := labels[key]
-			if val != value {
+			_, isPresent := labels[s[1:]]
+			if isPresent {
+				return false, nil
+			}
+		} else {
+			_, isPresent := labels[s]
+			if isPresent == false {
 				return false, nil
 			}
 		}
