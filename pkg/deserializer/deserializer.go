@@ -6,6 +6,7 @@ import (
 	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apiregistration "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	nodeapi "k8s.io/kubernetes/pkg/apis/node"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -230,6 +231,10 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &template.Template{}
 	case *oauthapi.OAuthClient:
 		return &oauthapi.OAuthClient{}
+	case *metricsv1beta1.PodMetrics:
+		return &metricsv1beta1.PodMetrics{}
+	case *metricsv1beta1.NodeMetrics:
+		return &metricsv1beta1.NodeMetrics{}
 	}
 	//fmt.Println("RUNTIME UNKNOW")
 	return &runtime.Unknown{}

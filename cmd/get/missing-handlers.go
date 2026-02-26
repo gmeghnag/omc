@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"k8s.io/kubernetes/pkg/printers"
 )
 
@@ -60,12 +61,26 @@ func AddMissingHandlers(h printers.PrintHandler) {
 		{Name: "Token-Max-Age", Type: "string", Description: oauthv1.OAuthClient{}.SwaggerDoc()["accessTokenMaxAgeSeconds"]},
 		{Name: "Redirect URIs", Type: "string", Description: oauthv1.OAuthClient{}.SwaggerDoc()["redirectURIs"]},
 	}
+	podMetricsColumnDefinitions := []metav1.TableColumnDefinition{
+		{Name: "Name", Type: "string", Format: "name"},
+		{Name: "CPU(cores)", Type: "string"},
+		{Name: "Memory(bytes)", Type: "string"},
+		{Name: "Window", Type: "string"},
+	}
+	nodeMetricsColumnDefinitions := []metav1.TableColumnDefinition{
+		{Name: "Name", Type: "string", Format: "name"},
+		{Name: "CPU(cores)", Type: "string"},
+		{Name: "Memory(bytes)", Type: "string"},
+		{Name: "Window", Type: "string"},
+	}
 	_ = h.TableHandler(apiServiceColumnDefinitions, printAPIService)
 	_ = h.TableHandler(clusterVersionDefinitions, printClusterVersion)
 	_ = h.TableHandler(customResourceDefinitionColumnDefinitions, printCustomResourceDefinitionv1)
 	_ = h.TableHandler(customResourceDefinitionColumnDefinitions, printCustomResourceDefinitionv1beta1)
 	_ = h.TableHandler(securitycontextconstraintsDefinitions, printSecurityContextConstraints)
 	_ = h.TableHandler(oauthClientColumnsDefinitions, printOAuthClient)
+	_ = h.TableHandler(podMetricsColumnDefinitions, printPodMetrics)
+	_ = h.TableHandler(nodeMetricsColumnDefinitions, printNodeMetrics)
 }
 
 func printAPIService(obj *apiregistrationv1.APIService, options printers.GenerateOptions) ([]metav1.TableRow, error) {
@@ -218,5 +233,38 @@ func printOAuthClient(oauthClient *oauthapi.OAuthClient, options printers.Genera
 
 	row.Cells = append(row.Cells, oauthClient.Name, oauthClient.Secret, oauthClient.RespondWithChallenges, maxAge, strings.Join(oauthClient.RedirectURIs, ","))
 
+	return []metav1.TableRow{row}, nil
+}
+
+func printPodMetrics(obj *metricsv1beta1.PodMetrics, options printers.GenerateOptions) ([]metav1.TableRow, error) {
+	row := metav1.TableRow{
+		Object: runtime.RawExtension{Object: obj},
+	}
+	
+	// Calculate total CPU and Memory across all containers
+	var totalCPU, totalMemory int64
+	for _, container := range obj.Containers {
+		totalCPU += container.Usage.Cpu().MilliValue()
+		totalMemory += container.Usage.Memory().Value()
+	}
+	
+	cpuStr := strconv.FormatInt(totalCPU, 10) + "m"
+	memoryStr := strconv.FormatInt(totalMemory/(1024*1024), 10) + "Mi"
+	window := obj.Window.Duration.String()
+	
+	row.Cells = append(row.Cells, obj.Name, cpuStr, memoryStr, window)
+	return []metav1.TableRow{row}, nil
+}
+
+func printNodeMetrics(obj *metricsv1beta1.NodeMetrics, options printers.GenerateOptions) ([]metav1.TableRow, error) {
+	row := metav1.TableRow{
+		Object: runtime.RawExtension{Object: obj},
+	}
+	
+	cpuStr := strconv.FormatInt(obj.Usage.Cpu().MilliValue(), 10) + "m"
+	memoryStr := strconv.FormatInt(obj.Usage.Memory().Value()/(1024*1024), 10) + "Mi"
+	window := obj.Window.Duration.String()
+	
+	row.Cells = append(row.Cells, obj.Name, cpuStr, memoryStr, window)
 	return []metav1.TableRow{row}, nil
 }
