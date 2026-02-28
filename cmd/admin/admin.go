@@ -23,7 +23,7 @@ import (
 
 // etcdCmd represents the etcd command
 var Admin = &cobra.Command{
-	Use:     "adm",
+	Use: "adm",
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 		os.Exit(0)

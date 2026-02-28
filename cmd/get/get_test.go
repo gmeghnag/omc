@@ -2,6 +2,8 @@ package get
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -56,13 +58,27 @@ func TestHandleEmptyWideOutput(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Capture stderr since handleOutput writes "No resources found" messages to stderr
+			oldStderr := os.Stderr
+			r, w, _ := os.Pipe()
+			os.Stderr = w
+
 			var output bytes.Buffer
 			vars.MustGatherRootPath = "../../testdata/"
 			vars.Namespace = tt.namespace
 			validateArgs(tt.rtype)
 			handleOutput(&output)
-			if !strings.Contains(output.String(), tt.want) {
-				t.Errorf("Got: %v \n", output.String())
+
+			// Restore stderr and read captured output
+			w.Close()
+			os.Stderr = oldStderr
+			var stderrBuf bytes.Buffer
+			io.Copy(&stderrBuf, r)
+
+			// Check both stdout and stderr for the expected message
+			combinedOutput := output.String() + stderrBuf.String()
+			if !strings.Contains(combinedOutput, tt.want) {
+				t.Errorf("Got: %v \n", combinedOutput)
 				t.Errorf("Want: %v \n", tt.want)
 			}
 			vars.GetArgs = make(map[string]map[string]struct{})

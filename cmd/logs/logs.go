@@ -32,8 +32,9 @@ var LogLevel string
 
 // logsCmd represents the logs command
 var Logs = &cobra.Command{
-	Use:   "logs",
-	Short: "Print the logs for a container in a pod",
+	Use:               "logs",
+	Short:             "Print the logs for a container in a pod",
+	ValidArgsFunction: LogsCompletionFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		if vars.MustGatherRootPath == "" {
 			fmt.Fprintln(os.Stderr, "There are no must-gather resources defined.")

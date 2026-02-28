@@ -43,7 +43,7 @@ func admUpgradeRecommendCommand(currentContextPath string) error {
 		if err := yaml.Unmarshal([]byte(_file), &cv); err != nil {
 			fmt.Println("Error trying to unmarshal file: " + clusterVersionFilePath)
 			os.Exit(1)
-		} 
+		}
 	}
 	if cv.Spec.Channel != "" {
 		if cv.Spec.Upstream == "" {
@@ -114,7 +114,6 @@ func admUpgradeRecommendCommand(currentContextPath string) error {
 
 	//
 	//
-	
 
 	if len(majorMinorBuckets) == 0 {
 		fmt.Fprintf(os.Stdout, "No updates available. You may still upgrade to a specific release image with --to-image or wait for new updates to be available.\n")
@@ -185,9 +184,8 @@ func admUpgradeRecommendCommand(currentContextPath string) error {
 	return nil
 }
 
-
 var UpgradeRecommend = &cobra.Command{
-	Use:   "recommend",
+	Use: "recommend",
 	Run: func(cmd *cobra.Command, args []string) {
 		admUpgradeRecommendCommand(vars.MustGatherRootPath)
 	},
@@ -197,7 +195,6 @@ func init() {
 	UpgradeRecommend.PersistentFlags().BoolVar(&showOutdatedReleases, "show-outdated-releases", false, "")
 	UpgradeRecommend.PersistentFlags().BoolVar(&quiet, "quiet", false, "")
 }
-
 
 func notRecommendedCondition(update configv1.ConditionalUpdate) *metav1.Condition {
 	if len(update.Risks) == 0 {
@@ -222,8 +219,6 @@ func notRecommendedCondition(update configv1.ConditionalUpdate) *metav1.Conditio
 		Message: fmt.Sprintf("Conditional update to %s has risks (%s), but no conditions.", update.Release.Version, strings.Join(risks, ", ")),
 	}
 }
-
-
 
 func injectUpgradeableAsCondition(version string, condition *configv1.ClusterOperatorStatusCondition, majorMinorBuckets map[uint64]map[uint64][]configv1.ConditionalUpdate) error {
 	current, err := semver.Parse(version)
@@ -254,7 +249,6 @@ func injectUpgradeableAsCondition(version string, condition *configv1.ClusterOpe
 
 	return nil
 }
-
 
 func ensureUpgradeableRisk(target configv1.ConditionalUpdate, condition *configv1.ClusterOperatorStatusCondition, upgradeableURI string) configv1.ConditionalUpdate {
 	if hasUpgradeableRisk(target, condition) {
