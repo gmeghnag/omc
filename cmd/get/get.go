@@ -107,7 +107,7 @@ var GetCmd = &cobra.Command{
 				getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			}
 		}
-		handleOutput(os.Stdout)
+		handleOutput(os.Stdout, os.Stderr)
 	},
 }
 
@@ -518,7 +518,7 @@ func handleObject(obj unstructured.Unstructured) error {
 	return nil
 }
 
-func handleOutput(w io.Writer) {
+func handleOutput(w io.Writer, errOut io.Writer) {
 	printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
 	_resources := make([]string, 0, len(vars.GetArgs))
 	var includesClusterScoped bool
@@ -543,9 +543,9 @@ func handleOutput(w io.Writer) {
 			fmt.Fprintf(w, "%s", data)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Fprintf(os.Stderr, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Fprintf(os.Stderr, "No resources %s found.\n", resources)
+				fmt.Fprintf(errOut, "No resources %s found.\n", resources)
 			}
 		}
 	} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
@@ -556,9 +556,9 @@ func handleOutput(w io.Writer) {
 			helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Fprintf(os.Stderr, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Fprintf(os.Stderr, "No resources %s found.\n", resources)
+				fmt.Fprintf(errOut, "No resources %s found.\n", resources)
 			}
 		}
 	} else if vars.OutputStringVar == "yaml" {
@@ -570,9 +570,9 @@ func handleOutput(w io.Writer) {
 			fmt.Fprintf(w, "%s", data)
 		} else {
 			if vars.Namespace != "" {
-				fmt.Fprintf(os.Stderr, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			} else {
-				fmt.Fprintf(os.Stderr, "No resources %s found.\n", resources)
+				fmt.Fprintf(errOut, "No resources %s found.\n", resources)
 			}
 		}
 	} else {
@@ -586,9 +586,9 @@ func handleOutput(w io.Writer) {
 		if vars.Output.Len() == 0 {
 			// never print the (default/current) namespace if at least one cluster-scoped resource is requested
 			if vars.Namespace == "" || includesClusterScoped {
-				fmt.Fprintf(os.Stderr, "No resources %s found.\n", resources)
+				fmt.Fprintf(errOut, "No resources %s found.\n", resources)
 			} else {
-				fmt.Fprintf(os.Stderr, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
+				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			}
 		} else {
 			vars.Output.WriteTo(w)
