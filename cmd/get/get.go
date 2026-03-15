@@ -213,7 +213,6 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			err := yaml.Unmarshal(_file, &UnstructuredItems)
 			if err != nil { // unable to unmarshal the file, it may be empty or corrupted
 				// We handle this situation by looking for the pod in the pods directory
-				fmt.Println("heree")
 				fStat, _ := os.Stat(resourcesItemsPath)
 				fSize := fStat.Size()
 				if resourceNamePlural == "pods" && fSize == 0 {
