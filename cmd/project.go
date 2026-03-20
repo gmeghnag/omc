@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/types"
@@ -75,9 +76,44 @@ func projectDefault(omcConfigFile string, projDefault string) {
 
 }
 
+// ProjectCompletionFunc provides completion for namespace/project names
+func ProjectCompletionFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	var completions []string
+
+	// If we already have a project argument, no more completions
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Check if we have a must-gather path configured
+	if vars.MustGatherRootPath == "" {
+		return completions, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Read namespace directories
+	namespacesPath := vars.MustGatherRootPath + "/namespaces/"
+	namespaces, err := ioutil.ReadDir(namespacesPath)
+	if err != nil {
+		return completions, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Add namespaces that match the prefix
+	for _, ns := range namespaces {
+		if ns.IsDir() {
+			nsName := ns.Name()
+			if strings.HasPrefix(nsName, toComplete) {
+				completions = append(completions, nsName)
+			}
+		}
+	}
+
+	return completions, cobra.ShellCompDirectiveNoFileComp
+}
+
 var ProjectCmd = &cobra.Command{
-	Use:   "project",
-	Short: "Switch to another project",
+	Use:               "project",
+	Short:             "Switch to another project",
+	ValidArgsFunction: ProjectCompletionFunc,
 	Run: func(cmd *cobra.Command, args []string) {
 		projDefault := ""
 		if len(args) > 1 {

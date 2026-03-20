@@ -76,10 +76,10 @@ type Target struct {
 	ScrapeURL  string `json:"scrapeUrl"`
 	GlobalURL  string `json:"globalUrl"`
 
-	LastError          string              `json:"lastError"`
-	LastScrape         time.Time           `json:"lastScrape"`
-	LastScrapeDuration float64             `json:"lastScrapeDuration"`
-	Health             string              `json:"health"`
+	LastError          string    `json:"lastError"`
+	LastScrape         time.Time `json:"lastScrape"`
+	LastScrapeDuration float64   `json:"lastScrapeDuration"`
+	Health             string    `json:"health"`
 
 	ScrapeInterval string `json:"scrapeInterval"`
 	ScrapeTimeout  string `json:"scrapeTimeout"`
