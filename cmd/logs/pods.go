@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, rotatedFlag bool, allContainersFlag bool, logLevels []string, insecureFlag bool) {
+func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, rotatedFlag bool, allContainersFlag bool, logLevels []string, insecureFlag bool, tail int64) {
 	var logFilter logLineFilter = NewCRILogFilter(logLevels, nil)
 	var _Items v1.PodList
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
@@ -64,6 +64,7 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 				for _, c := range Pod.Spec.Containers {
 					log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs")
 					log.WithFilter(logFilter)
+					log.WithTail(tail)
 					if previousFlag {
 						log.FromPrevious()
 					}
@@ -108,6 +109,7 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		} else {
 			log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/")
 			log.WithFilter(logFilter)
+			log.WithTail(tail)
 			if previousFlag {
 				log.FromPrevious()
 			}

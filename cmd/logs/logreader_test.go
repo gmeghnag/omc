@@ -69,7 +69,7 @@ func TestFromInsecure(t *testing.T) {
 		},
 		{
 			name:      "Handle insecure logs but only touch files suffixed .log",
-			logReader: &LogReader{"", &[]string{"current.log", "current.fakelog"}, nil},
+			logReader: &LogReader{"", &[]string{"current.log", "current.fakelog"}, nil, -1},
 			expected:  &[]string{"current.insecure.log"},
 		},
 	}
@@ -136,13 +136,13 @@ func TestRead(t *testing.T) {
 	}{
 		{
 			name:                    "Read file unfiltered",
-			logReader:               &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, nil},
+			logReader:               &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, nil, -1},
 			expectedText:            "My Info LogMessage",
 			expectedFilteredOutText: "",
 		},
 		{
 			name:                    "Read file and apply filter to every line.",
-			logReader:               &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, &SimpleToUpperLogFilter{}},
+			logReader:               &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, &SimpleToUpperLogFilter{}, -1},
 			expectedText:            "LOGMESSAGE",
 			expectedFilteredOutText: "LogMessage",
 		},
@@ -160,6 +160,47 @@ func TestRead(t *testing.T) {
 			if !strings.Contains(output.String(), tc.expectedText) {
 				t.Errorf("Got: %v \n", output.String())
 				t.Errorf("Want: %v \n", tc.expectedText)
+			}
+		})
+	}
+}
+
+func TestReadWithTail(t *testing.T) {
+	tests := []struct {
+		name           string
+		logReader      *LogReader
+		expectedText   string
+		unexpectedText string
+	}{
+		{
+			name:           "Read file tail 1",
+			logReader:      &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, nil, 1},
+			expectedText:   "My Error LogMessage",
+			unexpectedText: "My Info LogMessage",
+		},
+		{
+			name:           "Read file tail 2",
+			logReader:      &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, nil, 2},
+			expectedText:   "My Warning LogMessage",
+			unexpectedText: "My Info LogMessage",
+		},
+		{
+			name:           "Read file tail 0",
+			logReader:      &LogReader{testdata + "namespaces/test-namespace/pods/test-pod/test-container/test-container/logs/", &[]string{"current.log"}, nil, 0},
+			expectedText:   "",
+			unexpectedText: "LogMessage",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			output := new(bytes.Buffer)
+			tc.logReader.Read(output)
+			if !strings.Contains(output.String(), tc.expectedText) {
+				t.Errorf("Got: %v \nWant: %v \n", output.String(), tc.expectedText)
+			}
+			if tc.unexpectedText != "" && strings.Contains(output.String(), tc.unexpectedText) {
+				t.Errorf("Got: %v \nDid not want: %v \n", output.String(), tc.unexpectedText)
 			}
 		})
 	}

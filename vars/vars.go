@@ -10,6 +10,7 @@ import (
 	"k8s.io/kubernetes/pkg/printers"
 )
 
+var Tail int64
 var CfgFile, Namespace, MustGatherRootPath, OutputStringVar, LabelSelectorStringVar, Id, Container, OMCVersionHash, OMCVersionTag, DiffCmd, CurrentKind, LastKind, DefaultProject, ForResource string
 var AllNamespaceBoolVar, ShowLabelsBoolVar, Previous, Rotated, AllContainers, UseLocalCRDs, SingleResource, Wide, ShowKind, ShowNamespace, ShowManagedFields, NoHeaders, InsecureLogs bool
 

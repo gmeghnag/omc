@@ -48,6 +48,7 @@ type LogReader struct {
 	dirname string
 	files   *[]string
 	filter  logLineFilter
+	tail    int64
 }
 
 // Create a LogReader which holds a reader to either a plain (bufio.Reader) or gzipped (gzip.Reader) logfile.
@@ -55,12 +56,17 @@ func NewLogReader(dirname string) *LogReader {
 	l := new(LogReader)
 	l.dirname = dirname
 	l.files = &[]string{currentLogFile}
+	l.tail = -1
 
 	return l
 }
 
 func (l *LogReader) WithFilter(llf logLineFilter) {
 	l.filter = llf
+}
+
+func (l *LogReader) WithTail(tail int64) {
+	l.tail = tail
 }
 
 func (l *LogReader) FromPrevious() {
@@ -87,6 +93,7 @@ func (l *LogReader) FromRotated() {
 // If unfilter, write to provided writer (w).
 // If filtered read from reader line-by-line and apply the filter.
 func (l *LogReader) Read(w io.Writer) {
+	var logs []string
 	for _, filename := range *l.files {
 		reader, err := open(l.dirname + "/" + filename)
 		if err != nil {
@@ -100,20 +107,32 @@ func (l *LogReader) Read(w io.Writer) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		if l.filter == nil {
-			// without filter, copy entire content to the provided writer
+		if l.filter == nil && l.tail == -1 {
+			// without filter and without tail, copy entire content to the provided writer
 			if _, err := io.Copy(w, reader); err != nil {
 				log.Fatalf("fatal: %v", err)
 			}
 		} else {
-			// with filter, read line by line and apply the filter
+			// with filter or tail, read line by line
 			scanner := bufio.NewScanner(reader)
 			for scanner.Scan() {
 				log := l.applyFilter(scanner.Bytes())
 				if len(log) > 0 {
-					fmt.Fprintln(w, string(log))
+					if l.tail != -1 {
+						logs = append(logs, string(log))
+						if int64(len(logs)) > l.tail {
+							logs = logs[1:]
+						}
+					} else {
+						fmt.Fprintln(w, string(log))
+					}
 				}
 			}
+		}
+	}
+	if l.tail != -1 {
+		for _, logLine := range logs {
+			fmt.Fprintln(w, logLine)
 		}
 	}
 }

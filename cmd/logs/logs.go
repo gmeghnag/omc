@@ -86,10 +86,10 @@ var Logs = &cobra.Command{
 					fmt.Fprintln(os.Stderr, "arguments in resource/name form must have a single resource and name")
 					os.Exit(1)
 				}
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 			} else {
 				podName = s[0]
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
+				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 			}
 		}
 		if len(args) == 2 {
@@ -104,7 +104,7 @@ var Logs = &cobra.Command{
 						os.Exit(1)
 					}
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 				}
 			} else {
 				if containerName != "" {
@@ -113,7 +113,7 @@ var Logs = &cobra.Command{
 				} else {
 					podName = args[0]
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag)
+					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 				}
 			}
 		}
@@ -126,5 +126,6 @@ func init() {
 	Logs.PersistentFlags().BoolVarP(&vars.Previous, "previous", "p", false, "Print the logs for the previous instance of the container in a pod if it exists.")
 	Logs.PersistentFlags().BoolVarP(&vars.Rotated, "rotated", "r", false, "Print the logs for the rotated instance of the container in a pod if it exists.")
 	Logs.PersistentFlags().BoolVarP(&vars.AllContainers, "all-containers", "", false, "Get all containers' logs in the pod(s).")
+	Logs.PersistentFlags().Int64Var(&vars.Tail, "tail", -1, "Lines of recent log file to display. Defaults to -1 with no selector, showing all log lines.")
 	Logs.Flags().StringVarP(&LogLevel, "log-level", "l", "", "Filter logs by level (info|error|worning), you can filter for more concatenating them comma separated.")
 }
