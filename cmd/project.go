@@ -31,11 +31,7 @@ import (
 )
 
 func projectDefault(omcConfigFile string, projDefault string) {
-	var namespaces []string
-	_namespaces, _ := ioutil.ReadDir(vars.MustGatherRootPath + "/namespaces/")
-	for _, f := range _namespaces {
-		namespaces = append(namespaces, f.Name())
-	}
+	namespaces := helpers.GetNamespaces(vars.MustGatherRootPath)
 	file, _ := ioutil.ReadFile(omcConfigFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
