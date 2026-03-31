@@ -82,12 +82,12 @@ var ProjectsCmd = &cobra.Command{
 		if len(args) == 0 {
 			fmt.Println("You have access to the following projects and can switch between them with ' project <projectname>':")
 			fmt.Println("")
-			_namespaces, _ := ioutil.ReadDir(vars.MustGatherRootPath + "/namespaces/")
-			for _, f := range _namespaces {
-				if f.Name() == vars.Namespace {
-					fmt.Println("  * ", f.Name())
+			namespaces := helpers.GetNamespaces(vars.MustGatherRootPath)
+			for _, f := range namespaces {
+				if f == vars.Namespace {
+					fmt.Println("  * ", f)
 				} else {
-					fmt.Println("    ", f.Name())
+					fmt.Println("    ", f)
 				}
 			}
 			fmt.Println("")

@@ -455,3 +455,15 @@ func GetFromJsonPath(data interface{}, jsonPathTemplate string) string {
 	jPath.Execute(buf, data)
 	return buf.String()
 }
+
+func GetNamespaces(path string) []string {
+	var namespaces []string
+	_namespaces, _ := os.ReadDir(path + "/namespaces/")
+	for _, f := range _namespaces {
+		if f.IsDir() && !strings.HasPrefix(f.Name(), ".") {
+			namespaces = append(namespaces, f.Name())
+		}
+	}
+	return namespaces
+
+}
