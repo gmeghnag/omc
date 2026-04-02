@@ -4,6 +4,7 @@ package deserializer
 import (
 
 	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  userv1 "github.com/openshift/api/user/v1"
 
 	apiregistration "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	nodeapi "k8s.io/kubernetes/pkg/apis/node"
@@ -230,6 +231,12 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &template.Template{}
 	case *oauthapi.OAuthClient:
 		return &oauthapi.OAuthClient{}
+  case *userv1.User:
+    return &userv1.User{}
+  case *userv1.Identity:
+    return &userv1.Identity{}
+  case *userv1.Group:
+    return &userv1.Group{}
 	}
 	//fmt.Println("RUNTIME UNKNOW")
 	return &runtime.Unknown{}

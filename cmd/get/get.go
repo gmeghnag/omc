@@ -374,13 +374,34 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		for _, f := range resourcesFiles {
 			resourceYamlPath := resourceDir + "/" + f.Name()
 			_file, _ := os.ReadFile(resourceYamlPath)
+		var rawList struct {
+			Items []map[string]interface{} `json:"items"`
+		}
+		if err := yaml.Unmarshal(_file, &rawList); err == nil && len(rawList.Items) > 0 {
+			for _, rawItem := range rawList.Items {
+				item := unstructured.Unstructured{Object: rawItem}
+				if item.Object == nil {
+					continue
+				}
+					if vars.SortBy != "" {
+						UnstructuredItems.Items = append(UnstructuredItems.Items, item)
+					} else {
+						if len(resources) > 0 {
+							_, ok := resources[item.GetName()]
+							if ok {
+								handleObject(item)
+							}
+						} else {
+							handleObject(item)
+						}
+					}
+				}
+				continue
+			}
+
 			item := unstructured.Unstructured{}
 			if err := yaml.Unmarshal(_file, &item); err != nil {
 				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
-				os.Exit(1)
-			}
-			if item.IsList() {
-				fmt.Fprintln(os.Stderr, "error: file \""+resourceYamlPath+"\" contains a \"List\" objectKind, while it should contain a single resource.")
 				os.Exit(1)
 			}
 			if vars.SortBy != "" {
