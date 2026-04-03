@@ -1,7 +1,7 @@
 # `omc`: OpenShift Must-Gather Client
 
 [![GitHub Actions Test Status](https://github.com/gmeghnag/omc/actions/workflows/test.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ATest) [![GitHub Actions Build Status](https://github.com/gmeghnag/omc/actions/workflows/build.yml/badge.svg)](https://github.com/gmeghnag/omc/actions?query=workflow%3ABuild) ![Go version](https://img.shields.io/github/go-mod/go-version/gmeghnag/omc)
-![Downloads](https://img.shields.io/github/downloads/gmeghnag/omc/total) 
+![Downloads](https://img.shields.io/github/downloads/gmeghnag/omc/total)
 
 
 
@@ -24,7 +24,7 @@ omc -h
 ### Other Operating systems
 1. View the available downloads from the latest releases page
 1. Chose and download the Asset that best suits your operating system
-1. Un zip/tar the binary and move it to a directory location that is in your executable path. 
+1. Un zip/tar the binary and move it to a directory location that is in your executable path.
 
 ### Build from source
 ```
@@ -50,7 +50,7 @@ $ omc get pods -o wide -l app=etcd -n openshift-etcd
 ### Examples
 - Retrieving master nodes by label:
 ```
-$ omc get node -l node-role.kubernetes.io/master= -o name   
+$ omc get node -l node-role.kubernetes.io/master= -o name
 node/ip-10-0-132-49.eu-central-1.compute.internal
 node/ip-10-0-178-163.eu-central-1.compute.internal
 node/ip-10-0-202-187.eu-central-1.compute.internal
@@ -82,8 +82,8 @@ openshift-kubernetes.rules   AlertmanagerReceiversNotConfigured   firing    5s  
 ```
 - Retreive details of any certificate contained in configmaps/secrets/certificatesigningrequests:
 ```
-$ omc certs inspect                                                                                                                   
-NAME                       KIND        AGE   CERTTYPE    SUBJECT                                             NOTBEFORE                       NOTAFTER                             
+$ omc certs inspect
+NAME                       KIND        AGE   CERTTYPE    SUBJECT                                             NOTBEFORE                       NOTAFTER
 kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-lb-signer,OU=openshift            2023-05-03 08:59:22 +0000 UTC 　2033-04-30 08:59:22 +0000 UTC
 kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=kube-apiserver-localhost-signer,OU=openshift     2023-05-03 08:59:22 +0000 UTC 　2033-04-30 08:59:22 +0000 UTC
 kube-root-ca.crt           ConfigMap   47h   ca-bundle   CN=*.apps.example.com                               2023-05-03 09:20:57 +0000 UTC 　2025-05-02 09:20:58 +0000 UTC
@@ -101,3 +101,11 @@ NAMESPACE       NAME                            INGRESSCONTROLLER    SERVICES   
 testdata        rails-postgresql-example        default              rails-postgresql-example        web(8080)       http
 other-testdata  hello-node-secure               default              hello-node                      8080            edge/Redirect
 ```
+- Summarize **PodNetworkConnectivityCheck** resources from `pod_network_connectivity_check/podnetworkconnectivitychecks.yaml`:
+```
+$ omc network connectivity
+NAME                                                        TARGET                    REACHABLE   LAST_FAILURE_REASON   LAST_FAILURE_MESSAGE
+network-check-source-apiserver                              https://10.0.0.1:6443     True
+network-check-source-to-load-balancer-api-internal          10.10.10.1:8080           True        TCPConnectError       network-check-source-to-load-balancer-api-internal: failed to establish a TCP connection ...
+```
+Use `omc network connectivity --wide` (or `-w`) for full failure text and the Reachable condition’s last transition time; use `--unhealthy-only` to list only checks where Reachable is not True. Filter by namespace with the root flag, for example `omc network connectivity -n openshift-network-diagnostics`.

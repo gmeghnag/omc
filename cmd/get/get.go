@@ -100,7 +100,7 @@ var GetCmd = &cobra.Command{
 			if resourceNamePlural == "namespaces" || resourceNamePlural == "projects" {
 				getNamespacesResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if resourceNamePlural == "podnetworkconnectivitychecks" {
-				getPodNetworkConnectivityChecksResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				getPodNetworkConnectivityChecksResources(cmd, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else if namespaced {
 				getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			} else {
@@ -595,7 +595,20 @@ func handleOutput(w io.Writer, errOut io.Writer) {
 	}
 }
 
-func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) {
+// podNetworkConnectivityChecksDefaultNamespace is where network diagnostics checks are normally installed.
+const podNetworkConnectivityChecksDefaultNamespace = "openshift-network-diagnostics"
+
+func namespaceExplicitlySet(cmd *cobra.Command) bool {
+	return cmd.Root().PersistentFlags().Changed("namespace")
+}
+
+func getPodNetworkConnectivityChecksResources(cmd *cobra.Command, resources map[string]struct{}) {
+	if vars.AllNamespaceBoolVar {
+		vars.Namespace = ""
+		vars.ShowNamespace = true
+	} else if !namespaceExplicitlySet(cmd) {
+		vars.Namespace = podNetworkConnectivityChecksDefaultNamespace
+	}
 	resourcesYamlPath := vars.MustGatherRootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
 	_file, err := os.ReadFile(resourcesYamlPath)
 	if err == nil {

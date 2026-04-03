@@ -35,6 +35,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/insights"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
+	"github.com/gmeghnag/omc/cmd/network"
 	nodelogs "github.com/gmeghnag/omc/cmd/node-logs"
 	"github.com/gmeghnag/omc/cmd/ovn"
 	"github.com/gmeghnag/omc/cmd/prometheus"
@@ -108,6 +109,7 @@ func init() {
 		etcd.Etcd,
 		logs.Logs,
 		machineconfig.MachineConfig,
+		network.NetworkCmd,
 		ovn.OvnCmd,
 		prometheus.PrometheusCmd,
 		events.EventsCmd,
