@@ -998,3 +998,13 @@ users:
   name: user
   namespaced: false
   plural: users
+group:
+  group: user.openshift.io
+  name: group
+  namespaced: false
+  plural: groups
+groups:
+  group: user.openshift.io
+  name: group
+  namespaced: false
+  plural: groups
