@@ -18,28 +18,9 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kubernetes/pkg/printers"
-  userv1 "github.com/openshift/api/user/v1"
 )
 
 func AddMissingHandlers(h printers.PrintHandler) {
-	userColumnDefinitions := []metav1.TableColumnDefinition{
-		{Name: "Name", Type: "string", Format: "name"},
-		{Name: "UID", Type: "string"},
-		{Name: "Full Name", Type: "string"},
-		{Name: "Identities", Type: "string"},
-	}
-	h.TableHandler(userColumnDefinitions, printUserList)
-	h.TableHandler(userColumnDefinitions, printUser)
-
-	identityColumnDefinitions := []metav1.TableColumnDefinition{
-		{Name: "Name", Type: "string", Format: "name"},
-		{Name: "IDP Name", Type: "string"},
-		{Name: "IDP Username", Type: "string"},
-		{Name: "User Name", Type: "string"},
-		{Name: "User UID", Type: "string"},
-	}
-	h.TableHandler(identityColumnDefinitions, printIdentityList)
-	h.TableHandler(identityColumnDefinitions, printIdentity)
 	apiServiceColumnDefinitions := []metav1.TableColumnDefinition{
 		{Name: "Name", Type: "string", Format: "name"},
 		{Name: "Service", Type: "string"},
@@ -239,53 +220,3 @@ func printOAuthClient(oauthClient *oauthapi.OAuthClient, options printers.Genera
 
 	return []metav1.TableRow{row}, nil
 }
-
-func printUser(obj *userv1.User, options printers.GenerateOptions) ([]metav1.TableRow, error) {
-	row := metav1.TableRow{}
-	row.Cells = append(row.Cells,
-		obj.Name,
-		string(obj.UID),
-		obj.FullName,
-		strings.Join(obj.Identities, ","),
-	)
-	return []metav1.TableRow{row}, nil
-}
-
-func printUserList(list *userv1.UserList, options printers.GenerateOptions) ([]metav1.TableRow, error) {
-	var rows []metav1.TableRow
-	for i := range list.Items {
-		r, err := printUser(&list.Items[i], options)
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, r...)
-	}
-	return rows, nil
-}
-
-func printIdentity(obj *userv1.Identity, options printers.GenerateOptions) ([]metav1.TableRow, error) {
-	row := metav1.TableRow{}
-	row.Cells = append(row.Cells,
-		obj.Name,
-		obj.ProviderName,
-		obj.ProviderUserName,
-		obj.User.Name,
-		string(obj.User.UID),
-	)
-	return []metav1.TableRow{row}, nil
-}
-
-func printIdentityList(list *userv1.IdentityList, options printers.GenerateOptions) ([]metav1.TableRow, error) {
-	var rows []metav1.TableRow
-	for i := range list.Items {
-		r, err := printIdentity(&list.Items[i], options)
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, r...)
-	}
-	return rows, nil
-}
-
-
-
