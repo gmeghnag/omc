@@ -101,3 +101,29 @@ NAMESPACE       NAME                            INGRESSCONTROLLER    SERVICES   
 testdata        rails-postgresql-example        default              rails-postgresql-example        web(8080)       http
 other-testdata  hello-node-secure               default              hello-node                      8080            edge/Redirect
 ```
+
+### Working with Custom Resource Definitions (CRDs)
+
+omc discovers CRD definitions automatically if they are present in the must-gather under `cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/`. If the must-gather does not include them, you can place them in `~/.omc/customresourcedefinitions/`:
+```
+$ BASE=~/.omc/customresourcedefinitions
+$ mkdir -p $BASE
+$ curl -sL https://raw.githubusercontent.com/NVIDIA/gpu-operator/main/config/crd/bases/nvidia.com_clusterpolicies.yaml -o $BASE/clusterpolicies.nvidia.com.yaml
+$ curl -sL https://raw.githubusercontent.com/NVIDIA/k8s-nim-operator/main/config/crd/bases/apps.nvidia.com_nimservices.yaml -o $BASE/nimservices.apps.nvidia.com.yaml
+$ curl -sL https://raw.githubusercontent.com/NVIDIA/k8s-nim-operator/main/config/crd/bases/apps.nvidia.com_nimcaches.yaml -o $BASE/nimcaches.apps.nvidia.com.yaml
+```
+
+Example with CRDs not included in omc by default:
+```
+$ omc get clusterpolicy
+NAME             STATUS   AGE
+cluster-policy   ready    52d
+
+$ omc get nimservice -A
+NAMESPACE   NAME                                     STATUS     AGE
+llms        meta-llama-3-3-70b-instruct-fp8-public   NotReady   49d
+
+$ omc get nimcache -A
+NAMESPACE   NAME                              STATUS   PVC                                   AGE
+llms        meta-llama-3-3-70b-instruct-fp8   Ready    meta-llama-3-3-70b-instruct-fp8-pvc   50d
+```
