@@ -978,3 +978,23 @@ oauthclients:
   name: oauthclient
   namespaced: false
   plural: oauthclients
+pods.metrics.k8s.io:
+  group: metrics.k8s.io
+  name: podmetrics
+  namespaced: true
+  plural: pods
+podmetrics:
+  group: metrics.k8s.io
+  name: podmetrics
+  namespaced: true
+  plural: pods
+nodes.metrics.k8s.io:
+  group: metrics.k8s.io
+  name: nodemetrics
+  namespaced: false
+  plural: nodes
+nodemetrics:
+  group: metrics.k8s.io
+  name: nodemetrics
+  namespaced: false
+  plural: nodes

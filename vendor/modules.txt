@@ -1858,6 +1858,10 @@ k8s.io/kubernetes/v1_28/pkg/apis/policy
 # k8s.io/kubernetes/v1_30 v0.0.0-00010101000000-000000000000 => k8s.io/kubernetes v1.30.7
 ## explicit; go 1.22.0
 k8s.io/kubernetes/v1_30/pkg/apis/resource
+# k8s.io/metrics v0.32.1
+## explicit; go 1.23.0
+k8s.io/metrics/pkg/apis/metrics
+k8s.io/metrics/pkg/apis/metrics/v1beta1
 # k8s.io/utils v0.0.0-20241210054802-24370beab758
 ## explicit; go 1.18
 k8s.io/utils/buffer

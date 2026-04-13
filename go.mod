@@ -49,6 +49,8 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
+require k8s.io/metrics v0.32.1
+
 require (
 	cel.dev/expr v0.19.1 // indirect
 	github.com/Azure/ARO-RP v0.0.0-20250602035759-0693f32d5ccc // indirect
