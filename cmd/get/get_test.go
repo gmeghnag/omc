@@ -1,7 +1,11 @@
+// Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 package get
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -67,5 +71,55 @@ func TestHandleEmptyWideOutput(t *testing.T) {
 			}
 			vars.GetArgs = make(map[string]map[string]struct{})
 		})
+	}
+}
+
+func TestGetClusterScopedResources_ReturnsErrorOnCorruptYAML(t *testing.T) {
+	root := t.TempDir()
+	rdir := filepath.Join(root, "cluster-scoped-resources", "config.openshift.io")
+	if err := os.MkdirAll(rdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rdir, "clusterversions.yaml"), []byte("{ unterminated"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	saved := vars.MustGatherRootPath
+	t.Cleanup(func() { vars.MustGatherRootPath = saved })
+	vars.MustGatherRootPath = root
+
+	if err := getClusterScopedResources("clusterversions", "config.openshift.io", nil); err == nil {
+		t.Fatalf("expected error from corrupt yaml, got nil")
+	}
+}
+
+func TestGetCmd_PropagatesErrorThroughCobra(t *testing.T) {
+	root := t.TempDir()
+	rdir := filepath.Join(root, "cluster-scoped-resources", "config.openshift.io")
+	if err := os.MkdirAll(rdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rdir, "clusterversions.yaml"), []byte("{ unterminated"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	savedPath := vars.MustGatherRootPath
+	savedArgs := vars.GetArgs
+	t.Cleanup(func() {
+		vars.MustGatherRootPath = savedPath
+		vars.GetArgs = savedArgs
+		GetCmd.SetArgs(nil)
+		GetCmd.SetOut(nil)
+		GetCmd.SetErr(nil)
+	})
+	vars.MustGatherRootPath = root
+	vars.GetArgs = make(map[string]map[string]struct{})
+
+	GetCmd.SetArgs([]string{"clusterversions"})
+	GetCmd.SetOut(new(bytes.Buffer))
+	GetCmd.SetErr(new(bytes.Buffer))
+
+	if err := GetCmd.Execute(); err == nil {
+		t.Fatalf("expected GetCmd.Execute to return an error from the corrupt fixture, got nil")
 	}
 }
