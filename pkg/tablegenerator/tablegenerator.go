@@ -1,3 +1,5 @@
+// Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 package tablegenerator
 
 import (
@@ -42,7 +44,11 @@ func CustomColumnsTable(unstruct *unstructured.Unstructured) (*metav1.Table, err
 	}
 	cells := make([]interface{}, 0)
 	for _, column := range table.ColumnDefinitions {
-		matches := format.FindStringSubmatch(fieldSelectors[column.Name])
+		selector := fieldSelectors[column.Name]
+		matches := format.FindStringSubmatch(selector)
+		if matches == nil {
+			return nil, fmt.Errorf("invalid custom-columns selector %q for column %q (expected form: %s:.metadata.name)", selector, column.Name, column.Name)
+		}
 		cells = append(cells, helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{.", matches[1], "}")))
 	}
 	table.Rows = []metav1.TableRow{{Cells: cells}}

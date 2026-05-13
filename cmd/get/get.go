@@ -96,19 +96,18 @@ var GetCmd = &cobra.Command{
 			}
 			// namespaces and projects resources
 			// are exceptions to must-gather resources structure
-			var rerr error
 			switch {
 			case resourceNamePlural == "namespaces" || resourceNamePlural == "projects":
-				rerr = getNamespacesResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getNamespacesResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			case resourceNamePlural == "podnetworkconnectivitychecks":
-				rerr = getPodNetworkConnectivityChecksResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getPodNetworkConnectivityChecksResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			case namespaced:
-				rerr = getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			default:
-				rerr = getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			}
-			if rerr != nil {
-				return rerr
+			if err != nil {
+				return err
 			}
 		}
 		return handleOutput(os.Stdout, os.Stderr)
@@ -462,7 +461,10 @@ func handleObject(obj unstructured.Unstructured) error {
 	if vars.Namespace != "" && obj.GetNamespace() != "" && vars.Namespace != obj.GetNamespace() {
 		return nil
 	}
-	labelsOk, _ := helpers.MatchLabelsFromMap(obj.GetLabels(), vars.LabelSelectorStringVar)
+	labelsOk, err := helpers.MatchLabelsFromMap(obj.GetLabels(), vars.LabelSelectorStringVar)
+	if err != nil {
+		return fmt.Errorf("invalid label selector %q: %w", vars.LabelSelectorStringVar, err)
+	}
 	if !labelsOk {
 		return nil
 	}
@@ -575,11 +577,18 @@ func handleOutput(w io.Writer, errOut io.Writer) error {
 			}
 		}
 	} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
-		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		jsonPathTemplate, err := helpers.GetJsonTemplate(vars.OutputStringVar)
+		if err != nil {
+			return err
+		}
 		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
-			helpers.ExecuteJsonPath(vars.UnstructuredList.Items[0].Object, jsonPathTemplate)
+			if err := helpers.ExecuteJsonPath(vars.UnstructuredList.Items[0].Object, jsonPathTemplate); err != nil {
+				return err
+			}
 		} else if !vars.SingleResource && len(vars.UnstructuredList.Items) > 0 {
-			helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate)
+			if err := helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate); err != nil {
+				return err
+			}
 		} else {
 			if vars.Namespace != "" {
 				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
