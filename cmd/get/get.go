@@ -111,8 +111,7 @@ var GetCmd = &cobra.Command{
 				return rerr
 			}
 		}
-		handleOutput(os.Stdout, os.Stderr)
-		return nil
+		return handleOutput(os.Stdout, os.Stderr)
 	},
 }
 
@@ -252,12 +251,15 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			}
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
+					if _, ok := resources[item.GetName()]; ok {
+						if err := handleObject(item); err != nil {
+							return err
+						}
 					}
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		} else { // the resources are customresources so, stored in a single file per resource
@@ -291,12 +293,15 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 						sortObjects = append(sortObjects, item)
 					} else {
 						if len(resources) > 0 {
-							_, ok := resources[item.GetName()]
-							if ok {
-								handleObject(item)
+							if _, ok := resources[item.GetName()]; ok {
+								if err := handleObject(item); err != nil {
+									return err
+								}
 							}
 						} else {
-							handleObject(item)
+							if err := handleObject(item); err != nil {
+								return err
+							}
 						}
 					}
 				}
@@ -305,12 +310,15 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 					sortObjects = sortResources(sortObjects, vars.SortBy)
 					for _, item := range sortObjects {
 						if len(resources) > 0 {
-							_, ok := resources[item.GetName()]
-							if ok {
-								handleObject(item)
+							if _, ok := resources[item.GetName()]; ok {
+								if err := handleObject(item); err != nil {
+									return err
+								}
 							}
 						} else {
-							handleObject(item)
+							if err := handleObject(item); err != nil {
+								return err
+							}
 						}
 					}
 				}
@@ -334,7 +342,9 @@ func getNamespacesResources(resources map[string]struct{}) error {
 				if vars.SortBy != "" {
 					sortObjects = append(sortObjects, item)
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -351,7 +361,9 @@ func getNamespacesResources(resources map[string]struct{}) error {
 				if vars.SortBy != "" {
 					sortObjects = append(sortObjects, item)
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -359,7 +371,9 @@ func getNamespacesResources(resources map[string]struct{}) error {
 	if vars.SortBy != "" {
 		sortObjects = sortResources(sortObjects, vars.SortBy)
 		for _, item := range sortObjects {
-			handleObject(item)
+			if err := handleObject(item); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -392,12 +406,15 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 				UnstructuredItems.Items = append(UnstructuredItems.Items, item)
 			} else {
 				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
+					if _, ok := resources[item.GetName()]; ok {
+						if err := handleObject(item); err != nil {
+							return err
+						}
 					}
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -405,12 +422,15 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
+					if _, ok := resources[item.GetName()]; ok {
+						if err := handleObject(item); err != nil {
+							return err
+						}
 					}
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -423,12 +443,15 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		}
 		for _, item := range UnstructuredItems.Items {
 			if len(resources) > 0 {
-				_, ok := resources[item.GetName()]
-				if ok {
-					handleObject(item)
+				if _, ok := resources[item.GetName()]; ok {
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			} else {
-				handleObject(item)
+				if err := handleObject(item); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -521,7 +544,7 @@ func handleObject(obj unstructured.Unstructured) error {
 	return nil
 }
 
-func handleOutput(w io.Writer, errOut io.Writer) {
+func handleOutput(w io.Writer, errOut io.Writer) error {
 	printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
 	_resources := make([]string, 0, len(vars.GetArgs))
 	var includesClusterScoped bool
@@ -580,9 +603,8 @@ func handleOutput(w io.Writer, errOut io.Writer) {
 		}
 	} else {
 		if vars.LastKind == vars.CurrentKind {
-			err := printer.PrintObj(&vars.Table, &vars.Output)
-			if err != nil {
-				klog.V(1).ErrorS(err, "ERROR")
+			if err := printer.PrintObj(&vars.Table, &vars.Output); err != nil {
+				return fmt.Errorf("error printing table: %w", err)
 			}
 			vars.Table = metav1.Table{}
 		}
@@ -597,6 +619,7 @@ func handleOutput(w io.Writer, errOut io.Writer) {
 			vars.Output.WriteTo(w)
 		}
 	}
+	return nil
 }
 
 func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) error {
@@ -610,7 +633,9 @@ func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) err
 		for _, item := range UnstructuredItems.Items {
 			_, ok := resources[item.GetName()]
 			if ok || len(resources) == 0 {
-				handleObject(item)
+				if err := handleObject(item); err != nil {
+					return err
+				}
 			}
 		}
 	}
