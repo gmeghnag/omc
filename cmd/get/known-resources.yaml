@@ -978,3 +978,33 @@ oauthclients:
   name: oauthclient
   namespaced: false
   plural: oauthclients
+identities:
+  group: user.openshift.io
+  name: identity
+  namespaced: false
+  plural: identities
+identity:
+  group: user.openshift.io
+  name: identity
+  namespaced: false
+  plural: identities
+user:
+  group: user.openshift.io
+  name: user
+  namespaced: false
+  plural: users
+users:
+  group: user.openshift.io
+  name: user
+  namespaced: false
+  plural: users
+group:
+  group: user.openshift.io
+  name: group
+  namespaced: false
+  plural: groups
+groups:
+  group: user.openshift.io
+  name: group
+  namespaced: false
+  plural: groups
