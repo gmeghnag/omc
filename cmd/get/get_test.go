@@ -66,7 +66,7 @@ func TestHandleEmptyWideOutput(t *testing.T) {
 			vars.MustGatherRootPath = "../../testdata/"
 			vars.Namespace = tt.namespace
 			validateArgs(tt.rtype)
-			handleOutput(&stdout, &stderr)
+			newState().handleOutput(&stdout, &stderr)
 			if !strings.Contains(stderr.String(), tt.want) {
 				t.Errorf("Got: %v \n", stderr.String())
 				t.Errorf("Want: %v \n", tt.want)
@@ -90,7 +90,7 @@ func TestGetClusterScopedResources_ReturnsErrorOnCorruptYAML(t *testing.T) {
 	t.Cleanup(func() { vars.MustGatherRootPath = saved })
 	vars.MustGatherRootPath = root
 
-	if err := getClusterScopedResources("clusterversions", "config.openshift.io", nil); err == nil {
+	if err := getClusterScopedResources(newState(), "clusterversions", "config.openshift.io", nil); err == nil {
 		t.Fatalf("expected error from corrupt yaml, got nil")
 	}
 }
@@ -144,8 +144,68 @@ func TestHandleObject_ReturnsErrorOnBadCustomColumns(t *testing.T) {
 	obj.SetKind("ConfigMap")
 	obj.SetName("test")
 
-	if err := handleObject(obj); err == nil {
+	if err := newState().handleObject(obj); err == nil {
 		t.Fatalf("expected handleObject to return error for malformed custom-columns spec, got nil")
+	}
+}
+
+func TestGetState_IsolatedAcrossInvocations(t *testing.T) {
+	root := t.TempDir()
+	rdir := filepath.Join(root, "cluster-scoped-resources", "config.openshift.io")
+	if err := os.MkdirAll(rdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fixture := []byte(`apiVersion: v1
+kind: List
+items:
+- apiVersion: config.openshift.io/v1
+  kind: ClusterVersion
+  metadata:
+    name: version
+  status:
+    desired:
+      version: "4.17.11"
+`)
+	if err := os.WriteFile(filepath.Join(rdir, "clusterversions.yaml"), fixture, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	savedPath := vars.MustGatherRootPath
+	savedArgs := vars.GetArgs
+	savedOutput := vars.OutputStringVar
+	savedNs := vars.Namespace
+	t.Cleanup(func() {
+		vars.MustGatherRootPath = savedPath
+		vars.GetArgs = savedArgs
+		vars.OutputStringVar = savedOutput
+		vars.Namespace = savedNs
+	})
+	vars.MustGatherRootPath = root
+	vars.GetArgs = map[string]map[string]struct{}{
+		"clusterversions.config.openshift.io": {},
+	}
+	vars.OutputStringVar = ""
+	vars.Namespace = ""
+
+	run := func() string {
+		s := newState()
+		if err := getClusterScopedResources(s, "clusterversions", "config.openshift.io", nil); err != nil {
+			t.Fatalf("getClusterScopedResources: %v", err)
+		}
+		var out, errOut bytes.Buffer
+		if err := s.handleOutput(&out, &errOut); err != nil {
+			t.Fatalf("handleOutput: %v", err)
+		}
+		return out.String()
+	}
+
+	first := run()
+	if first == "" {
+		t.Fatalf("expected non-empty output from fixture, got empty")
+	}
+	second := run()
+	if first != second {
+		t.Fatalf("state leaks across invocations.\nfirst:\n%q\nsecond:\n%q", first, second)
 	}
 }
 
