@@ -23,6 +23,7 @@ import (
 
 	"github.com/gmeghnag/omc/cmd"
 	"github.com/gmeghnag/omc/cmd/admin"
+	"github.com/gmeghnag/omc/cmd/ceph"
 	"github.com/gmeghnag/omc/cmd/certs"
 	"github.com/gmeghnag/omc/cmd/config"
 	"github.com/gmeghnag/omc/cmd/describe"
@@ -92,6 +93,11 @@ func init() {
 	// when this action is called directly.
 	RootCmd.AddCommand(
 		admin.Admin,
+		ceph.Ceph,
+		ceph.CephVolume,
+		ceph.Rados,
+		ceph.RadosgwAdmin,
+		ceph.Rbd,
 		haproxy.Haproxy,
 		certs.Certs,
 		cmd.VersionCmd,
