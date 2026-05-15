@@ -1,3 +1,5 @@
+// Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
 package helpers
 
 import (
@@ -102,18 +104,19 @@ func FormatDiffTime(diff time.Duration) string {
 	return strconv.Itoa(int(diff.Seconds())) + "s"
 }
 
-func ExecuteJsonPath(data interface{}, jsonPathTemplate string) {
+func ExecuteJsonPath(data interface{}, jsonPathTemplate string) error {
 	buf := new(bytes.Buffer)
 	jPath := jsonpath.New("out")
 	jPath.AllowMissingKeys(false)
 	jPath.EnableJSONOutput(false)
-	err := jPath.Parse(jsonPathTemplate)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: error parsing jsonpath "+jsonPathTemplate+", "+err.Error())
-		os.Exit(1)
+	if err := jPath.Parse(jsonPathTemplate); err != nil {
+		return fmt.Errorf("error parsing jsonpath %s, %w", jsonPathTemplate, err)
 	}
-	jPath.Execute(buf, data)
+	if err := jPath.Execute(buf, data); err != nil {
+		return fmt.Errorf("error executing jsonpath %s, %w", jsonPathTemplate, err)
+	}
 	fmt.Print(buf)
+	return nil
 }
 
 func CreateConfigFile(cfgFilePath string) {
@@ -273,7 +276,9 @@ func PrintOutput(resource interface{}, columns int16, outputFlag string, resourc
 		fmt.Println(string(j))
 	}
 	if strings.HasPrefix(outputFlag, "jsonpath=") {
-		ExecuteJsonPath(resource, jsonPathTemplate)
+		if err := ExecuteJsonPath(resource, jsonPathTemplate); err != nil {
+			fmt.Fprintln(os.Stderr, "error: "+err.Error())
+		}
 	}
 	return false
 }
@@ -303,17 +308,15 @@ func Cat(filePath string) {
 	fmt.Print(string(fileBytes[:]))
 }
 
-func GetJsonTemplate(outputStringVar string) string {
-	jsonPathTemplate := ""
-	if strings.HasPrefix(outputStringVar, "jsonpath=") {
-		s := outputStringVar[9:]
-		if len(s) < 1 {
-			fmt.Fprintln(os.Stderr, "error: template format specified but no template given")
-			os.Exit(1)
-		}
-		jsonPathTemplate = s
+func GetJsonTemplate(outputStringVar string) (string, error) {
+	if !strings.HasPrefix(outputStringVar, "jsonpath=") {
+		return "", nil
 	}
-	return jsonPathTemplate
+	s := outputStringVar[9:]
+	if len(s) < 1 {
+		return "", fmt.Errorf("template format specified but no template given")
+	}
+	return s, nil
 }
 
 func StringInSlice(a string, list []string) bool {

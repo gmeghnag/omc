@@ -1,5 +1,6 @@
 /*
 Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,7 +65,9 @@ var RootCmd = &cobra.Command{ // FLOW 4
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	cobra.CheckErr(RootCmd.Execute())
+	if err := RootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
 
 func init() {

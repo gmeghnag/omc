@@ -1,5 +1,6 @@
 /*
 Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -74,40 +75,42 @@ var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 var yamlData []byte
 
 var GetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "get",
+	Short:        "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			cmd.Help()
-			os.Exit(0)
+			return cmd.Help()
 		}
 		if vars.OutputStringVar == "wide" {
 			vars.Wide = true
 		}
-		err := validateArgs(args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err.Error())
-			os.Exit(1)
+		if err := validateArgs(args); err != nil {
+			return err
 		}
 		for resource := range vars.GetArgs {
 			resourceNamePlural, resourceGroup, _, namespaced, err := KindGroupNamespaced(resource)
 			if err != nil {
 				klog.V(1).ErrorS(err, "ERROR")
-				os.Exit(1)
+				return err
 			}
 			// namespaces and projects resources
 			// are exceptions to must-gather resources structure
-			if resourceNamePlural == "namespaces" || resourceNamePlural == "projects" {
-				getNamespacesResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
-			} else if resourceNamePlural == "podnetworkconnectivitychecks" {
-				getPodNetworkConnectivityChecksResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
-			} else if namespaced {
-				getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
-			} else {
-				getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+			switch {
+			case resourceNamePlural == "namespaces" || resourceNamePlural == "projects":
+				err = getNamespacesResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+			case resourceNamePlural == "podnetworkconnectivitychecks":
+				err = getPodNetworkConnectivityChecksResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+			case namespaced:
+				err = getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+			default:
+				err = getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+			}
+			if err != nil {
+				return err
 			}
 		}
-		handleOutput(os.Stdout, os.Stderr)
+		return handleOutput(os.Stdout, os.Stderr)
 	},
 }
 
@@ -193,7 +196,7 @@ func init() {
 	templateprinters.AddTemplateOpenShiftHandlers(vars.TableGenerator)
 }
 
-func getNamespacedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+func getNamespacedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	var namespaces []string
 	if vars.AllNamespaceBoolVar {
 		vars.Namespace = ""
@@ -227,21 +230,18 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 						podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
 						_file, err := os.ReadFile(podPath)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "error reading %s: %s\n", podPath, err)
-							os.Exit(1)
+							return fmt.Errorf("error reading %s: %w", podPath, err)
 						}
 						var podItem unstructured.Unstructured
 						if err := yaml.Unmarshal(_file, &podItem); err != nil {
-							fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podPath)
-							os.Exit(1)
+							return fmt.Errorf("error unmarshaling %s: %w", podPath, err)
 						}
 						if podItem.Object != nil {
 							UnstructuredItems.Items = append(UnstructuredItems.Items, podItem)
 						}
 					}
 				} else {
-					fmt.Fprintln(os.Stderr, err)
-					os.Exit(1)
+					return fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, err)
 				}
 			}
 
@@ -250,12 +250,15 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			}
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
+					if _, ok := resources[item.GetName()]; ok {
+						if err := handleObject(item); err != nil {
+							return err
+						}
 					}
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		} else { // the resources are customresources so, stored in a single file per resource
@@ -277,22 +280,27 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 						continue
 					}
 					resourceYamlPath := resourceDir + "/" + f.Name()
-					_file, _ := os.ReadFile(resourceYamlPath)
+					_file, err := os.ReadFile(resourceYamlPath)
+					if err != nil {
+						return fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
+					}
 					item := unstructured.Unstructured{}
 					if err := yaml.Unmarshal(_file, &item); err != nil {
-						fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
-						os.Exit(1)
+						return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
 					}
 					if vars.SortBy != "" {
 						sortObjects = append(sortObjects, item)
 					} else {
 						if len(resources) > 0 {
-							_, ok := resources[item.GetName()]
-							if ok {
-								handleObject(item)
+							if _, ok := resources[item.GetName()]; ok {
+								if err := handleObject(item); err != nil {
+									return err
+								}
 							}
 						} else {
-							handleObject(item)
+							if err := handleObject(item); err != nil {
+								return err
+							}
 						}
 					}
 				}
@@ -301,21 +309,25 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 					sortObjects = sortResources(sortObjects, vars.SortBy)
 					for _, item := range sortObjects {
 						if len(resources) > 0 {
-							_, ok := resources[item.GetName()]
-							if ok {
-								handleObject(item)
+							if _, ok := resources[item.GetName()]; ok {
+								if err := handleObject(item); err != nil {
+									return err
+								}
 							}
 						} else {
-							handleObject(item)
+							if err := handleObject(item); err != nil {
+								return err
+							}
 						}
 					}
 				}
 			}
 		}
 	}
+	return nil
 }
 
-func getNamespacesResources(resources map[string]struct{}) {
+func getNamespacesResources(resources map[string]struct{}) error {
 	var sortObjects []unstructured.Unstructured
 	if len(resources) > 0 {
 		for namespace := range resources {
@@ -324,13 +336,14 @@ func getNamespacesResources(resources map[string]struct{}) {
 			if err == nil {
 				item := unstructured.Unstructured{}
 				if err := yaml.Unmarshal(_file, &item); err != nil {
-					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
-					os.Exit(1)
+					return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
 				}
 				if vars.SortBy != "" {
 					sortObjects = append(sortObjects, item)
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -342,13 +355,14 @@ func getNamespacesResources(resources map[string]struct{}) {
 			if err == nil {
 				item := unstructured.Unstructured{}
 				if err := yaml.Unmarshal(_file, &item); err != nil {
-					fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
-					os.Exit(1)
+					return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
 				}
 				if vars.SortBy != "" {
 					sortObjects = append(sortObjects, item)
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -356,12 +370,15 @@ func getNamespacesResources(resources map[string]struct{}) {
 	if vars.SortBy != "" {
 		sortObjects = sortResources(sortObjects, vars.SortBy)
 		for _, item := range sortObjects {
-			handleObject(item)
+			if err := handleObject(item); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) {
+func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
 	_file, err := os.ReadFile(resourcePath)
@@ -373,26 +390,30 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		}
 		for _, f := range resourcesFiles {
 			resourceYamlPath := resourceDir + "/" + f.Name()
-			_file, _ := os.ReadFile(resourceYamlPath)
+			_file, err := os.ReadFile(resourceYamlPath)
+			if err != nil {
+				return fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
+			}
 			item := unstructured.Unstructured{}
 			if err := yaml.Unmarshal(_file, &item); err != nil {
-				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourceYamlPath)
-				os.Exit(1)
+				return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
 			}
 			if item.IsList() {
-				fmt.Fprintln(os.Stderr, "error: file \""+resourceYamlPath+"\" contains a \"List\" objectKind, while it should contain a single resource.")
-				os.Exit(1)
+				return fmt.Errorf("file %q contains a \"List\" objectKind, while it should contain a single resource", resourceYamlPath)
 			}
 			if vars.SortBy != "" {
 				UnstructuredItems.Items = append(UnstructuredItems.Items, item)
 			} else {
 				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
+					if _, ok := resources[item.GetName()]; ok {
+						if err := handleObject(item); err != nil {
+							return err
+						}
 					}
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -400,42 +421,50 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
-					_, ok := resources[item.GetName()]
-					if ok {
-						handleObject(item)
+					if _, ok := resources[item.GetName()]; ok {
+						if err := handleObject(item); err != nil {
+							return err
+						}
 					}
 				} else {
-					handleObject(item)
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			}
 		}
 	} else {
 		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return fmt.Errorf("error unmarshaling %s: %w", resourcePath, err)
 		}
 		if vars.SortBy != "" {
 			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, vars.SortBy)
 		}
 		for _, item := range UnstructuredItems.Items {
 			if len(resources) > 0 {
-				_, ok := resources[item.GetName()]
-				if ok {
-					handleObject(item)
+				if _, ok := resources[item.GetName()]; ok {
+					if err := handleObject(item); err != nil {
+						return err
+					}
 				}
 			} else {
-				handleObject(item)
+				if err := handleObject(item); err != nil {
+					return err
+				}
 			}
 		}
 	}
-
+	return nil
 }
 
 func handleObject(obj unstructured.Unstructured) error {
 	if vars.Namespace != "" && obj.GetNamespace() != "" && vars.Namespace != obj.GetNamespace() {
 		return nil
 	}
-	labelsOk, _ := helpers.MatchLabelsFromMap(obj.GetLabels(), vars.LabelSelectorStringVar)
+	labelsOk, err := helpers.MatchLabelsFromMap(obj.GetLabels(), vars.LabelSelectorStringVar)
+	if err != nil {
+		return fmt.Errorf("invalid label selector %q: %w", vars.LabelSelectorStringVar, err)
+	}
 	if !labelsOk {
 		return nil
 	}
@@ -517,7 +546,7 @@ func handleObject(obj unstructured.Unstructured) error {
 	return nil
 }
 
-func handleOutput(w io.Writer, errOut io.Writer) {
+func handleOutput(w io.Writer, errOut io.Writer) error {
 	printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
 	_resources := make([]string, 0, len(vars.GetArgs))
 	var includesClusterScoped bool
@@ -548,11 +577,18 @@ func handleOutput(w io.Writer, errOut io.Writer) {
 			}
 		}
 	} else if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
-		jsonPathTemplate := helpers.GetJsonTemplate(vars.OutputStringVar)
+		jsonPathTemplate, err := helpers.GetJsonTemplate(vars.OutputStringVar)
+		if err != nil {
+			return err
+		}
 		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
-			helpers.ExecuteJsonPath(vars.UnstructuredList.Items[0].Object, jsonPathTemplate)
+			if err := helpers.ExecuteJsonPath(vars.UnstructuredList.Items[0].Object, jsonPathTemplate); err != nil {
+				return err
+			}
 		} else if !vars.SingleResource && len(vars.UnstructuredList.Items) > 0 {
-			helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate)
+			if err := helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate); err != nil {
+				return err
+			}
 		} else {
 			if vars.Namespace != "" {
 				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
@@ -576,9 +612,8 @@ func handleOutput(w io.Writer, errOut io.Writer) {
 		}
 	} else {
 		if vars.LastKind == vars.CurrentKind {
-			err := printer.PrintObj(&vars.Table, &vars.Output)
-			if err != nil {
-				klog.V(1).ErrorS(err, "ERROR")
+			if err := printer.PrintObj(&vars.Table, &vars.Output); err != nil {
+				return fmt.Errorf("error printing table: %w", err)
 			}
 			vars.Table = metav1.Table{}
 		}
@@ -593,24 +628,27 @@ func handleOutput(w io.Writer, errOut io.Writer) {
 			vars.Output.WriteTo(w)
 		}
 	}
+	return nil
 }
 
-func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) {
+func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) error {
 	resourcesYamlPath := vars.MustGatherRootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
 	_file, err := os.ReadFile(resourcesYamlPath)
 	if err == nil {
 		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file: "+resourcesYamlPath)
-			os.Exit(1)
+			return fmt.Errorf("error unmarshaling %s: %w", resourcesYamlPath, err)
 		}
 		for _, item := range UnstructuredItems.Items {
 			_, ok := resources[item.GetName()]
 			if ok || len(resources) == 0 {
-				handleObject(item)
+				if err := handleObject(item); err != nil {
+					return err
+				}
 			}
 		}
 	}
+	return nil
 }
 
 func sortResources(list []unstructured.Unstructured, sortBy string) []unstructured.Unstructured {
