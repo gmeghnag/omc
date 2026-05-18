@@ -65,7 +65,7 @@ func parseCRILog(log []byte, infoLevel bool, warningLevel bool, errorLevel bool)
 	return "", nil
 }
 
-func FilterCatLogs(filePath string, logLevels []string) {
+func FilterCatLogs(filePath string, logLevels []string) error {
 	var infoLevel, warningLevel, errorLevel bool
 	for _, i := range logLevels {
 		if i == "info" {
@@ -78,14 +78,15 @@ func FilterCatLogs(filePath string, logLevels []string) {
 			errorLevel = true
 		}
 	}
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Fprintln(os.Stderr, "error: file "+filePath+" does not exist")
-		os.Exit(1)
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file %s does not exist", filePath)
+		}
+		return fmt.Errorf("stat file %s: %w", filePath, err)
 	}
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: can't open file "+filePath)
-		os.Exit(1)
+		return fmt.Errorf("can't open file %s: %w", filePath, err)
 	}
 	defer file.Close()
 
@@ -94,14 +95,17 @@ func FilterCatLogs(filePath string, logLevels []string) {
 	for scanner.Scan() {
 		log, err := parseCRILog(scanner.Bytes(), infoLevel, warningLevel, errorLevel)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return err
 		}
 		if log != "" {
 			fmt.Println(log)
 		}
 
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("scan file %s: %w", filePath, err)
+	}
+	return nil
 }
 
 func isNumber(char byte) bool {

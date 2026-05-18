@@ -17,37 +17,34 @@ package logs
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
-func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, rotatedFlag bool, allContainersFlag bool, logLevels []string, insecureFlag bool, tail int64) {
+func logsPods(currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, rotatedFlag bool, allContainersFlag bool, logLevels []string, insecureFlag bool, tail int64) error {
 	var logFilter logLineFilter = NewCRILogFilter(logLevels, nil)
 	var _Items v1.PodList
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
-	_file, err := ioutil.ReadFile(CurrentNamespacePath + "/core/pods.yaml")
+	podsPath := CurrentNamespacePath + "/core/pods.yaml"
+	_file, err := os.ReadFile(podsPath)
 	if err != nil {
 		// Sometimes the core/pods.yaml might be empty due to unknown reasons when MG is collected
 		// In such cases, we need to look for the pod in the pods directory
-		_file, err = ioutil.ReadFile(CurrentNamespacePath + "/pods/" + podName + "/" + podName + ".yaml")
+		podPath := CurrentNamespacePath + "/pods/" + podName + "/" + podName + ".yaml"
+		_file, err = os.ReadFile(podPath)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "error: pod "+podName+" not found.")
-			os.Exit(1)
+			return fmt.Errorf("pod %s not found: %w", podName, err)
 		}
 		// We create a Pod object and append it to the _Items PodList
 		var pod v1.Pod
 		if err := yaml.Unmarshal([]byte(_file), &pod); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/pods/"+podName+"/"+podName+".yaml")
-			os.Exit(1)
+			return fmt.Errorf("error unmarshaling %s: %w", podPath, err)
 		}
 		_Items.Items = append(_Items.Items, pod)
-	}
-	if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-		fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+CurrentNamespacePath+"/core/pods.yaml")
-		os.Exit(1)
+	} else if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
+		return fmt.Errorf("error unmarshaling %s: %w", podsPath, err)
 	}
 	podMatch := ""
 	for _, Pod := range _Items.Items {
@@ -74,9 +71,11 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 					if insecureFlag {
 						log.FromInsecure()
 					}
-					log.Read(os.Stdout)
+					if err := log.Read(os.Stdout); err != nil {
+						return err
+					}
 				}
-				return
+				return nil
 			} else {
 				var containerSlice []v1.Container
 				containerSlice = append(containerSlice, Pod.Spec.Containers...)
@@ -100,11 +99,9 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 		}
 		if containerMatch == "" {
 			if containerName != "" {
-				fmt.Fprintln(os.Stderr, "error: container "+containerName+" is not valid for pod "+Pod.Name)
-				os.Exit(1)
+				return fmt.Errorf("container %s is not valid for pod %s", containerName, Pod.Name)
 			} else {
-				fmt.Fprintln(os.Stderr, "error: a container name must be specified for pod "+Pod.Name+", choose one of:", containers)
-				os.Exit(1)
+				return fmt.Errorf("a container name must be specified for pod %s, choose one of: %v", Pod.Name, containers)
 			}
 		} else {
 			log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/")
@@ -119,11 +116,13 @@ func logsPods(currentContextPath string, defaultConfigNamespace string, podName 
 			if insecureFlag {
 				log.FromInsecure()
 			}
-			log.Read(os.Stdout)
+			if err := log.Read(os.Stdout); err != nil {
+				return err
+			}
 		}
 	}
 	if podMatch == "" {
-		fmt.Fprintln(os.Stderr, "error: pods "+podName+" not found")
-		os.Exit(1)
+		return fmt.Errorf("pods %s not found", podName)
 	}
+	return nil
 }
