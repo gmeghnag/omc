@@ -92,25 +92,22 @@ func (l *LogReader) FromRotated() {
 // Print the current reader (filtered) to a provided writer.
 // If unfilter, write to provided writer (w).
 // If filtered read from reader line-by-line and apply the filter.
-func (l *LogReader) Read(w io.Writer) {
+func (l *LogReader) Read(w io.Writer) error {
 	var logs []string
 	for _, filename := range *l.files {
 		reader, err := open(l.dirname + "/" + filename)
 		if err != nil {
-			if !os.IsNotExist(err) {
-				// since we're scanning through logs dynamically don't error out if log files do not exist
-				fmt.Errorf("failed to open log file: %v", err)
+			if os.IsNotExist(err) {
+				// Must-gathers may omit selected current, previous, or rotated logs.
+				continue
 			}
-			continue
+			return fmt.Errorf("failed to open log file %s: %w", filename, err)
 		}
 		defer reader.Close()
-		if err != nil {
-			fmt.Println(err)
-		}
 		if l.filter == nil && l.tail == -1 {
 			// without filter and without tail, copy entire content to the provided writer
 			if _, err := io.Copy(w, reader); err != nil {
-				log.Fatalf("fatal: %v", err)
+				return fmt.Errorf("copy log file %s: %w", filename, err)
 			}
 		} else {
 			// with filter or tail, read line by line
@@ -124,17 +121,25 @@ func (l *LogReader) Read(w io.Writer) {
 							logs = logs[1:]
 						}
 					} else {
-						fmt.Fprintln(w, string(log))
+						if _, err := fmt.Fprintln(w, string(log)); err != nil {
+							return fmt.Errorf("write log line from %s: %w", filename, err)
+						}
 					}
 				}
+			}
+			if err := scanner.Err(); err != nil {
+				return fmt.Errorf("scan log file %s: %w", filename, err)
 			}
 		}
 	}
 	if l.tail != -1 {
 		for _, logLine := range logs {
-			fmt.Fprintln(w, logLine)
+			if _, err := fmt.Fprintln(w, logLine); err != nil {
+				return fmt.Errorf("write tailed log line: %w", err)
+			}
 		}
 	}
+	return nil
 }
 
 func (l *LogReader) applyFilter(raw []byte) []byte {

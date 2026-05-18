@@ -17,8 +17,6 @@ package logs
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
@@ -32,18 +30,18 @@ var LogLevel string
 
 // logsCmd represents the logs command
 var Logs = &cobra.Command{
-	Use:   "logs",
-	Short: "Print the logs for a container in a pod",
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:          "logs",
+	Short:        "Print the logs for a container in a pod",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if vars.MustGatherRootPath == "" {
-			fmt.Fprintln(os.Stderr, "There are no must-gather resources defined.")
-			os.Exit(1)
+			return fmt.Errorf("there are no must-gather resources defined")
 		}
 		exist, _ := helpers.Exists(vars.MustGatherRootPath + "/namespaces")
 		if !exist {
-			files, err := ioutil.ReadDir(vars.MustGatherRootPath)
+			files, err := os.ReadDir(vars.MustGatherRootPath)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			var QuayString string
 			for _, f := range files {
@@ -54,8 +52,7 @@ var Logs = &cobra.Command{
 				}
 			}
 			if QuayString == "" {
-				fmt.Fprintln(os.Stderr, "Some error occurred, wrong must-gather file composition")
-				os.Exit(1)
+				return fmt.Errorf("wrong must-gather file composition")
 			}
 		}
 		namespaceFlag, _ := cmd.Flags().GetString("namespace")
@@ -74,49 +71,43 @@ var Logs = &cobra.Command{
 		}
 
 		if len(args) == 0 || len(args) > 2 {
-			fmt.Fprintln(os.Stderr, "error: expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'.")
-			fmt.Fprintln(os.Stderr, "POD or TYPE/NAME is a required argument for the logs command")
-			fmt.Fprintln(os.Stderr, "See 'omc logs -h' for help and examples")
-			os.Exit(1)
+			return fmt.Errorf("expected 'logs [-p] (POD | TYPE/NAME) [-c CONTAINER]'; POD or TYPE/NAME is a required argument for the logs command")
 		}
 		if len(args) == 1 {
 			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
 				podName = s[1]
 				if podName == "" {
-					fmt.Fprintln(os.Stderr, "arguments in resource/name form must have a single resource and name")
-					os.Exit(1)
+					return fmt.Errorf("arguments in resource/name form must have a single resource and name")
 				}
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
+				return logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 			} else {
 				podName = s[0]
-				logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
+				return logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 			}
 		}
 		if len(args) == 2 {
 			if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
 				if containerName != "" {
-					fmt.Fprintln(os.Stderr, "error: only one of -c or an inline [CONTAINER] arg is allowed")
-					os.Exit(1)
+					return fmt.Errorf("only one of -c or an inline [CONTAINER] arg is allowed")
 				} else {
 					podName = s[1]
 					if podName == "" {
-						fmt.Fprintln(os.Stderr, "error: arguments in resource/name form must have a single resource and name")
-						os.Exit(1)
+						return fmt.Errorf("arguments in resource/name form must have a single resource and name")
 					}
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
+					return logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 				}
 			} else {
 				if containerName != "" {
-					fmt.Fprintln(os.Stderr, "error: only one of -c or an inline [CONTAINER] arg is allowed")
-					os.Exit(1)
+					return fmt.Errorf("only one of -c or an inline [CONTAINER] arg is allowed")
 				} else {
 					podName = args[0]
 					containerName = args[1]
-					logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
+					return logsPods(vars.MustGatherRootPath, vars.Namespace, podName, containerName, previousFlag, rotatedFlag, allContainersFlag, logLevels, insecureFlag, vars.Tail)
 				}
 			}
 		}
+		return nil
 	},
 }
 

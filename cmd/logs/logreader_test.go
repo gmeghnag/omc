@@ -151,7 +151,9 @@ func TestRead(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			output := new(bytes.Buffer)
-			tc.logReader.Read(output)
+			if err := tc.logReader.Read(output); err != nil {
+				t.Fatal(err)
+			}
 			if tc.expectedFilteredOutText != "" {
 				if strings.Contains(output.String(), tc.expectedFilteredOutText) {
 					t.Errorf("Found '%v' while expecting to be filtered.\n", tc.expectedFilteredOutText)
@@ -195,7 +197,9 @@ func TestReadWithTail(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			output := new(bytes.Buffer)
-			tc.logReader.Read(output)
+			if err := tc.logReader.Read(output); err != nil {
+				t.Fatal(err)
+			}
 			if !strings.Contains(output.String(), tc.expectedText) {
 				t.Errorf("Got: %v \nWant: %v \n", output.String(), tc.expectedText)
 			}
