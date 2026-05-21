@@ -74,6 +74,26 @@ var jsonRegexp = regexp.MustCompile(`^\{\.?([^{}]+)\}$|^\.?([^{}]+)$`)
 //go:embed known-resources.yaml
 var yamlData []byte
 
+// state holds the per-invocation accumulator fields that handleObject and
+// handleOutput build up as resources are read. Keeping these out of the vars
+// package makes the get pipeline reentrant and is a precondition for any
+// future concurrent producer/consumer in this command.
+type state struct {
+	output           bytes.Buffer
+	table            metav1.Table
+	currentKind      string
+	lastKind         string
+	unstructuredList types.UnstructuredList
+	jsonPathList     types.JsonPathList
+}
+
+func newState() *state {
+	return &state{
+		unstructuredList: types.UnstructuredList{Kind: "List", ApiVersion: "v1", Items: []unstructured.Unstructured{}},
+		jsonPathList:     types.JsonPathList{Kind: "List", ApiVersion: "v1"},
+	}
+}
+
 var GetCmd = &cobra.Command{
 	Use:          "get",
 	Short:        "Get kubernetes/openshift object in tabular format or wide|yaml|json|jsonpath|custom-columns.",
@@ -88,6 +108,7 @@ var GetCmd = &cobra.Command{
 		if err := validateArgs(args); err != nil {
 			return err
 		}
+		s := newState()
 		for resource := range vars.GetArgs {
 			resourceNamePlural, resourceGroup, _, namespaced, err := KindGroupNamespaced(resource)
 			if err != nil {
@@ -98,19 +119,19 @@ var GetCmd = &cobra.Command{
 			// are exceptions to must-gather resources structure
 			switch {
 			case resourceNamePlural == "namespaces" || resourceNamePlural == "projects":
-				err = getNamespacesResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getNamespacesResources(s, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			case resourceNamePlural == "podnetworkconnectivitychecks":
-				err = getPodNetworkConnectivityChecksResources(vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getPodNetworkConnectivityChecksResources(s, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			case namespaced:
-				err = getNamespacedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getNamespacedResources(s, resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			default:
-				err = getClusterScopedResources(resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
+				err = getClusterScopedResources(s, resourceNamePlural, resourceGroup, vars.GetArgs[resourceNamePlural+"."+resourceGroup])
 			}
 			if err != nil {
 				return err
 			}
 		}
-		return handleOutput(os.Stdout, os.Stderr)
+		return s.handleOutput(os.Stdout, os.Stderr)
 	},
 }
 
@@ -129,8 +150,6 @@ func init() {
 	vars.AliasToCrd = make(map[string]apiextensionsv1.CustomResourceDefinition)
 	vars.ArgPresent = make(map[string]bool)
 	vars.KnownResources = make(map[string]map[string]interface{})
-	vars.UnstructuredList = types.UnstructuredList{Kind: "List", ApiVersion: "v1", Items: []unstructured.Unstructured{}}
-	vars.JsonPathList = types.JsonPathList{Kind: "List", ApiVersion: "v1"}
 	err := goyaml.Unmarshal(yamlData, vars.KnownResources)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s", err.Error())
@@ -196,7 +215,7 @@ func init() {
 	templateprinters.AddTemplateOpenShiftHandlers(vars.TableGenerator)
 }
 
-func getNamespacedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
+func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	var namespaces []string
 	if vars.AllNamespaceBoolVar {
 		vars.Namespace = ""
@@ -251,12 +270,12 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
 					if _, ok := resources[item.GetName()]; ok {
-						if err := handleObject(item); err != nil {
+						if err := s.handleObject(item); err != nil {
 							return err
 						}
 					}
 				} else {
-					if err := handleObject(item); err != nil {
+					if err := s.handleObject(item); err != nil {
 						return err
 					}
 				}
@@ -293,12 +312,12 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 					} else {
 						if len(resources) > 0 {
 							if _, ok := resources[item.GetName()]; ok {
-								if err := handleObject(item); err != nil {
+								if err := s.handleObject(item); err != nil {
 									return err
 								}
 							}
 						} else {
-							if err := handleObject(item); err != nil {
+							if err := s.handleObject(item); err != nil {
 								return err
 							}
 						}
@@ -310,12 +329,12 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 					for _, item := range sortObjects {
 						if len(resources) > 0 {
 							if _, ok := resources[item.GetName()]; ok {
-								if err := handleObject(item); err != nil {
+								if err := s.handleObject(item); err != nil {
 									return err
 								}
 							}
 						} else {
-							if err := handleObject(item); err != nil {
+							if err := s.handleObject(item); err != nil {
 								return err
 							}
 						}
@@ -327,7 +346,7 @@ func getNamespacedResources(resourceNamePlural string, resourceGroup string, res
 	return nil
 }
 
-func getNamespacesResources(resources map[string]struct{}) error {
+func getNamespacesResources(s *state, resources map[string]struct{}) error {
 	var sortObjects []unstructured.Unstructured
 	if len(resources) > 0 {
 		for namespace := range resources {
@@ -341,7 +360,7 @@ func getNamespacesResources(resources map[string]struct{}) error {
 				if vars.SortBy != "" {
 					sortObjects = append(sortObjects, item)
 				} else {
-					if err := handleObject(item); err != nil {
+					if err := s.handleObject(item); err != nil {
 						return err
 					}
 				}
@@ -360,7 +379,7 @@ func getNamespacesResources(resources map[string]struct{}) error {
 				if vars.SortBy != "" {
 					sortObjects = append(sortObjects, item)
 				} else {
-					if err := handleObject(item); err != nil {
+					if err := s.handleObject(item); err != nil {
 						return err
 					}
 				}
@@ -370,7 +389,7 @@ func getNamespacesResources(resources map[string]struct{}) error {
 	if vars.SortBy != "" {
 		sortObjects = sortResources(sortObjects, vars.SortBy)
 		for _, item := range sortObjects {
-			if err := handleObject(item); err != nil {
+			if err := s.handleObject(item); err != nil {
 				return err
 			}
 		}
@@ -378,7 +397,7 @@ func getNamespacesResources(resources map[string]struct{}) error {
 	return nil
 }
 
-func getClusterScopedResources(resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
+func getClusterScopedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
 	_file, err := os.ReadFile(resourcePath)
@@ -406,12 +425,12 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			} else {
 				if len(resources) > 0 {
 					if _, ok := resources[item.GetName()]; ok {
-						if err := handleObject(item); err != nil {
+						if err := s.handleObject(item); err != nil {
 							return err
 						}
 					}
 				} else {
-					if err := handleObject(item); err != nil {
+					if err := s.handleObject(item); err != nil {
 						return err
 					}
 				}
@@ -422,12 +441,12 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 			for _, item := range UnstructuredItems.Items {
 				if len(resources) > 0 {
 					if _, ok := resources[item.GetName()]; ok {
-						if err := handleObject(item); err != nil {
+						if err := s.handleObject(item); err != nil {
 							return err
 						}
 					}
 				} else {
-					if err := handleObject(item); err != nil {
+					if err := s.handleObject(item); err != nil {
 						return err
 					}
 				}
@@ -443,12 +462,12 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 		for _, item := range UnstructuredItems.Items {
 			if len(resources) > 0 {
 				if _, ok := resources[item.GetName()]; ok {
-					if err := handleObject(item); err != nil {
+					if err := s.handleObject(item); err != nil {
 						return err
 					}
 				}
 			} else {
-				if err := handleObject(item); err != nil {
+				if err := s.handleObject(item); err != nil {
 					return err
 				}
 			}
@@ -457,7 +476,7 @@ func getClusterScopedResources(resourceNamePlural string, resourceGroup string, 
 	return nil
 }
 
-func handleObject(obj unstructured.Unstructured) error {
+func (s *state) handleObject(obj unstructured.Unstructured) error {
 	if vars.Namespace != "" && obj.GetNamespace() != "" && vars.Namespace != obj.GetNamespace() {
 		return nil
 	}
@@ -468,27 +487,27 @@ func handleObject(obj unstructured.Unstructured) error {
 	if !labelsOk {
 		return nil
 	}
-	vars.LastKind = obj.GetKind()
+	s.lastKind = obj.GetKind()
 	if vars.OutputStringVar == "yaml" || vars.OutputStringVar == "json" {
 		if !vars.ShowManagedFields {
 			obj.SetManagedFields(nil)
 		}
-		vars.UnstructuredList.Items = append(vars.UnstructuredList.Items, obj)
+		s.unstructuredList.Items = append(s.unstructuredList.Items, obj)
 		return nil
 	}
 	if strings.HasPrefix(vars.OutputStringVar, "jsonpath=") {
 		if !vars.ShowManagedFields {
 			obj.SetManagedFields(nil)
 		}
-		vars.UnstructuredList.Items = append(vars.UnstructuredList.Items, obj)
-		vars.JsonPathList.Items = append(vars.JsonPathList.Items, obj.Object)
+		s.unstructuredList.Items = append(s.unstructuredList.Items, obj)
+		s.jsonPathList.Items = append(s.jsonPathList.Items, obj.Object)
 		return nil
 	}
 	if vars.OutputStringVar == "name" {
 		if obj.GetAPIVersion() == "v1" {
-			vars.Output.WriteString(strings.ToLower(obj.GetKind()) + "/" + obj.GetName() + "\n")
+			s.output.WriteString(strings.ToLower(obj.GetKind()) + "/" + obj.GetName() + "\n")
 		} else {
-			vars.Output.WriteString(strings.ToLower(obj.GetKind()) + "." + strings.Split(obj.GetAPIVersion(), "/")[0] + "/" + obj.GetName() + "\n")
+			s.output.WriteString(strings.ToLower(obj.GetKind()) + "." + strings.Split(obj.GetAPIVersion(), "/")[0] + "/" + obj.GetName() + "\n")
 		}
 		return nil
 	}
@@ -527,26 +546,26 @@ func handleObject(obj unstructured.Unstructured) error {
 		}
 	}
 
-	if vars.CurrentKind == obj.GetObjectKind().GroupVersionKind().Kind {
-		vars.Table.Rows = append(vars.Table.Rows, objectTable.Rows...)
+	if s.currentKind == obj.GetObjectKind().GroupVersionKind().Kind {
+		s.table.Rows = append(s.table.Rows, objectTable.Rows...)
 	} else {
 		// printo la tabella dell'oggetto precedente
 		printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
-		err = printer.PrintObj(&vars.Table, &vars.Output)
+		err = printer.PrintObj(&s.table, &s.output)
 		if err != nil {
 			klog.V(1).ErrorS(err, err.Error())
 			return err
 		}
-		if vars.CurrentKind != "" {
-			vars.Output.WriteByte('\n')
+		if s.currentKind != "" {
+			s.output.WriteByte('\n')
 		}
-		vars.CurrentKind = obj.GetObjectKind().GroupVersionKind().Kind
-		vars.Table = metav1.Table{ColumnDefinitions: objectTable.ColumnDefinitions, Rows: objectTable.Rows}
+		s.currentKind = obj.GetObjectKind().GroupVersionKind().Kind
+		s.table = metav1.Table{ColumnDefinitions: objectTable.ColumnDefinitions, Rows: objectTable.Rows}
 	}
 	return nil
 }
 
-func handleOutput(w io.Writer, errOut io.Writer) error {
+func (s *state) handleOutput(w io.Writer, errOut io.Writer) error {
 	printer := cliprint.NewTablePrinter(cliprint.PrintOptions{NoHeaders: vars.NoHeaders, Wide: vars.Wide, WithNamespace: false, ShowLabels: false})
 	_resources := make([]string, 0, len(vars.GetArgs))
 	var includesClusterScoped bool
@@ -561,12 +580,12 @@ func handleOutput(w io.Writer, errOut io.Writer) error {
 	sort.Strings(_resources)
 	resources := strings.Join(_resources, ",")
 	if vars.OutputStringVar == "json" {
-		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
-			data, _ := json.MarshalIndent(vars.UnstructuredList.Items[0].Object, "", "  ")
+		if vars.SingleResource && len(s.unstructuredList.Items) == 1 {
+			data, _ := json.MarshalIndent(s.unstructuredList.Items[0].Object, "", "  ")
 			data = append(data, '\n')
 			fmt.Fprintf(w, "%s", data)
-		} else if !vars.SingleResource && len(vars.UnstructuredList.Items) > 0 {
-			data, _ := json.MarshalIndent(vars.UnstructuredList, "", "  ")
+		} else if !vars.SingleResource && len(s.unstructuredList.Items) > 0 {
+			data, _ := json.MarshalIndent(s.unstructuredList, "", "  ")
 			data = append(data, '\n')
 			fmt.Fprintf(w, "%s", data)
 		} else {
@@ -581,12 +600,12 @@ func handleOutput(w io.Writer, errOut io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
-			if err := helpers.ExecuteJsonPath(vars.UnstructuredList.Items[0].Object, jsonPathTemplate); err != nil {
+		if vars.SingleResource && len(s.unstructuredList.Items) == 1 {
+			if err := helpers.ExecuteJsonPath(s.unstructuredList.Items[0].Object, jsonPathTemplate); err != nil {
 				return err
 			}
-		} else if !vars.SingleResource && len(vars.UnstructuredList.Items) > 0 {
-			if err := helpers.ExecuteJsonPath(vars.JsonPathList, jsonPathTemplate); err != nil {
+		} else if !vars.SingleResource && len(s.unstructuredList.Items) > 0 {
+			if err := helpers.ExecuteJsonPath(s.jsonPathList, jsonPathTemplate); err != nil {
 				return err
 			}
 		} else {
@@ -597,11 +616,11 @@ func handleOutput(w io.Writer, errOut io.Writer) error {
 			}
 		}
 	} else if vars.OutputStringVar == "yaml" {
-		if vars.SingleResource && len(vars.UnstructuredList.Items) == 1 {
-			data, _ := yaml.Marshal(vars.UnstructuredList.Items[0].Object)
+		if vars.SingleResource && len(s.unstructuredList.Items) == 1 {
+			data, _ := yaml.Marshal(s.unstructuredList.Items[0].Object)
 			fmt.Fprintf(w, "%s", data)
-		} else if len(vars.UnstructuredList.Items) > 0 {
-			data, _ := yaml.Marshal(vars.UnstructuredList)
+		} else if len(s.unstructuredList.Items) > 0 {
+			data, _ := yaml.Marshal(s.unstructuredList)
 			fmt.Fprintf(w, "%s", data)
 		} else {
 			if vars.Namespace != "" {
@@ -611,13 +630,13 @@ func handleOutput(w io.Writer, errOut io.Writer) error {
 			}
 		}
 	} else {
-		if vars.LastKind == vars.CurrentKind {
-			if err := printer.PrintObj(&vars.Table, &vars.Output); err != nil {
+		if s.lastKind == s.currentKind {
+			if err := printer.PrintObj(&s.table, &s.output); err != nil {
 				return fmt.Errorf("error printing table: %w", err)
 			}
-			vars.Table = metav1.Table{}
+			s.table = metav1.Table{}
 		}
-		if vars.Output.Len() == 0 {
+		if s.output.Len() == 0 {
 			// never print the (default/current) namespace if at least one cluster-scoped resource is requested
 			if vars.Namespace == "" || includesClusterScoped {
 				fmt.Fprintf(errOut, "No resources %s found.\n", resources)
@@ -625,13 +644,13 @@ func handleOutput(w io.Writer, errOut io.Writer) error {
 				fmt.Fprintf(errOut, "No resources %s found in %s namespace.\n", resources, vars.Namespace)
 			}
 		} else {
-			vars.Output.WriteTo(w)
+			s.output.WriteTo(w)
 		}
 	}
 	return nil
 }
 
-func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) error {
+func getPodNetworkConnectivityChecksResources(s *state, resources map[string]struct{}) error {
 	resourcesYamlPath := vars.MustGatherRootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
 	_file, err := os.ReadFile(resourcesYamlPath)
 	if err == nil {
@@ -642,7 +661,7 @@ func getPodNetworkConnectivityChecksResources(resources map[string]struct{}) err
 		for _, item := range UnstructuredItems.Items {
 			_, ok := resources[item.GetName()]
 			if ok || len(resources) == 0 {
-				if err := handleObject(item); err != nil {
+				if err := s.handleObject(item); err != nil {
 					return err
 				}
 			}
