@@ -40,6 +40,7 @@ import (
 	nodelogs "github.com/gmeghnag/omc/cmd/node-logs"
 	"github.com/gmeghnag/omc/cmd/ovn"
 	"github.com/gmeghnag/omc/cmd/prometheus"
+	"github.com/gmeghnag/omc/cmd/stern"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
 	"github.com/gmeghnag/omc/types"
@@ -122,6 +123,7 @@ func init() {
 		events.EventsCmd,
 		upgrade.Upgrade,
 		insights.InsightsCmd,
+		stern.Stern,
 	)
 	loadOmcConfigs()
 }
