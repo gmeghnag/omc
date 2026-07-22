@@ -24,6 +24,18 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+func findLogDir(namespacePath, podName, containerName string) string {
+	traditional := namespacePath + "/pods/" + podName + "/" + containerName + "/" + containerName + "/logs"
+	if _, err := os.Stat(traditional); err == nil {
+		return traditional
+	}
+	corePods := namespacePath + "/core/pods/" + podName + "/" + containerName + "/logs"
+	if _, err := os.Stat(corePods); err == nil {
+		return corePods
+	}
+	return traditional
+}
+
 func logsPods(stdout io.Writer, currentContextPath string, defaultConfigNamespace string, podName string, containerName string, previousFlag bool, rotatedFlag bool, allContainersFlag bool, logLevels []string, insecureFlag bool, tail int64) error {
 	var logFilter logLineFilter = NewCRILogFilter(logLevels, nil)
 	var _Items v1.PodList
@@ -36,7 +48,11 @@ func logsPods(stdout io.Writer, currentContextPath string, defaultConfigNamespac
 		podPath := CurrentNamespacePath + "/pods/" + podName + "/" + podName + ".yaml"
 		_file, err = os.ReadFile(podPath)
 		if err != nil {
-			return fmt.Errorf("pod %s not found: %w", podName, err)
+			podPath = CurrentNamespacePath + "/core/pods/" + podName + ".yaml"
+			_file, err = os.ReadFile(podPath)
+			if err != nil {
+				return fmt.Errorf("pod %s not found: %w", podName, err)
+			}
 		}
 		// We create a Pod object and append it to the _Items PodList
 		var pod v1.Pod
@@ -60,7 +76,7 @@ func logsPods(stdout io.Writer, currentContextPath string, defaultConfigNamespac
 		} else {
 			if allContainersFlag {
 				for _, c := range Pod.Spec.Containers {
-					log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + c.Name + "/" + c.Name + "/logs")
+					log := NewLogReader(findLogDir(CurrentNamespacePath, Pod.Name, c.Name))
 					log.WithFilter(logFilter)
 					log.WithTail(tail)
 					if previousFlag {
@@ -105,7 +121,7 @@ func logsPods(stdout io.Writer, currentContextPath string, defaultConfigNamespac
 				return fmt.Errorf("a container name must be specified for pod %s, choose one of: %v", Pod.Name, containers)
 			}
 		} else {
-			log := NewLogReader(CurrentNamespacePath + "/pods/" + Pod.Name + "/" + containerMatch + "/" + containerMatch + "/logs/")
+			log := NewLogReader(findLogDir(CurrentNamespacePath, Pod.Name, containerMatch))
 			log.WithFilter(logFilter)
 			log.WithTail(tail)
 			if previousFlag {
