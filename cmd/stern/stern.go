@@ -110,7 +110,11 @@ func Run(stdout, stderr io.Writer, opts Options, args []string) error {
 			vars.Namespace = namespace
 			for _, containerName := range containerNames {
 				pw := newPrefixWriter(stdout, pod.Name, containerName)
-				logsOpts := logs.Options{Tail: opts.Tail}
+				logsOpts := logs.Options{
+					RootPath:  vars.MustGatherRootPath,
+					Namespace: namespace,
+					Tail:      opts.Tail,
+				}
 				if err := logs.Run(pw, stderr, logsOpts, []string{pod.Name, containerName}); err != nil {
 					fmt.Fprintf(stderr, "stern: %s %s: %v\n", pod.Name, containerName, err)
 				}
@@ -166,7 +170,7 @@ func init() {
 	Stern.Flags().StringVarP(&containerFlag, "container", "c", ".*", "Container name when multiple containers in pod. (regular expression)")
 	Stern.PersistentFlags().BoolVarP(&vars.AllNamespaceBoolVar, "all-namespaces", "A", false, "If present, tail across all namespaces.")
 
-    // Most of stern options are not implemented atm
+	// Most of stern options are not implemented atm
 	//Stern.Flags().StringVarP(&selectorFlag, "selector", "l", "", "Selector (label query) to filter on. If present, default to \".*\" for the pod-query.")
 	//Stern.Flags().StringArrayVarP(&excludeFlag, "exclude", "e", nil, "Log lines to exclude. (regular expression)")
 	//Stern.Flags().StringArrayVarP(&includeFlag, "include", "i", nil, "Log lines to include. (regular expression)")
