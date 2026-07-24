@@ -122,7 +122,7 @@ func FilterEventList(eventList *corev1.EventList, types []string, forResource st
 		splitStr := strings.Split(forResource, "/")
 		inputResource, resourceName := splitStr[0], splitStr[1]
 		inputResource = strings.ToLower(inputResource)
-		_, resourceGroup, resourceKind, _, err := get.KindGroupNamespaced(inputResource)
+		_, resourceGroup, resourceKind, _, err := get.KindGroupNamespaced(inputResource, vars.MustGatherRootPath)
 		if err != nil {
 			klog.V(3).ErrorS(err, "Couldn't get --for resource")
 		}

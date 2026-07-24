@@ -64,8 +64,8 @@ func TestHandleEmptyWideOutput(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
-			vars.MustGatherRootPath = "../../testdata/"
 			opts := newOptions()
+			opts.RootPath = "../../testdata/"
 			opts.Namespace = tt.namespace
 			validateArgs(&opts, tt.rtype)
 			newState(&opts).handleOutput(&stdout, &stderr)
@@ -87,11 +87,8 @@ func TestGetClusterScopedResources_ReturnsErrorOnCorruptYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saved := vars.MustGatherRootPath
-	t.Cleanup(func() { vars.MustGatherRootPath = saved })
-	vars.MustGatherRootPath = root
-
 	opts := newOptions()
+	opts.RootPath = root
 	if err := getClusterScopedResources(newState(&opts), "clusterversions", "config.openshift.io", nil); err == nil {
 		t.Fatalf("expected error from corrupt yaml, got nil")
 	}
@@ -119,11 +116,8 @@ items:
 		t.Fatal(err)
 	}
 
-	saved := vars.MustGatherRootPath
-	t.Cleanup(func() { vars.MustGatherRootPath = saved })
-	vars.MustGatherRootPath = root
-
 	opts := newOptions()
+	opts.RootPath = root
 	s := newState(&opts)
 	if err := getClusterScopedResources(s, "clusterversions", "config.openshift.io", nil); err != nil {
 		t.Fatalf("getClusterScopedResources: %v", err)
@@ -207,14 +201,9 @@ items:
 		t.Fatal(err)
 	}
 
-	savedPath := vars.MustGatherRootPath
-	t.Cleanup(func() {
-		vars.MustGatherRootPath = savedPath
-	})
-	vars.MustGatherRootPath = root
-
 	run := func() string {
 		opts := newOptions()
+		opts.RootPath = root
 		opts.GetArgs = map[string]map[string]struct{}{
 			"clusterversions.config.openshift.io": {},
 		}
@@ -319,6 +308,7 @@ items:
 
 	var libOut, libErr bytes.Buffer
 	opts := newOptions()
+	opts.RootPath = root
 	opts.Output = "yaml"
 	if err := Run(&libOut, &libErr, opts, []string{"clusterversions"}); err != nil {
 		t.Fatalf("library Run: %v", err)
@@ -370,10 +360,6 @@ items:
 		}
 	}
 
-	savedPath := vars.MustGatherRootPath
-	t.Cleanup(func() { vars.MustGatherRootPath = savedPath })
-	vars.MustGatherRootPath = root
-
 	const iterations = 50
 	type result struct {
 		out string
@@ -386,6 +372,7 @@ items:
 		go func() {
 			defer wg.Done()
 			opts := newOptions()
+			opts.RootPath = root
 			opts.Namespace = "ns-a"
 			var out, errOut bytes.Buffer
 			if err := Run(&out, &errOut, opts, []string{"pods"}); err != nil {
@@ -397,6 +384,7 @@ items:
 		go func() {
 			defer wg.Done()
 			opts := newOptions()
+			opts.RootPath = root
 			opts.Namespace = "ns-b"
 			var out, errOut bytes.Buffer
 			if err := Run(&out, &errOut, opts, []string{"pods"}); err != nil {

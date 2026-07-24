@@ -61,7 +61,6 @@ func projectDefault(omcConfigFile string, projDefault string) {
 		Id:             omcConfigJson.Id,
 		DiffCmd:        omcConfigJson.DiffCmd,
 		DefaultProject: omcConfigJson.DefaultProject,
-		UseLocalCRDs:   omcConfigJson.UseLocalCRDs,
 	}
 	file, err := json.MarshalIndent(config, "", " ")
 	if err != nil {

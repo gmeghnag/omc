@@ -28,7 +28,6 @@ type Context struct {
 type Config struct {
 	Id             string    `json:"id,omitempty"`
 	Contexts       []Context `json:"contexts,omitempty"`
-	UseLocalCRDs   bool      `json:"use_local_crds,omitempty"`
 	DiffCmd        string    `json:"diff_command,omitempty"`
 	DefaultProject string    `json:"default_project,omitempty"`
 }

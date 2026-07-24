@@ -18,6 +18,8 @@ package logs
 // Options holds the configuration for a single logs invocation. Fields are
 // populated from the cobra-bound flags before Run is invoked.
 type Options struct {
+	RootPath      string
+	Namespace     string
 	Container     string
 	Previous      bool
 	Rotated       bool

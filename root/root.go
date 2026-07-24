@@ -201,7 +201,6 @@ func loadOmcConfigs() {
 	file, _ := os.ReadFile(home + "/.omc/omc.json")
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
-	vars.UseLocalCRDs = omcConfigJson.UseLocalCRDs
 	vars.DiffCmd = omcConfigJson.DiffCmd
 	vars.DefaultProject = omcConfigJson.DefaultProject
 }
