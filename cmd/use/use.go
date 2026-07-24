@@ -115,7 +115,6 @@ func useContext(path string, omcConfigFile string, idFlag string) error {
 		Contexts:       NewContexts,
 		DiffCmd:        omcConfigJson.DiffCmd,
 		DefaultProject: omcConfigJson.DefaultProject,
-		UseLocalCRDs:   omcConfigJson.UseLocalCRDs,
 	}
 	file, _ = json.MarshalIndent(config, "", " ")
 	_ = os.WriteFile(omcConfigFile, file, 0644)

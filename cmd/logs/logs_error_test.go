@@ -229,7 +229,7 @@ func TestRun_LibraryAndCobraParity(t *testing.T) {
 	vars.Namespace = "test-namespace"
 
 	var libOut, libErr bytes.Buffer
-	opts := Options{Container: "test-container", Tail: -1}
+	opts := Options{RootPath: root, Namespace: "test-namespace", Container: "test-container", Tail: -1}
 	if err := Run(&libOut, &libErr, opts, []string{"test-pod"}); err != nil {
 		t.Fatalf("library Run: %v", err)
 	}

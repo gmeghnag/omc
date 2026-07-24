@@ -16,7 +16,6 @@ import (
 	"k8s.io/kubernetes/pkg/printers"
 
 	helpers "github.com/gmeghnag/omc/cmd/helpers"
-	"github.com/gmeghnag/omc/vars"
 )
 
 // DisplayConfig carries the per-invocation display settings that the table
@@ -29,6 +28,7 @@ type DisplayConfig struct {
 	ShowLabels     bool
 	Namespace      string
 	Output         string
+	RootPath       string
 	TableGenerator *printers.HumanReadableGenerator
 	AliasToCrd     map[string]apiextensionsv1.CustomResourceDefinition
 }
@@ -74,7 +74,7 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 	}
 	for i, column := range table.ColumnDefinitions {
 		if column.Name == "Age" {
-			table.Rows[0].Cells[i] = helpers.TranslateTimestamp(unstruct.GetCreationTimestamp())
+			table.Rows[0].Cells[i] = helpers.TranslateTimestamp(cfg.RootPath, unstruct.GetCreationTimestamp())
 			if unstruct.GetKind() != "Node" {
 				break
 			}
@@ -120,7 +120,7 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 		} else {
 			lastTimestamp = metav1.NewTime(unstruct.GetCreationTimestamp().UTC())
 		}
-		lastSeen := helpers.GetAge(vars.MustGatherRootPath, lastTimestamp)
+		lastSeen := helpers.GetAge(cfg.RootPath, lastTimestamp)
 		table.Rows[0].Cells[0] = lastSeen
 	}
 
@@ -201,14 +201,14 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured, cfg Display
 					for _, column := range crdSpec.Versions[i].AdditionalPrinterColumns {
 						table.ColumnDefinitions = append(table.ColumnDefinitions, metav1.TableColumnDefinition{Name: column.Name, Format: "string"})
 						if column.Name == "Age" {
-							cells = append(cells, helpers.TranslateTimestamp(unstruct.GetCreationTimestamp()))
+							cells = append(cells, helpers.TranslateTimestamp(cfg.RootPath, unstruct.GetCreationTimestamp()))
 							continue
 						}
 						if column.Name == "Since" {
 							v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
 							parsedTime, _ := time.Parse(time.RFC3339, v)
 							metav1Time := metav1.Time{Time: parsedTime}
-							v = helpers.TranslateTimestamp(metav1Time)
+							v = helpers.TranslateTimestamp(cfg.RootPath, metav1Time)
 							cells = append(cells, v)
 						} else {
 							v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
@@ -217,14 +217,14 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured, cfg Display
 					}
 				} else {
 					table.ColumnDefinitions = append(table.ColumnDefinitions, metav1.TableColumnDefinition{Name: "Age", Format: "string"})
-					cells = append(cells, helpers.TranslateTimestamp(unstruct.GetCreationTimestamp()))
+					cells = append(cells, helpers.TranslateTimestamp(cfg.RootPath, unstruct.GetCreationTimestamp()))
 				}
 				break
 			}
 		}
 	} else {
 		table.ColumnDefinitions = append(table.ColumnDefinitions, metav1.TableColumnDefinition{Name: "Age", Format: "string"})
-		cells = append(cells, helpers.TranslateTimestamp(unstruct.GetCreationTimestamp()))
+		cells = append(cells, helpers.TranslateTimestamp(cfg.RootPath, unstruct.GetCreationTimestamp()))
 	}
 	table.Rows = []metav1.TableRow{{Cells: cells}}
 	if cfg.ShowLabels {

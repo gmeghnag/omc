@@ -14,7 +14,6 @@ import (
 // Define a struct to hold each test case
 type testCase struct {
 	name           string
-	useLocalCRDs   bool
 	diffCmd        string
 	defaultProject string
 }
@@ -24,13 +23,11 @@ func TestSetConfig(t *testing.T) {
 	tests := []testCase{
 		{
 			name:           "Test Case 1",
-			useLocalCRDs:   true,
 			diffCmd:        "diff",
 			defaultProject: "project1",
 		},
 		{
 			name:           "Test Case 2",
-			useLocalCRDs:   false,
 			diffCmd:        "diff --unified",
 			defaultProject: "project2",
 		},
@@ -53,7 +50,6 @@ func TestSetConfig(t *testing.T) {
 			}
 
 			// Set test variables according to the current test case
-			vars.UseLocalCRDs = tc.useLocalCRDs
 			vars.DiffCmd = tc.diffCmd
 			vars.DefaultProject = tc.defaultProject
 
@@ -87,9 +83,6 @@ func TestSetConfig(t *testing.T) {
 }
 
 func compareConfig(actualConfig types.Config, tc testCase) bool {
-	if actualConfig.UseLocalCRDs != tc.useLocalCRDs {
-		return false
-	}
 	if actualConfig.DiffCmd != tc.diffCmd {
 		return false
 	}

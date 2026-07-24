@@ -37,6 +37,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/insights"
 	"github.com/gmeghnag/omc/cmd/logs"
 	"github.com/gmeghnag/omc/cmd/machineconfig"
+	"github.com/gmeghnag/omc/cmd/network"
 	nodelogs "github.com/gmeghnag/omc/cmd/node-logs"
 	"github.com/gmeghnag/omc/cmd/ovn"
 	"github.com/gmeghnag/omc/cmd/prometheus"
@@ -118,6 +119,7 @@ func init() {
 		etcd.Etcd,
 		logs.Logs,
 		machineconfig.MachineConfig,
+		network.NetworkCmd,
 		ovn.OvnCmd,
 		prometheus.PrometheusCmd,
 		events.EventsCmd,
@@ -201,7 +203,6 @@ func loadOmcConfigs() {
 	file, _ := os.ReadFile(home + "/.omc/omc.json")
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
-	vars.UseLocalCRDs = omcConfigJson.UseLocalCRDs
 	vars.DiffCmd = omcConfigJson.DiffCmd
 	vars.DefaultProject = omcConfigJson.DefaultProject
 }

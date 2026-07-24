@@ -18,7 +18,9 @@ package get
 // Options holds the configuration for a single get invocation. Fields are
 // populated from the cobra-bound flags before Run is invoked.
 type Options struct {
+	RootPath          string
 	Namespace         string
+	NamespaceExplicit bool
 	Output            string
 	LabelSelector     string
 	NoHeaders         bool

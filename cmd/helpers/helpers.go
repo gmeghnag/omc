@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/gmeghnag/omc/types"
-	"github.com/gmeghnag/omc/vars"
 
 	"github.com/olekukonko/tablewriter"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -424,11 +423,14 @@ func MatchLabelsFromMap(labels map[string]string, selector string) (bool, error)
 	return true, nil
 }
 
-func TranslateTimestamp(timestamp metav1.Time) string {
+func TranslateTimestamp(rootPath string, timestamp metav1.Time) string {
 	if timestamp.IsZero() {
 		return "<unknown>"
 	}
-	ResourceFile, _ := os.Stat(vars.MustGatherRootPath + "/namespaces")
+	ResourceFile, err := os.Stat(rootPath + "/namespaces")
+	if err != nil {
+		return "<unknown>"
+	}
 	t2 := ResourceFile.ModTime()
 	return ShortHumanDuration(t2.Sub(timestamp.Time))
 }

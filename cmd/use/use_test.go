@@ -192,8 +192,7 @@ func compareConfig(actualConfig types.Config, expectedConfig types.Config, ignor
 	}
 
 	if actualConfig.DefaultProject != expectedConfig.DefaultProject ||
-		actualConfig.DiffCmd != expectedConfig.DiffCmd ||
-		actualConfig.UseLocalCRDs != expectedConfig.UseLocalCRDs {
+		actualConfig.DiffCmd != expectedConfig.DiffCmd {
 		return false
 	}
 

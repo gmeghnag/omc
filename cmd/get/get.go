@@ -96,6 +96,9 @@ type state struct {
 	lastKind         string
 	unstructuredList types.UnstructuredList
 	jsonPathList     types.JsonPathList
+	// crds maps this call's resolved aliases to their CRDs for rendering. Private
+	// to one Run, so the lock-free reads below are safe.
+	crds map[string]apiextensionsv1.CustomResourceDefinition
 }
 
 func newState(opts *Options) *state {
@@ -103,6 +106,7 @@ func newState(opts *Options) *state {
 		opts:             opts,
 		unstructuredList: types.UnstructuredList{Kind: "List", ApiVersion: "v1", Items: []unstructured.Unstructured{}},
 		jsonPathList:     types.JsonPathList{Kind: "List", ApiVersion: "v1"},
+		crds:             make(map[string]apiextensionsv1.CustomResourceDefinition),
 	}
 }
 
@@ -114,8 +118,9 @@ func (s *state) displayConfig() tablegenerator.DisplayConfig {
 		ShowLabels:     s.opts.ShowLabels,
 		Namespace:      s.opts.Namespace,
 		Output:         s.opts.Output,
+		RootPath:       s.opts.RootPath,
 		TableGenerator: vars.TableGenerator,
-		AliasToCrd:     vars.AliasToCrd,
+		AliasToCrd:     s.crds,
 	}
 }
 
@@ -128,7 +133,9 @@ var GetCmd = &cobra.Command{
 			return cmd.Help()
 		}
 		opts := Options{
+			RootPath:          vars.MustGatherRootPath,
 			Namespace:         vars.Namespace,
+			NamespaceExplicit: cmd.Root().PersistentFlags().Changed("namespace"),
 			Output:            vars.OutputStringVar,
 			LabelSelector:     labelSelectorFlag,
 			NoHeaders:         noHeadersFlag,
@@ -154,7 +161,7 @@ func Run(stdout, stderr io.Writer, opts Options, args []string) error {
 	}
 	s := newState(&opts)
 	for resource := range opts.GetArgs {
-		resourceNamePlural, resourceGroup, _, namespaced, err := KindGroupNamespaced(resource)
+		resourceNamePlural, resourceGroup, _, namespaced, err := kindGroupNamespaced(resource, s.opts.RootPath, s.crds)
 		if err != nil {
 			klog.V(1).ErrorS(err, "ERROR")
 			return err
@@ -189,8 +196,6 @@ func init() {
 }
 
 func init() {
-	vars.AliasToCrd = make(map[string]apiextensionsv1.CustomResourceDefinition)
-	vars.ArgPresent = make(map[string]bool)
 	vars.KnownResources = make(map[string]map[string]interface{})
 	err := goyaml.Unmarshal(yamlData, vars.KnownResources)
 	if err != nil {
@@ -240,7 +245,8 @@ func init() {
 	_ = addStorageV1B1Types(vars.Schema)
 	_ = addTemplateV1Types(vars.Schema)
 	_ = addOAuthV1Types(vars.Schema)
-  _ = addUserV1Types(vars.Schema)
+	_ = addMetrics(vars.Schema)
+	_ = addUserV1Types(vars.Schema)
 	utilruntime.Must(schemeBuilder.AddToScheme(vars.Schema))
 
 	vars.TableGenerator = printers.NewTableGenerator()
@@ -263,7 +269,7 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 	if s.opts.AllNamespaces {
 		s.opts.Namespace = ""
 		s.opts.ShowNamespace = true
-		_namespaces, _ := ReadDirForResources(vars.MustGatherRootPath + "/namespaces/")
+		_namespaces, _ := ReadDirForResources(s.opts.RootPath + "/namespaces/")
 		for _, f := range _namespaces {
 			namespaces = append(namespaces, f.Name())
 		}
@@ -272,7 +278,7 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 	}
 	for _, namespace := range namespaces {
 		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-		resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
+		resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
 		_file, err := os.ReadFile(resourcesItemsPath)
 		if err == nil { // able to read <resourceplural>.yaml, which contains list of items, i.e. /namespaces/<NAMESPACE>/core/pods.yaml
 			err := yaml.Unmarshal(_file, &UnstructuredItems)
@@ -282,7 +288,7 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 				fSize := fStat.Size()
 				if resourceNamePlural == "pods" && fSize == 0 {
 					// tranverse the pods directory and fill in UnstructuredItems.Items
-					podsDir := fmt.Sprintf("%s/namespaces/%s/pods", vars.MustGatherRootPath, namespace)
+					podsDir := fmt.Sprintf("%s/namespaces/%s/pods", s.opts.RootPath, namespace)
 					pods, rErr := ReadDirForResources(podsDir)
 					if rErr != nil {
 						klog.V(3).ErrorS(err, "Failed to read resources:")
@@ -324,7 +330,7 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 				}
 			}
 		} else { // the resources are customresources so, stored in a single file per resource
-			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", vars.MustGatherRootPath, namespace, resourceGroup, resourceNamePlural)
+			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
 			_, err = os.Stat(resourceDir)
 			if err == nil {
 				resourcesFiles, rErr := ReadDirForResources(resourceDir)
@@ -393,7 +399,7 @@ func getNamespacesResources(s *state, resources map[string]struct{}) error {
 	var sortObjects []unstructured.Unstructured
 	if len(resources) > 0 {
 		for namespace := range resources {
-			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", vars.MustGatherRootPath, namespace, namespace)
+			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", s.opts.RootPath, namespace, namespace)
 			_file, err := os.ReadFile(resourceYamlPath)
 			if err == nil {
 				item := unstructured.Unstructured{}
@@ -410,9 +416,9 @@ func getNamespacesResources(s *state, resources map[string]struct{}) error {
 			}
 		}
 	} else {
-		_namespaces, _ := os.ReadDir(vars.MustGatherRootPath + "/namespaces/")
+		_namespaces, _ := os.ReadDir(s.opts.RootPath + "/namespaces/")
 		for _, namespace := range _namespaces {
-			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", vars.MustGatherRootPath, namespace.Name(), namespace.Name())
+			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", s.opts.RootPath, namespace.Name(), namespace.Name())
 			_file, err := os.ReadFile(resourceYamlPath)
 			if err == nil {
 				item := unstructured.Unstructured{}
@@ -442,10 +448,10 @@ func getNamespacesResources(s *state, resources map[string]struct{}) error {
 
 func getClusterScopedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
+	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", s.opts.RootPath, resourceGroup, resourceNamePlural)
 	_file, err := os.ReadFile(resourcePath)
 	if err != nil {
-		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", vars.MustGatherRootPath, resourceGroup, resourceNamePlural)
+		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", s.opts.RootPath, resourceGroup, resourceNamePlural)
 		resourcesFiles, rErr := ReadDirForResources(resourceDir)
 		if rErr != nil {
 			klog.V(3).ErrorS(err, "Failed to read resources:")
@@ -637,7 +643,7 @@ func (s *state) handleOutput(w io.Writer, errOut io.Writer) error {
 	for resource := range s.opts.GetArgs {
 		_resources = append(_resources, resource)
 		// if at least one resource is cluster-scoped, never include a namespace in the output if no resources are found of the kind
-		_, _, _, namespaced, _ := KindGroupNamespaced(resource)
+		_, _, _, namespaced, _ := kindGroupNamespaced(resource, s.opts.RootPath, s.crds)
 		if !namespaced {
 			includesClusterScoped = true
 		}
@@ -715,8 +721,21 @@ func (s *state) handleOutput(w io.Writer, errOut io.Writer) error {
 	return nil
 }
 
+// podNetworkConnectivityChecksDefaultNamespace is where network diagnostics checks are normally installed.
+const podNetworkConnectivityChecksDefaultNamespace = "openshift-network-diagnostics"
+
 func getPodNetworkConnectivityChecksResources(s *state, resources map[string]struct{}) error {
-	resourcesYamlPath := vars.MustGatherRootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
+	// PodNetworkConnectivityChecks live in a single aggregated file rather than
+	// under namespaces/, so default the namespace filter to where they normally
+	// reside (openshift-network-diagnostics) unless the user asked for all
+	// namespaces or explicitly set one.
+	if s.opts.AllNamespaces {
+		s.opts.Namespace = ""
+		s.opts.ShowNamespace = true
+	} else if !s.opts.NamespaceExplicit {
+		s.opts.Namespace = podNetworkConnectivityChecksDefaultNamespace
+	}
+	resourcesYamlPath := s.opts.RootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
 	_file, err := os.ReadFile(resourcesYamlPath)
 	if err == nil {
 		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}

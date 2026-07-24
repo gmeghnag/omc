@@ -36,7 +36,6 @@ var ConfigCmd = &cobra.Command{
 }
 
 func init() {
-	ConfigCmd.PersistentFlags().BoolVarP(&vars.UseLocalCRDs, "use-local-crds", "", false, "If set to true, omc will search for valid CRDs also in ~/.omc/customresourcedefinitions")
 	ConfigCmd.PersistentFlags().StringVarP(&vars.DiffCmd, "diff-command", "", "", "Set the binary tool to use to execute \"omc mc diff <machineConfig1> <machineConfig2>\"")
 	ConfigCmd.PersistentFlags().StringVarP(&vars.DefaultProject, "default-project", "", "", "Set the default context project \"omc config --default-project=<NS>\"")
 
@@ -47,7 +46,6 @@ func SetConfig() {
 	file, _ := ioutil.ReadFile(home + "/.omc/omc.json")
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
-	omcConfigJson.UseLocalCRDs = vars.UseLocalCRDs
 	omcConfigJson.DiffCmd = vars.DiffCmd
 	omcConfigJson.DefaultProject = vars.DefaultProject
 	file, _ = json.MarshalIndent(omcConfigJson, "", " ")

@@ -7,6 +7,7 @@ import (
 
 	apiregistration "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	nodeapi "k8s.io/kubernetes/pkg/apis/node"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 
 	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "github.com/openshift/openshift-apiserver/pkg/apps/apis/apps"
@@ -46,7 +47,7 @@ import (
 	// cliprint "k8s.io/cli-runtime/pkg/printers"
 	quotav1 "github.com/openshift/api/quota/v1"
 	securityv1 "github.com/openshift/api/security/v1"
-  userv1 "github.com/openshift/api/user/v1"
+	userv1 "github.com/openshift/api/user/v1"
 	"github.com/openshift/openshift-apiserver/pkg/route/apis/route"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
@@ -231,12 +232,16 @@ func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.
 		return &template.Template{}
 	case *oauthapi.OAuthClient:
 		return &oauthapi.OAuthClient{}
-  case *userv1.User:
-    return &userv1.User{}
-  case *userv1.Group:
-    return &userv1.Group{}
-  case *userv1.Identity:
-    return &userv1.Identity{}
+	case *metricsv1beta1.PodMetrics:
+		return &metricsv1beta1.PodMetrics{}
+	case *metricsv1beta1.NodeMetrics:
+		return &metricsv1beta1.NodeMetrics{}
+	case *userv1.User:
+		return &userv1.User{}
+	case *userv1.Group:
+		return &userv1.Group{}
+	case *userv1.Identity:
+		return &userv1.Identity{}
 	}
 	//fmt.Println("RUNTIME UNKNOW")
 	return &runtime.Unknown{}

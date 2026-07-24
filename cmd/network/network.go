@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,17 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package logs
+package network
 
-// Options holds the configuration for a single logs invocation. Fields are
-// populated from the cobra-bound flags before Run is invoked.
-type Options struct {
-	RootPath      string
-	Namespace     string
-	Container     string
-	Previous      bool
-	Rotated       bool
-	AllContainers bool
-	Insecure      bool
-	Tail          int64
+import (
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+var NetworkCmd = &cobra.Command{
+	Use:     "network",
+	Short:   "Inspect must-gather networking diagnostics",
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+		os.Exit(0)
+	},
+}
+
+func init() {
+	NetworkCmd.AddCommand(ConnectivityCmd)
 }
