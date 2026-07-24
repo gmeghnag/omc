@@ -135,3 +135,11 @@ network-check-source-apiserver                              https://10.0.0.1:644
 network-check-source-to-load-balancer-api-internal          10.10.10.1:8080           True        TCPConnectError       network-check-source-to-load-balancer-api-internal: failed to establish a TCP connection ...
 ```
 Use `omc network connectivity --wide` (or `-w`) for full failure text and the Reachable condition’s last transition time; use `--unhealthy-only` to list only checks where Reachable is not True. Filter by namespace with the root flag, for example `omc network connectivity -n openshift-network-diagnostics`.
+- Tail the logs of multiple pods and containers at once (a must-gather counterpart of [stern](https://github.com/stern/stern)). `POD_QUERY` is a regular expression matched against pod names; scope the search to one namespace with `-n` or to every namespace with `-A`. Each output line is prefixed with `<pod> <container>`:
+```
+$ omc stern -n openshift-etcd etcd
+etcd-master-0 etcd {"level":"info","ts":"...","msg":"serving client traffic securely"}
+etcd-master-0 etcdctl {"level":"info","ts":"...","msg":"compacted"}
+etcd-master-1 etcd {"level":"info","ts":"...","msg":"serving client traffic securely"}
+```
+Use `-c` to select containers by regular expression (defaults to `.*`, all containers) and `--tail N` to limit the number of lines shown per container. Only `--selector`, `--exclude`, `--include` and `--highlight` are not yet supported.
