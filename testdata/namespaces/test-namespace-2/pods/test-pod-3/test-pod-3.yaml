@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod-3
+  namespace: test-namespace-2
+spec:
+  containers:
+  - name: test-container-3
