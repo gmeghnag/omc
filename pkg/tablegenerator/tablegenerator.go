@@ -16,6 +16,9 @@ import (
 	"k8s.io/kubernetes/pkg/printers"
 
 	helpers "github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/pkg/podstatus"
+
+	core "k8s.io/kubernetes/pkg/apis/core"
 )
 
 // DisplayConfig carries the per-invocation display settings that the table
@@ -98,6 +101,19 @@ func InternalResourceTable(runtimeObject runtime.Object, unstruct *unstructured.
 			table.Rows[0].Cells[0] = resourceKind + "/" + unstruct.GetName()
 		} else {
 			table.Rows[0].Cells[0] = unstruct.GetName()
+		}
+	}
+	if resourceKind == "pod" {
+		if pod, ok := runtimeObject.(*core.Pod); ok {
+			for i, column := range table.ColumnDefinitions {
+				if column.Name != "Status" {
+					continue
+				}
+				if reason, ok := table.Rows[0].Cells[i].(string); ok {
+					table.Rows[0].Cells[i] = podstatus.CorrectDisplayStatus(pod, reason)
+				}
+				break
+			}
 		}
 	}
 	if resourceKind == "event" && table.ColumnDefinitions[0].Name == "Last Seen" {
