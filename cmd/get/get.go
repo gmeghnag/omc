@@ -340,9 +340,8 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 				var sortObjects []unstructured.Unstructured
 				for _, f := range resourcesFiles {
 					if f.IsDir() {
-						fmt.Fprintf(
-							os.Stderr,
-							"error: invalid must-gather structure, yaml files are expected in path \"/namespaces/%s/%s/%s\", found directory: \"%s\"\n",
+						klog.V(3).Infof(
+							"skipping directory in path \"/namespaces/%s/%s/%s\": \"%s\"",
 							namespace, resourceGroup, resourceNamePlural, f.Name(),
 						)
 						continue
