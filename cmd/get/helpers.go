@@ -285,6 +285,40 @@ func kindGroupNamespacedFromCrds(alias, rootPath string, aliasCache map[string]a
 	return alias, "", "", false, fmt.Errorf("No customResource found with name or alias \"%s\".", alias)
 }
 
+// preloadCRDs loads all CRDs from the must-gather bundle into s.crds so that
+// GenerateCustomResourceTable can use AdditionalPrinterColumns for rich output.
+func preloadCRDs(s *state) {
+	crdCache.Lock()
+	defer crdCache.Unlock()
+
+	bundleCRDs, hit := crdCache.byRoot[s.opts.RootPath]
+	if !hit {
+		crdsPath := s.opts.RootPath + "/cluster-scoped-resources/apiextensions.k8s.io/customresourcedefinitions/"
+		if ok, _ := Exists(crdsPath); ok {
+			files, err := ReadDirForResources(crdsPath)
+			if err == nil {
+				for _, f := range files {
+					crdByte, err := ioutil.ReadFile(crdsPath + f.Name())
+					if err != nil {
+						continue
+					}
+					_crd := &apiextensionsv1.CustomResourceDefinition{}
+					if err := yaml.Unmarshal(crdByte, _crd); err != nil {
+						continue
+					}
+					bundleCRDs = append(bundleCRDs, *_crd)
+				}
+			}
+		}
+		crdCache.byRoot[s.opts.RootPath] = bundleCRDs
+	}
+
+	for _, _crd := range bundleCRDs {
+		key := strings.ToLower(_crd.Spec.Names.Kind) + "." + _crd.Spec.Group
+		s.crds[key] = apiextensionsv1.CustomResourceDefinition{Spec: _crd.Spec}
+	}
+}
+
 func StringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {

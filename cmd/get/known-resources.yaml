@@ -1028,3 +1028,411 @@ nodemetrics:
   name: nodemetrics
   namespaced: false
   plural: nodes
+# KubeVirt / OpenShift Virtualization (CNV) resources
+# kubevirt.io
+virtualmachine:
+  group: kubevirt.io
+  name: virtualmachine
+  namespaced: true
+  plural: virtualmachines
+virtualmachines:
+  group: kubevirt.io
+  name: virtualmachine
+  namespaced: true
+  plural: virtualmachines
+vm:
+  group: kubevirt.io
+  name: virtualmachine
+  namespaced: true
+  plural: virtualmachines
+vms:
+  group: kubevirt.io
+  name: virtualmachine
+  namespaced: true
+  plural: virtualmachines
+virtualmachineinstance:
+  group: kubevirt.io
+  name: virtualmachineinstance
+  namespaced: true
+  plural: virtualmachineinstances
+virtualmachineinstances:
+  group: kubevirt.io
+  name: virtualmachineinstance
+  namespaced: true
+  plural: virtualmachineinstances
+vmi:
+  group: kubevirt.io
+  name: virtualmachineinstance
+  namespaced: true
+  plural: virtualmachineinstances
+vmis:
+  group: kubevirt.io
+  name: virtualmachineinstance
+  namespaced: true
+  plural: virtualmachineinstances
+virtualmachineinstancereplicaset:
+  group: kubevirt.io
+  name: virtualmachineinstancereplicaset
+  namespaced: true
+  plural: virtualmachineinstancereplicasets
+virtualmachineinstancereplicasets:
+  group: kubevirt.io
+  name: virtualmachineinstancereplicaset
+  namespaced: true
+  plural: virtualmachineinstancereplicasets
+vmirs:
+  group: kubevirt.io
+  name: virtualmachineinstancereplicaset
+  namespaced: true
+  plural: virtualmachineinstancereplicasets
+virtualmachineinstancemigration:
+  group: kubevirt.io
+  name: virtualmachineinstancemigration
+  namespaced: true
+  plural: virtualmachineinstancemigrations
+virtualmachineinstancemigrations:
+  group: kubevirt.io
+  name: virtualmachineinstancemigration
+  namespaced: true
+  plural: virtualmachineinstancemigrations
+vmim:
+  group: kubevirt.io
+  name: virtualmachineinstancemigration
+  namespaced: true
+  plural: virtualmachineinstancemigrations
+vmims:
+  group: kubevirt.io
+  name: virtualmachineinstancemigration
+  namespaced: true
+  plural: virtualmachineinstancemigrations
+virtualmachineinstancepreset:
+  group: kubevirt.io
+  name: virtualmachineinstancepreset
+  namespaced: true
+  plural: virtualmachineinstancepresets
+virtualmachineinstancepresets:
+  group: kubevirt.io
+  name: virtualmachineinstancepreset
+  namespaced: true
+  plural: virtualmachineinstancepresets
+vmipreset:
+  group: kubevirt.io
+  name: virtualmachineinstancepreset
+  namespaced: true
+  plural: virtualmachineinstancepresets
+vmipresets:
+  group: kubevirt.io
+  name: virtualmachineinstancepreset
+  namespaced: true
+  plural: virtualmachineinstancepresets
+kubevirt:
+  group: kubevirt.io
+  name: kubevirt
+  namespaced: true
+  plural: kubevirts
+kubevirts:
+  group: kubevirt.io
+  name: kubevirt
+  namespaced: true
+  plural: kubevirts
+kv:
+  group: kubevirt.io
+  name: kubevirt
+  namespaced: true
+  plural: kubevirts
+# snapshot.kubevirt.io
+virtualmachinesnapshot:
+  group: snapshot.kubevirt.io
+  name: virtualmachinesnapshot
+  namespaced: true
+  plural: virtualmachinesnapshots
+virtualmachinesnapshots:
+  group: snapshot.kubevirt.io
+  name: virtualmachinesnapshot
+  namespaced: true
+  plural: virtualmachinesnapshots
+vmsnapshot:
+  group: snapshot.kubevirt.io
+  name: virtualmachinesnapshot
+  namespaced: true
+  plural: virtualmachinesnapshots
+virtualmachinesnapshotcontent:
+  group: snapshot.kubevirt.io
+  name: virtualmachinesnapshotcontent
+  namespaced: true
+  plural: virtualmachinesnapshotcontents
+virtualmachinesnapshotcontents:
+  group: snapshot.kubevirt.io
+  name: virtualmachinesnapshotcontent
+  namespaced: true
+  plural: virtualmachinesnapshotcontents
+vmsnapshotcontent:
+  group: snapshot.kubevirt.io
+  name: virtualmachinesnapshotcontent
+  namespaced: true
+  plural: virtualmachinesnapshotcontents
+virtualmachinerestore:
+  group: snapshot.kubevirt.io
+  name: virtualmachinerestore
+  namespaced: true
+  plural: virtualmachinerestores
+virtualmachinerestores:
+  group: snapshot.kubevirt.io
+  name: virtualmachinerestore
+  namespaced: true
+  plural: virtualmachinerestores
+vmrestore:
+  group: snapshot.kubevirt.io
+  name: virtualmachinerestore
+  namespaced: true
+  plural: virtualmachinerestores
+# export.kubevirt.io
+virtualmachineexport:
+  group: export.kubevirt.io
+  name: virtualmachineexport
+  namespaced: true
+  plural: virtualmachineexports
+virtualmachineexports:
+  group: export.kubevirt.io
+  name: virtualmachineexport
+  namespaced: true
+  plural: virtualmachineexports
+vmexport:
+  group: export.kubevirt.io
+  name: virtualmachineexport
+  namespaced: true
+  plural: virtualmachineexports
+# instancetype.kubevirt.io
+virtualmachineinstancetype:
+  group: instancetype.kubevirt.io
+  name: virtualmachineinstancetype
+  namespaced: true
+  plural: virtualmachineinstancetypes
+virtualmachineinstancetypes:
+  group: instancetype.kubevirt.io
+  name: virtualmachineinstancetype
+  namespaced: true
+  plural: virtualmachineinstancetypes
+vminstancetype:
+  group: instancetype.kubevirt.io
+  name: virtualmachineinstancetype
+  namespaced: true
+  plural: virtualmachineinstancetypes
+virtualmachineclusterinstancetype:
+  group: instancetype.kubevirt.io
+  name: virtualmachineclusterinstancetype
+  namespaced: false
+  plural: virtualmachineclusterinstancetypes
+virtualmachineclusterinstancetypes:
+  group: instancetype.kubevirt.io
+  name: virtualmachineclusterinstancetype
+  namespaced: false
+  plural: virtualmachineclusterinstancetypes
+vmclusterinstancetype:
+  group: instancetype.kubevirt.io
+  name: virtualmachineclusterinstancetype
+  namespaced: false
+  plural: virtualmachineclusterinstancetypes
+virtualmachinepreference:
+  group: instancetype.kubevirt.io
+  name: virtualmachinepreference
+  namespaced: true
+  plural: virtualmachinepreferences
+virtualmachinepreferences:
+  group: instancetype.kubevirt.io
+  name: virtualmachinepreference
+  namespaced: true
+  plural: virtualmachinepreferences
+vmpreference:
+  group: instancetype.kubevirt.io
+  name: virtualmachinepreference
+  namespaced: true
+  plural: virtualmachinepreferences
+virtualmachineclusterpreference:
+  group: instancetype.kubevirt.io
+  name: virtualmachineclusterpreference
+  namespaced: false
+  plural: virtualmachineclusterpreferences
+virtualmachineclusterpreferences:
+  group: instancetype.kubevirt.io
+  name: virtualmachineclusterpreference
+  namespaced: false
+  plural: virtualmachineclusterpreferences
+vmclusterpreference:
+  group: instancetype.kubevirt.io
+  name: virtualmachineclusterpreference
+  namespaced: false
+  plural: virtualmachineclusterpreferences
+# pool.kubevirt.io
+virtualmachinepool:
+  group: pool.kubevirt.io
+  name: virtualmachinepool
+  namespaced: true
+  plural: virtualmachinepools
+virtualmachinepools:
+  group: pool.kubevirt.io
+  name: virtualmachinepool
+  namespaced: true
+  plural: virtualmachinepools
+vmpool:
+  group: pool.kubevirt.io
+  name: virtualmachinepool
+  namespaced: true
+  plural: virtualmachinepools
+# clone.kubevirt.io
+virtualmachineclone:
+  group: clone.kubevirt.io
+  name: virtualmachineclone
+  namespaced: true
+  plural: virtualmachineclones
+virtualmachineclones:
+  group: clone.kubevirt.io
+  name: virtualmachineclone
+  namespaced: true
+  plural: virtualmachineclones
+vmclone:
+  group: clone.kubevirt.io
+  name: virtualmachineclone
+  namespaced: true
+  plural: virtualmachineclones
+# migrations.kubevirt.io
+migrationpolicy:
+  group: migrations.kubevirt.io
+  name: migrationpolicy
+  namespaced: false
+  plural: migrationpolicies
+migrationpolicies:
+  group: migrations.kubevirt.io
+  name: migrationpolicy
+  namespaced: false
+  plural: migrationpolicies
+# cdi.kubevirt.io
+datavolume:
+  group: cdi.kubevirt.io
+  name: datavolume
+  namespaced: true
+  plural: datavolumes
+datavolumes:
+  group: cdi.kubevirt.io
+  name: datavolume
+  namespaced: true
+  plural: datavolumes
+dv:
+  group: cdi.kubevirt.io
+  name: datavolume
+  namespaced: true
+  plural: datavolumes
+dvs:
+  group: cdi.kubevirt.io
+  name: datavolume
+  namespaced: true
+  plural: datavolumes
+datasource:
+  group: cdi.kubevirt.io
+  name: datasource
+  namespaced: true
+  plural: datasources
+datasources:
+  group: cdi.kubevirt.io
+  name: datasource
+  namespaced: true
+  plural: datasources
+cdi:
+  group: cdi.kubevirt.io
+  name: cdi
+  namespaced: false
+  plural: cdis
+cdis:
+  group: cdi.kubevirt.io
+  name: cdi
+  namespaced: false
+  plural: cdis
+cdiconfig:
+  group: cdi.kubevirt.io
+  name: cdiconfig
+  namespaced: false
+  plural: cdiconfigs
+cdiconfigs:
+  group: cdi.kubevirt.io
+  name: cdiconfig
+  namespaced: false
+  plural: cdiconfigs
+storageprofile:
+  group: cdi.kubevirt.io
+  name: storageprofile
+  namespaced: false
+  plural: storageprofiles
+storageprofiles:
+  group: cdi.kubevirt.io
+  name: storageprofile
+  namespaced: false
+  plural: storageprofiles
+objecttransfer:
+  group: cdi.kubevirt.io
+  name: objecttransfer
+  namespaced: false
+  plural: objecttransfers
+objecttransfers:
+  group: cdi.kubevirt.io
+  name: objecttransfer
+  namespaced: false
+  plural: objecttransfers
+dataimportcron:
+  group: cdi.kubevirt.io
+  name: dataimportcron
+  namespaced: true
+  plural: dataimportcrons
+dataimportcrons:
+  group: cdi.kubevirt.io
+  name: dataimportcron
+  namespaced: true
+  plural: dataimportcrons
+# hco.kubevirt.io
+hyperconverged:
+  group: hco.kubevirt.io
+  name: hyperconverged
+  namespaced: true
+  plural: hyperconvergeds
+hyperconvergeds:
+  group: hco.kubevirt.io
+  name: hyperconverged
+  namespaced: true
+  plural: hyperconvergeds
+hco:
+  group: hco.kubevirt.io
+  name: hyperconverged
+  namespaced: true
+  plural: hyperconvergeds
+# ssp.kubevirt.io
+ssp:
+  group: ssp.kubevirt.io
+  name: ssp
+  namespaced: true
+  plural: ssps
+ssps:
+  group: ssp.kubevirt.io
+  name: ssp
+  namespaced: true
+  plural: ssps
+# networkaddonsoperator.network.kubevirt.io
+networkaddonsconfig:
+  group: networkaddonsoperator.network.kubevirt.io
+  name: networkaddonsconfig
+  namespaced: false
+  plural: networkaddonsconfigs
+networkaddonsconfigs:
+  group: networkaddonsoperator.network.kubevirt.io
+  name: networkaddonsconfig
+  namespaced: false
+  plural: networkaddonsconfigs
+# hostpathprovisioner.kubevirt.io
+hostpathprovisioner:
+  group: hostpathprovisioner.kubevirt.io
+  name: hostpathprovisioner
+  namespaced: false
+  plural: hostpathprovisioners
+hostpathprovisioners:
+  group: hostpathprovisioner.kubevirt.io
+  name: hostpathprovisioner
+  namespaced: false
+  plural: hostpathprovisioners

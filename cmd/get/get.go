@@ -160,6 +160,7 @@ func Run(stdout, stderr io.Writer, opts Options, args []string) error {
 		return err
 	}
 	s := newState(&opts)
+	preloadCRDs(s)
 	for resource := range opts.GetArgs {
 		resourceNamePlural, resourceGroup, _, namespaced, err := kindGroupNamespaced(resource, s.opts.RootPath, s.crds)
 		if err != nil {
@@ -340,8 +341,9 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 				var sortObjects []unstructured.Unstructured
 				for _, f := range resourcesFiles {
 					if f.IsDir() {
-						klog.V(3).Infof(
-							"skipping directory in path \"/namespaces/%s/%s/%s\": \"%s\"",
+						fmt.Fprintf(
+							os.Stderr,
+							"error: invalid must-gather structure, yaml files are expected in path \"/namespaces/%s/%s/%s\", found directory: \"%s\"\n",
 							namespace, resourceGroup, resourceNamePlural, f.Name(),
 						)
 						continue
@@ -598,10 +600,14 @@ func (s *state) handleObject(obj unstructured.Unstructured) error {
 		_, ok := vars.KnownResources[strings.ToLower(obj.GetKind())]
 		if ok {
 			runtimeObjectType := deserializer.RawObjectToRuntimeObject(rawObject, vars.Schema)
-			if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
-				klog.V(3).Info(err, err.Error())
+			if _, isUnknown := runtimeObjectType.(*runtime.Unknown); isUnknown {
+				objectTable, err = tablegenerator.GenerateCustomResourceTable(obj, cfg)
+			} else {
+				if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
+					klog.V(3).Info(err, err.Error())
+				}
+				objectTable, err = tablegenerator.InternalResourceTable(runtimeObjectType, &obj, cfg)
 			}
-			objectTable, err = tablegenerator.InternalResourceTable(runtimeObjectType, &obj, cfg)
 			if err != nil {
 				klog.V(3).Info("INFO ", fmt.Sprintf("%s: %s, %s", err.Error(), obj.GetKind(), obj.GetAPIVersion()))
 				klog.V(1).ErrorS(err, err.Error())
