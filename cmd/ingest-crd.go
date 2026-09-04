@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gmeghnag/omc/root"
+	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -32,7 +32,7 @@ var IngestCRDS = &cobra.Command{
 		if kubeconfigPath == "" {
 			kubeconfigPath = filepath.Join(homeDir, ".kube", "config")
 		}
-		outputDir := root.GetConfigPathResolver().GetCRDsDir()
+		outputDir := vars.ConfigPathResolver.GetCRDsDir()
 		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 		if err != nil {
 			panic(err)

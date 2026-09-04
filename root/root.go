@@ -18,7 +18,6 @@ package root
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
@@ -55,9 +54,6 @@ import (
 
 	"k8s.io/klog/v2"
 )
-
-// ConfigPathResolver is the global config path resolver
-var ConfigPathResolver *configpath.Resolver
 
 // configDirFlag holds the --config-dir flag value
 var configDirFlag string
@@ -138,32 +134,31 @@ func init() {
 		insights.InsightsCmd,
 		stern.Stern,
 	)
-	loadOmcConfigs()
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	// Initialize the config path resolver
-	ConfigPathResolver = configpath.NewResolver(configDirFlag)
+	vars.ConfigPathResolver = configpath.NewResolver(configDirFlag)
 
 	// Ensure config directory exists
-	if err := ConfigPathResolver.EnsureConfigDir(); err != nil {
+	if err := vars.ConfigPathResolver.EnsureConfigDir(); err != nil {
 		cobra.CheckErr(err)
 	}
 
-	configFile := ConfigPathResolver.GetConfigFile()
+	configFile := vars.ConfigPathResolver.GetConfigFile()
 	exist, _ := helpers.Exists(configFile)
 	if !exist {
 		helpers.CreateConfigFile(configFile)
 	}
 
 	// Ensure CRDs directory exists
-	if err := ConfigPathResolver.EnsureCRDsDir(); err != nil {
+	if err := vars.ConfigPathResolver.EnsureCRDsDir(); err != nil {
 		cobra.CheckErr(err)
 	}
 
 	// Configure viper to use the resolved config path
-	configDir := ConfigPathResolver.GetConfigDir()
+	configDir := vars.ConfigPathResolver.GetConfigDir()
 	viper.AddConfigPath(configDir)
 	viper.SetConfigType("json")
 	viper.SetConfigName("omc")
@@ -209,18 +204,15 @@ func initConfig() {
 		}
 	}
 
+	// Load additional config settings after viper config is ready
+	loadOmcConfigs()
 }
 
 func loadOmcConfigs() {
-	configFile := ConfigPathResolver.GetConfigFile()
+	configFile := vars.ConfigPathResolver.GetConfigFile()
 	file, _ := os.ReadFile(configFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	vars.DiffCmd = omcConfigJson.DiffCmd
 	vars.DefaultProject = omcConfigJson.DefaultProject
-}
-
-// GetConfigPathResolver returns the global config path resolver
-func GetConfigPathResolver() *configpath.Resolver {
-	return ConfigPathResolver
 }

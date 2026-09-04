@@ -8,12 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/gmeghnag/omc/root"
 	"github.com/gmeghnag/omc/vars"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -48,7 +46,7 @@ func getRegistryAccessToken(registry string, repository string, authfile string)
 		}
 	} else {
 		// Try both pull secret paths from the configured config directory
-		pullSecretPaths := root.GetConfigPathResolver().GetPullSecretPaths()
+		pullSecretPaths := vars.ConfigPathResolver.GetPullSecretPaths()
 		var lastErr error
 		for _, pullSecretPath := range pullSecretPaths {
 			data, err = os.ReadFile(pullSecretPath)

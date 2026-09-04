@@ -20,7 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/gmeghnag/omc/root"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
@@ -43,7 +42,7 @@ func init() {
 }
 
 func SetConfig() {
-	configFile := root.GetConfigPathResolver().GetConfigFile()
+	configFile := vars.ConfigPathResolver.GetConfigFile()
 	file, _ := ioutil.ReadFile(configFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
