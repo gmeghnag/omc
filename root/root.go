@@ -18,7 +18,6 @@ package root
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
@@ -44,6 +43,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/stern"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
+	"github.com/gmeghnag/omc/configpath"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -54,6 +54,9 @@ import (
 
 	"k8s.io/klog/v2"
 )
+
+// omcconfigFlag holds the --omcconfig flag value
+var omcconfigFlag string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{ // FLOW 4
@@ -74,6 +77,10 @@ func Execute() {
 
 func init() {
 	//fmt.Println("inside init") //FLOW 0
+
+	// Add --omcconfig flag before cobra.OnInitialize
+	RootCmd.PersistentFlags().StringVar(&omcconfigFlag, "omcconfig", "", "Path to the omc config file (default: $OMCCONFIG or ~/.omc/omc.json)")
+
 	cobra.OnInitialize(initConfig)
 
 	// add klog flags, but hide them from the overall --help information
@@ -127,33 +134,37 @@ func init() {
 		insights.InsightsCmd,
 		stern.Stern,
 	)
-	loadOmcConfigs()
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-	exist, _ := helpers.Exists(home + "/.omc/omc.json")
+	// Initialize the config path resolver with file-based approach
+	vars.ConfigPathResolver = configpath.NewResolver(omcconfigFlag)
+
+	// Ensure parent directory of config file exists
+	if err := vars.ConfigPathResolver.EnsureConfigDir(); err != nil {
+		cobra.CheckErr(err)
+	}
+
+	// Ensure shared directory (~/.omc/) exists for CRDs and pull-secrets
+	if err := vars.ConfigPathResolver.EnsureSharedDir(); err != nil {
+		cobra.CheckErr(err)
+	}
+
+	configFile := vars.ConfigPathResolver.GetConfigFile()
+	exist, _ := helpers.Exists(configFile)
 	if !exist {
-		if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
-			err := os.Mkdir(home+"/.omc", os.ModePerm)
-			if err != nil {
-				cobra.CheckErr(err)
-			}
-		}
-		helpers.CreateConfigFile(home + "/.omc/omc.json")
+		helpers.CreateConfigFile(configFile)
 	}
-	if _, err := os.Stat(home + "/.omc/customresourcedefinitions"); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(home+"/.omc/customresourcedefinitions", os.ModePerm)
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+
+	// Ensure CRDs directory exists (in shared directory)
+	if err := vars.ConfigPathResolver.EnsureCRDsDir(); err != nil {
+		cobra.CheckErr(err)
 	}
-	// Search config in home directory with name ".omc" (without extension).
-	viper.AddConfigPath(home + "/.omc/")
+
+	// Configure viper to use the specific config file directly
+	viper.SetConfigFile(configFile)
 	viper.SetConfigType("json")
-	viper.SetConfigName("omc")
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
@@ -196,11 +207,13 @@ func initConfig() {
 		}
 	}
 
+	// Load additional config settings after viper config is ready
+	loadOmcConfigs()
 }
 
 func loadOmcConfigs() {
-	home, _ := os.UserHomeDir()
-	file, _ := os.ReadFile(home + "/.omc/omc.json")
+	configFile := vars.ConfigPathResolver.GetConfigFile()
+	file, _ := os.ReadFile(configFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	vars.DiffCmd = omcConfigJson.DiffCmd

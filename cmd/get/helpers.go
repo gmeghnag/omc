@@ -232,8 +232,7 @@ func kindGroupNamespacedFromCrds(alias, rootPath string, aliasCache map[string]a
 	// ~/.omc/customresourcedefinitions is an always-on fallback: it covers
 	// resources whose CRDs are absent from the must-gather, which is exactly
 	// when the fallback is needed most.
-	home, _ := os.UserHomeDir()
-	omcCrdsPath := home + "/.omc/customresourcedefinitions/"
+	omcCrdsPath := vars.ConfigPathResolver.GetCRDsDir() + "/"
 	if ok, _ := Exists(omcCrdsPath); ok {
 		crds, rErr := ReadDirForResources(omcCrdsPath)
 		if rErr != nil {
