@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gmeghnag/omc/root"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,7 +20,7 @@ import (
 var IngestCRDS = &cobra.Command{
 	Use:     "collect-crd",
 	Aliases: []string{"ingest-crd", "ingest-crds", "collect-crds"},
-	Short:   "Collect CRDs from your running cluster to ~/.omc/customresourcedefinitions/* .",
+	Short:   "Collect CRDs from your running cluster to the configured OMC config directory.",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		homeDir, err := os.UserHomeDir()
@@ -31,7 +32,7 @@ var IngestCRDS = &cobra.Command{
 		if kubeconfigPath == "" {
 			kubeconfigPath = filepath.Join(homeDir, ".kube", "config")
 		}
-		outputDir := filepath.Join(homeDir, ".omc", "customresourcedefinitions")
+		outputDir := root.GetConfigPathResolver().GetCRDsDir()
 		config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 		if err != nil {
 			panic(err)

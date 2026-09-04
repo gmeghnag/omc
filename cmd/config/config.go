@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/gmeghnag/omc/root"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 	"github.com/spf13/cobra"
@@ -42,13 +43,13 @@ func init() {
 }
 
 func SetConfig() {
-	home, _ := os.UserHomeDir()
-	file, _ := ioutil.ReadFile(home + "/.omc/omc.json")
+	configFile := root.GetConfigPathResolver().GetConfigFile()
+	file, _ := ioutil.ReadFile(configFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	omcConfigJson.DiffCmd = vars.DiffCmd
 	omcConfigJson.DefaultProject = vars.DefaultProject
 	file, _ = json.MarshalIndent(omcConfigJson, "", " ")
-	_ = ioutil.WriteFile(home+"/.omc/omc.json", file, 0644)
+	_ = ioutil.WriteFile(configFile, file, 0644)
 
 }

@@ -44,6 +44,7 @@ import (
 	"github.com/gmeghnag/omc/cmd/stern"
 	"github.com/gmeghnag/omc/cmd/upgrade"
 	"github.com/gmeghnag/omc/cmd/use"
+	"github.com/gmeghnag/omc/configpath"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -54,6 +55,12 @@ import (
 
 	"k8s.io/klog/v2"
 )
+
+// ConfigPathResolver is the global config path resolver
+var ConfigPathResolver *configpath.Resolver
+
+// configDirFlag holds the --config-dir flag value
+var configDirFlag string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{ // FLOW 4
@@ -74,6 +81,10 @@ func Execute() {
 
 func init() {
 	//fmt.Println("inside init") //FLOW 0
+
+	// Add --config-dir flag before cobra.OnInitialize
+	RootCmd.PersistentFlags().StringVar(&configDirFlag, "config-dir", "", "Config directory path (default: $OMC_CONFIG_HOME or ~/.omc)")
+
 	cobra.OnInitialize(initConfig)
 
 	// add klog flags, but hide them from the overall --help information
@@ -132,26 +143,28 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-	exist, _ := helpers.Exists(home + "/.omc/omc.json")
+	// Initialize the config path resolver
+	ConfigPathResolver = configpath.NewResolver(configDirFlag)
+
+	// Ensure config directory exists
+	if err := ConfigPathResolver.EnsureConfigDir(); err != nil {
+		cobra.CheckErr(err)
+	}
+
+	configFile := ConfigPathResolver.GetConfigFile()
+	exist, _ := helpers.Exists(configFile)
 	if !exist {
-		if _, err := os.Stat(home + "/.omc"); errors.Is(err, os.ErrNotExist) {
-			err := os.Mkdir(home+"/.omc", os.ModePerm)
-			if err != nil {
-				cobra.CheckErr(err)
-			}
-		}
-		helpers.CreateConfigFile(home + "/.omc/omc.json")
+		helpers.CreateConfigFile(configFile)
 	}
-	if _, err := os.Stat(home + "/.omc/customresourcedefinitions"); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(home+"/.omc/customresourcedefinitions", os.ModePerm)
-		if err != nil {
-			cobra.CheckErr(err)
-		}
+
+	// Ensure CRDs directory exists
+	if err := ConfigPathResolver.EnsureCRDsDir(); err != nil {
+		cobra.CheckErr(err)
 	}
-	// Search config in home directory with name ".omc" (without extension).
-	viper.AddConfigPath(home + "/.omc/")
+
+	// Configure viper to use the resolved config path
+	configDir := ConfigPathResolver.GetConfigDir()
+	viper.AddConfigPath(configDir)
 	viper.SetConfigType("json")
 	viper.SetConfigName("omc")
 	// If a config file is found, read it in.
@@ -199,10 +212,15 @@ func initConfig() {
 }
 
 func loadOmcConfigs() {
-	home, _ := os.UserHomeDir()
-	file, _ := os.ReadFile(home + "/.omc/omc.json")
+	configFile := ConfigPathResolver.GetConfigFile()
+	file, _ := os.ReadFile(configFile)
 	omcConfigJson := types.Config{}
 	_ = json.Unmarshal([]byte(file), &omcConfigJson)
 	vars.DiffCmd = omcConfigJson.DiffCmd
 	vars.DefaultProject = omcConfigJson.DefaultProject
+}
+
+// GetConfigPathResolver returns the global config path resolver
+func GetConfigPathResolver() *configpath.Resolver {
+	return ConfigPathResolver
 }
