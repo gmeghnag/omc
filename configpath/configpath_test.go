@@ -10,59 +10,74 @@ import (
 
 func TestResolverPrecedence(t *testing.T) {
 	// Test flag takes precedence over env
-	t.Setenv(EnvConfigHome, "/tmp/env-config")
-	resolver := NewResolver("/tmp/flag-config")
-	expected := "/tmp/flag-config"
-	if resolver.GetConfigDir() != expected {
-		t.Errorf("Expected flag to take precedence, got %s, want %s", resolver.GetConfigDir(), expected)
+	t.Setenv(EnvConfigFile, "/tmp/env-config.json")
+	resolver := NewResolver("/tmp/flag-config.json")
+	expected := "/tmp/flag-config.json"
+	if resolver.GetConfigFile() != expected {
+		t.Errorf("Expected flag to take precedence, got %s, want %s", resolver.GetConfigFile(), expected)
 	}
 
 	// Test env takes precedence over default
 	resolver = NewResolver("")
-	expected = "/tmp/env-config"
-	if resolver.GetConfigDir() != expected {
-		t.Errorf("Expected env to take precedence, got %s, want %s", resolver.GetConfigDir(), expected)
+	expected = "/tmp/env-config.json"
+	if resolver.GetConfigFile() != expected {
+		t.Errorf("Expected env to take precedence, got %s, want %s", resolver.GetConfigFile(), expected)
 	}
 }
 
-func TestDefaultConfigDir(t *testing.T) {
+func TestDefaultConfigFile(t *testing.T) {
 	// Unset the environment variable
-	t.Setenv(EnvConfigHome, "")
+	t.Setenv(EnvConfigFile, "")
 	resolver := NewResolver("")
 
 	home, _ := os.UserHomeDir()
-	expected := filepath.Join(home, DefaultConfigDirName)
-	if resolver.GetConfigDir() != expected {
-		t.Errorf("Expected %s, got %s", expected, resolver.GetConfigDir())
-	}
-}
-
-func TestGetConfigFile(t *testing.T) {
-	resolver := NewResolver("/tmp/test-config")
-	expected := filepath.Join("/tmp/test-config", ConfigFileName)
+	expected := filepath.Join(home, DefaultConfigDir, DefaultConfigFile)
 	if resolver.GetConfigFile() != expected {
 		t.Errorf("Expected %s, got %s", expected, resolver.GetConfigFile())
 	}
 }
 
-func TestGetCRDsDir(t *testing.T) {
-	resolver := NewResolver("/tmp/test-config")
-	expected := filepath.Join("/tmp/test-config", CRDsDirName)
-	if resolver.GetCRDsDir() != expected {
-		t.Errorf("Expected %s, got %s", expected, resolver.GetCRDsDir())
+func TestGetConfigFile(t *testing.T) {
+	resolver := NewResolver("/tmp/test-config.json")
+	expected := "/tmp/test-config.json"
+	if resolver.GetConfigFile() != expected {
+		t.Errorf("Expected %s, got %s", expected, resolver.GetConfigFile())
 	}
 }
 
-func TestGetPullSecretPaths(t *testing.T) {
-	resolver := NewResolver("/tmp/test-config")
+func TestGetConfigDir(t *testing.T) {
+	resolver := NewResolver("/tmp/configs/case-123.json")
+	expected := "/tmp/configs"
+	if resolver.GetConfigDir() != expected {
+		t.Errorf("Expected %s, got %s", expected, resolver.GetConfigDir())
+	}
+}
+
+func TestSharedResources(t *testing.T) {
+	// Config file can be anywhere
+	resolver := NewResolver("/tmp/configs/case-123.json")
+
+	// But CRDs and pull-secrets are always in ~/.omc/
+	home, _ := os.UserHomeDir()
+	expectedSharedDir := filepath.Join(home, DefaultConfigDir)
+	expectedCRDsDir := filepath.Join(expectedSharedDir, CRDsDirName)
+
+	if resolver.GetSharedDir() != expectedSharedDir {
+		t.Errorf("Expected shared dir %s, got %s", expectedSharedDir, resolver.GetSharedDir())
+	}
+
+	if resolver.GetCRDsDir() != expectedCRDsDir {
+		t.Errorf("CRDs should be in shared dir, expected %s, got %s", expectedCRDsDir, resolver.GetCRDsDir())
+	}
+
+	// Pull secrets should also be in shared dir
 	paths := resolver.GetPullSecretPaths()
+	expectedTxt := filepath.Join(expectedSharedDir, PullSecretTxtName)
+	expectedJson := filepath.Join(expectedSharedDir, PullSecretJsonName)
 
 	if len(paths) != 2 {
 		t.Errorf("Expected 2 pull secret paths, got %d", len(paths))
 	}
-
-	expectedTxt := filepath.Join("/tmp/test-config", PullSecretTxtName)
-	expectedJson := filepath.Join("/tmp/test-config", PullSecretJsonName)
 
 	if paths[0] != expectedTxt {
 		t.Errorf("Expected first path %s, got %s", expectedTxt, paths[0])
@@ -75,23 +90,24 @@ func TestGetPullSecretPaths(t *testing.T) {
 
 func TestEnsureConfigDir(t *testing.T) {
 	tempDir := t.TempDir()
-	configDir := filepath.Join(tempDir, "test-omc-config")
+	configFile := filepath.Join(tempDir, "subdir", "test-config.json")
 
-	resolver := NewResolver(configDir)
+	resolver := NewResolver(configFile)
 
-	// Directory should not exist yet
+	// Parent directory should not exist yet
+	configDir := filepath.Dir(configFile)
 	if _, err := os.Stat(configDir); !os.IsNotExist(err) {
-		t.Errorf("Config directory should not exist yet")
+		t.Errorf("Config parent directory should not exist yet")
 	}
 
-	// Create the directory
+	// Create the parent directory
 	if err := resolver.EnsureConfigDir(); err != nil {
-		t.Errorf("Failed to create config directory: %v", err)
+		t.Errorf("Failed to create config parent directory: %v", err)
 	}
 
 	// Directory should now exist
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		t.Errorf("Config directory should exist after EnsureConfigDir()")
+		t.Errorf("Config parent directory should exist after EnsureConfigDir()")
 	}
 
 	// Calling again should not error
@@ -100,15 +116,58 @@ func TestEnsureConfigDir(t *testing.T) {
 	}
 }
 
-func TestEnsureCRDsDir(t *testing.T) {
+func TestEnsureSharedDir(t *testing.T) {
+	// Create resolver with config file in temp location
 	tempDir := t.TempDir()
-	configDir := filepath.Join(tempDir, "test-omc-config")
+	configFile := filepath.Join(tempDir, "test-config.json")
 
-	resolver := NewResolver(configDir)
+	// Temporarily change HOME to test shared dir creation
+	originalHome := os.Getenv("HOME")
+	testHome := t.TempDir()
+	t.Setenv("HOME", testHome)
+	defer os.Setenv("HOME", originalHome)
 
-	// Create parent config directory first
-	if err := resolver.EnsureConfigDir(); err != nil {
-		t.Fatalf("Failed to create config directory: %v", err)
+	resolver := NewResolver(configFile)
+
+	expectedSharedDir := filepath.Join(testHome, DefaultConfigDir)
+
+	// Shared directory should not exist yet
+	if _, err := os.Stat(expectedSharedDir); !os.IsNotExist(err) {
+		t.Errorf("Shared directory should not exist yet")
+	}
+
+	// Create the shared directory
+	if err := resolver.EnsureSharedDir(); err != nil {
+		t.Errorf("Failed to create shared directory: %v", err)
+	}
+
+	// Directory should now exist
+	if _, err := os.Stat(expectedSharedDir); os.IsNotExist(err) {
+		t.Errorf("Shared directory should exist after EnsureSharedDir()")
+	}
+
+	// Calling again should not error
+	if err := resolver.EnsureSharedDir(); err != nil {
+		t.Errorf("EnsureSharedDir should not error when directory exists: %v", err)
+	}
+}
+
+func TestEnsureCRDsDir(t *testing.T) {
+	// Create resolver with config file in temp location
+	tempDir := t.TempDir()
+	configFile := filepath.Join(tempDir, "test-config.json")
+
+	// Temporarily change HOME to test CRDs dir creation
+	originalHome := os.Getenv("HOME")
+	testHome := t.TempDir()
+	t.Setenv("HOME", testHome)
+	defer os.Setenv("HOME", originalHome)
+
+	resolver := NewResolver(configFile)
+
+	// Create shared directory first
+	if err := resolver.EnsureSharedDir(); err != nil {
+		t.Fatalf("Failed to create shared directory: %v", err)
 	}
 
 	crdsDir := resolver.GetCRDsDir()

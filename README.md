@@ -47,6 +47,41 @@ $ omc get clusterversion
 $ omc get pods -o wide -l app=etcd -n openshift-etcd
 ```
 
+### Parallel Usage with Multiple Config Files
+
+By default, omc stores configuration in `~/.omc/omc.json`. To work on multiple cases in parallel, you can use different config files:
+
+#### Using Environment Variable (Recommended)
+```bash
+# Terminal 1 - Working on case 12345
+export OMCCONFIG=~/.omc/case-12345.json
+omc use /cases/12345/must-gather
+omc get nodes
+
+# Terminal 2 - Working on case 67890 (in parallel)
+export OMCCONFIG=~/.omc/case-67890.json
+omc use /cases/67890/must-gather
+omc get pods -A
+```
+
+#### Using Command-Line Flag
+```bash
+# One-off command with custom config
+omc --omcconfig=~/.omc/test.json use /path/to/must-gather
+```
+
+#### How It Works
+- **Config files**: Each case has its own config file (e.g., `~/.omc/case-12345.json`)
+- **CRDs**: Shared across all configs (stored in `~/.omc/customresourcedefinitions/`)
+- **Pull secrets**: Shared across all configs (stored in `~/.omc/pull-secret.txt`)
+
+This design allows parallel analysis of different must-gathers without race conditions, while sharing common resources like CRDs and container registry credentials.
+
+**Configuration Precedence:**
+1. `--omcconfig` flag (highest priority)
+2. `OMCCONFIG` environment variable
+3. `~/.omc/omc.json` (default)
+
 ### Examples
 - Retrieving master nodes by label:
 ```

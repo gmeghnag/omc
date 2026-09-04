@@ -55,8 +55,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// configDirFlag holds the --config-dir flag value
-var configDirFlag string
+// omcconfigFlag holds the --omcconfig flag value
+var omcconfigFlag string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{ // FLOW 4
@@ -78,8 +78,8 @@ func Execute() {
 func init() {
 	//fmt.Println("inside init") //FLOW 0
 
-	// Add --config-dir flag before cobra.OnInitialize
-	RootCmd.PersistentFlags().StringVar(&configDirFlag, "config-dir", "", "Config directory path (default: $OMC_CONFIG_HOME or ~/.omc)")
+	// Add --omcconfig flag before cobra.OnInitialize
+	RootCmd.PersistentFlags().StringVar(&omcconfigFlag, "omcconfig", "", "Path to the omc config file (default: $OMCCONFIG or ~/.omc/omc.json)")
 
 	cobra.OnInitialize(initConfig)
 
@@ -138,11 +138,16 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// Initialize the config path resolver
-	vars.ConfigPathResolver = configpath.NewResolver(configDirFlag)
+	// Initialize the config path resolver with file-based approach
+	vars.ConfigPathResolver = configpath.NewResolver(omcconfigFlag)
 
-	// Ensure config directory exists
+	// Ensure parent directory of config file exists
 	if err := vars.ConfigPathResolver.EnsureConfigDir(); err != nil {
+		cobra.CheckErr(err)
+	}
+
+	// Ensure shared directory (~/.omc/) exists for CRDs and pull-secrets
+	if err := vars.ConfigPathResolver.EnsureSharedDir(); err != nil {
 		cobra.CheckErr(err)
 	}
 
@@ -152,16 +157,14 @@ func initConfig() {
 		helpers.CreateConfigFile(configFile)
 	}
 
-	// Ensure CRDs directory exists
+	// Ensure CRDs directory exists (in shared directory)
 	if err := vars.ConfigPathResolver.EnsureCRDsDir(); err != nil {
 		cobra.CheckErr(err)
 	}
 
-	// Configure viper to use the resolved config path
-	configDir := vars.ConfigPathResolver.GetConfigDir()
-	viper.AddConfigPath(configDir)
+	// Configure viper to use the specific config file directly
+	viper.SetConfigFile(configFile)
 	viper.SetConfigType("json")
-	viper.SetConfigName("omc")
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		//fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
