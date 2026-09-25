@@ -16,12 +16,14 @@ limitations under the License.
 package use
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/types"
@@ -215,6 +217,34 @@ func MustGatherInfo() {
 		}
 	}
 
+	timestampFilePath := vars.MustGatherRootPath + "/../timestamp"
+	timestamp := "MISSING"
+	if ok, _ := helpers.Exists(timestampFilePath); ok {
+		file, err := os.Open(timestampFilePath)
+		if err == nil {
+			defer file.Close()
+
+			scanner := bufio.NewScanner(file)
+
+			var times []string
+
+			for scanner.Scan() {
+				rLine := scanner.Text()
+				var tLine string
+				if i := strings.Index(rLine, " m="); i >= 0 {
+					tLine = rLine[:i]
+				}
+				t, _ := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", tLine)
+				times = append(times, t.Format("2006-01-02 15:04:05"))
+			}
+			if len(times) > 1 {
+				timestamp = times[0] + " - " + times[1]
+			} else {
+				timestamp = "INCOMPLETE"
+			}
+		}
+	}
+	fmt.Println("Timestamp      : " + timestamp)
 }
 
 // useCmd represents the use command
