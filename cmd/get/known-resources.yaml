@@ -1028,3 +1028,53 @@ nodemetrics:
   name: nodemetrics
   namespaced: false
   plural: nodes
+plan:
+  group: forklift.konveyor.io
+  name: plan
+  namespaced: true
+  plural: plans
+plans:
+  group: forklift.konveyor.io
+  name: plan
+  namespaced: true
+  plural: plans
+migration:
+  group: forklift.konveyor.io
+  name: migration
+  namespaced: true
+  plural: migrations
+migrations:
+  group: forklift.konveyor.io
+  name: migration
+  namespaced: true
+  plural: migrations
+networkmapping:
+  group: forklift.konveyor.io
+  name: networkmapping
+  namespaced: true
+  plural: networkmappings
+networkmappings:
+  group: forklift.konveyor.io
+  name: networkmapping
+  namespaced: true
+  plural: networkmappings
+storagemapping:
+  group: forklift.konveyor.io
+  name: storagemapping
+  namespaced: true
+  plural: storagemappings
+storagemappings:
+  group: forklift.konveyor.io
+  name: storagemapping
+  namespaced: true
+  plural: storagemappings
+provider:
+  group: forklift.konveyor.io
+  name: provider
+  namespaced: true
+  plural: providers
+providers:
+  group: forklift.konveyor.io
+  name: provider
+  namespaced: true
+  plural: providers
