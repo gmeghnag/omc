@@ -8,6 +8,9 @@ import (
 	"sort"
 	"testing"
 	"testing/fstest"
+
+	"github.com/gmeghnag/omc/configpath"
+	"github.com/gmeghnag/omc/vars"
 )
 
 func TestKindGroupNamespacedFromCrds_NilAliasCache(t *testing.T) {
@@ -18,6 +21,11 @@ func TestKindGroupNamespacedFromCrds_NilAliasCache(t *testing.T) {
 	if err := os.MkdirAll(crdsDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+
+	// Initialize config path resolver for the test
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	vars.ConfigPathResolver = configpath.NewResolver("")
 
 	t.Cleanup(func() {
 		crdCache.Lock()
@@ -38,6 +46,10 @@ func TestKindGroupNamespacedFromCrds_HomedirFallback(t *testing.T) {
 
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+
+	// Initialize config path resolver for the test
+	vars.ConfigPathResolver = configpath.NewResolver("")
+
 	omcCrdsDir := filepath.Join(home, ".omc", "customresourcedefinitions")
 	if err := os.MkdirAll(omcCrdsDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -78,6 +90,12 @@ func TestKindGroupNamespacedFromCrds_Cache(t *testing.T) {
 	// After the first call the CRD file is made unreadable, so a second call
 	// that still succeeds confirms the result came from the in-memory cache.
 	root := t.TempDir()
+
+	// Initialize config path resolver for the test
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	vars.ConfigPathResolver = configpath.NewResolver("")
+
 	crdsDir := filepath.Join(root, "cluster-scoped-resources", "apiextensions.k8s.io", "customresourcedefinitions")
 	if err := os.MkdirAll(crdsDir, 0o755); err != nil {
 		t.Fatal(err)
