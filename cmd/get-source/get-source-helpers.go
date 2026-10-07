@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -46,16 +45,19 @@ func getRegistryAccessToken(registry string, repository string, authfile string)
 			os.Exit(1)
 		}
 	} else {
-		homeDir, _ := os.UserHomeDir()
-		pullSecretPath := filepath.Join(homeDir, ".omc", "pull-secret.txt")
-		data, err = os.ReadFile(pullSecretPath)
-		if err != nil {
-			pullSecretPath := filepath.Join(homeDir, ".omc", "pull-secret.json")
+		// Try both pull secret paths from the configured config directory
+		pullSecretPaths := vars.ConfigPathResolver.GetPullSecretPaths()
+		var lastErr error
+		for _, pullSecretPath := range pullSecretPaths {
 			data, err = os.ReadFile(pullSecretPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error reading authentication file: %v\n", err)
-				os.Exit(1)
+			if err == nil {
+				break
 			}
+			lastErr = err
+		}
+		if lastErr != nil {
+			fmt.Fprintf(os.Stderr, "Error reading pull secret from config directory: %v\n", lastErr)
+			os.Exit(1)
 		}
 	}
 
