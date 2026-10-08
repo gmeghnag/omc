@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/pkg/mustgather"
 	"github.com/gmeghnag/omc/vars"
 
 	"github.com/spf13/cobra"
@@ -53,6 +54,7 @@ var Logs = &cobra.Command{
 		}
 		opts := Options{
 			RootPath:      vars.MustGatherRootPath,
+			RootPaths:     vars.MustGatherRootPaths,
 			Namespace:     namespace,
 			Container:     containerFlag,
 			Previous:      previousFlag,
@@ -103,35 +105,54 @@ func Run(stdout, stderr io.Writer, opts Options, args []string) error {
 			if podName == "" {
 				return fmt.Errorf("arguments in resource/name form must have a single resource and name")
 			}
-			return logsPods(stdout, opts.RootPath, opts.Namespace, podName, containerName, opts.Previous, opts.Rotated, opts.AllContainers, logLevels, opts.Insecure, opts.Tail)
 		} else {
 			podName = s[0]
-			return logsPods(stdout, opts.RootPath, opts.Namespace, podName, containerName, opts.Previous, opts.Rotated, opts.AllContainers, logLevels, opts.Insecure, opts.Tail)
 		}
 	}
 	if len(args) == 2 {
 		if s := strings.Split(args[0], "/"); len(s) == 2 && (s[0] == "po" || s[0] == "pod" || s[0] == "pods") {
 			if containerName != "" {
 				return fmt.Errorf("only one of -c or an inline [CONTAINER] arg is allowed")
-			} else {
-				podName = s[1]
-				if podName == "" {
-					return fmt.Errorf("arguments in resource/name form must have a single resource and name")
-				}
-				containerName = args[1]
-				return logsPods(stdout, opts.RootPath, opts.Namespace, podName, containerName, opts.Previous, opts.Rotated, opts.AllContainers, logLevels, opts.Insecure, opts.Tail)
 			}
+			podName = s[1]
+			if podName == "" {
+				return fmt.Errorf("arguments in resource/name form must have a single resource and name")
+			}
+			containerName = args[1]
 		} else {
 			if containerName != "" {
 				return fmt.Errorf("only one of -c or an inline [CONTAINER] arg is allowed")
-			} else {
-				podName = args[0]
-				containerName = args[1]
-				return logsPods(stdout, opts.RootPath, opts.Namespace, podName, containerName, opts.Previous, opts.Rotated, opts.AllContainers, logLevels, opts.Insecure, opts.Tail)
 			}
+			podName = args[0]
+			containerName = args[1]
 		}
 	}
-	return nil
+
+	// In a grouped (multi-must-gather) context resolve the pod to the most
+	// recent must-gather that contains it - the same capture get and describe
+	// show - and read its logs only from there. If that capture has no logs for
+	// the pod we show none rather than falling back to an older capture.
+	rootPath := resolveLogsRoot(opts, podName)
+	return logsPods(stdout, rootPath, opts.Namespace, podName, containerName, opts.Previous, opts.Rotated, opts.AllContainers, logLevels, opts.Insecure, opts.Tail)
+}
+
+// resolveLogsRoot returns the must-gather root a pod's logs must be read from.
+// For a single-must-gather context it is just opts.RootPath. For a grouped
+// context it is the most recent root that contains the pod; ResolveRoot falls
+// back to the most recent root when the pod is found in none, letting logsPods
+// report "not found" as usual.
+func resolveLogsRoot(opts Options, podName string) string {
+	if len(opts.RootPaths) <= 1 {
+		return opts.RootPath
+	}
+	ns := opts.Namespace
+	candidates := []string{
+		"namespaces/" + ns + "/pods/" + podName + "/" + podName + ".yaml",
+		"namespaces/" + ns + "/pods/" + podName,
+		"namespaces/" + ns + "/core/pods/" + podName + ".yaml",
+	}
+	root, _ := mustgather.ResolveRoot(opts.RootPaths, candidates...)
+	return root
 }
 
 func init() {
@@ -143,3 +164,4 @@ func init() {
 	Logs.PersistentFlags().Int64Var(&tailFlag, "tail", -1, "Lines of recent log file to display. Defaults to -1 with no selector, showing all log lines.")
 	Logs.Flags().StringVarP(&LogLevel, "log-level", "l", "", "Filter logs by level (info|error|worning), you can filter for more concatenating them comma separated.")
 }
+

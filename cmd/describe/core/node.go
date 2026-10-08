@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/pkg/mustgather"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -57,6 +58,26 @@ var Node = &cobra.Command{
 	Aliases: []string{"nodes"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
-		describeNode(vars.MustGatherRootPath, vars.Namespace, args)
+		describeNodeMulti(vars.Namespace, args)
 	},
+}
+
+// describeNodeMulti resolves each requested node to the most recent must-gather
+// that contains it, keeping describe consistent with get across a grouped
+// context. A single-must-gather context, or describing every node (no names
+// given), reads the most recent root directly.
+func describeNodeMulti(namespace string, args []string) {
+	roots := vars.MustGatherRootPaths
+	if len(roots) <= 1 {
+		describeNode(vars.MustGatherRootPath, namespace, args)
+		return
+	}
+	if len(args) == 0 {
+		describeNode(roots[0], namespace, args)
+		return
+	}
+	for _, name := range args {
+		root, _ := mustgather.ResolveRoot(roots, "cluster-scoped-resources/core/nodes/"+name+".yaml")
+		describeNode(root, namespace, []string{name})
+	}
 }

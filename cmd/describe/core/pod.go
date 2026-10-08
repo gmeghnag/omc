@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/pkg/mustgather"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -50,7 +51,7 @@ func describePod(currentContextPath string, defaultConfigNamespace string, args 
 			}
 		}
 	} else {
-		podsDir := fmt.Sprintf("%s/namespaces/%s/pods", vars.MustGatherRootPath, defaultConfigNamespace)
+		podsDir := fmt.Sprintf("%s/namespaces/%s/pods", currentContextPath, defaultConfigNamespace)
 		pods, rErr := os.ReadDir(podsDir)
 		if rErr != nil {
 			klog.V(3).ErrorS(err, "Failed to read resources:")
@@ -84,6 +85,57 @@ var Pod = &cobra.Command{
 	Aliases: []string{"po", "pods"},
 	Hidden:  true,
 	Run: func(cmd *cobra.Command, args []string) {
-		describePod(vars.MustGatherRootPath, vars.Namespace, args)
+		describePodMulti(vars.Namespace, args)
 	},
+}
+
+// describePodMulti resolves each requested pod to the most recent must-gather
+// that contains it, so describe shows the same capture get and logs do. For a
+// single-must-gather context, or when describing every pod (no names given), it
+// reads the most recent root directly.
+func describePodMulti(namespace string, args []string) {
+	roots := vars.MustGatherRootPaths
+	if len(roots) <= 1 {
+		describePod(vars.MustGatherRootPath, namespace, args)
+		return
+	}
+	if len(args) == 0 {
+		describePod(roots[0], namespace, args)
+		return
+	}
+	for _, name := range args {
+		root, _ := mustgather.ResolveRootBy(roots, func(root string) bool {
+			return podExistsInRoot(root, namespace, name)
+		})
+		describePod(root, namespace, []string{name})
+	}
+}
+
+// podExistsInRoot reports whether a must-gather root contains the named pod,
+// in either the per-pod layout or the aggregated core/pods.yaml list, so
+// describe resolves to the same capture get would show regardless of layout.
+func podExistsInRoot(root, namespace, name string) bool {
+	nsPath := root + "/namespaces/" + namespace
+	for _, p := range []string{
+		nsPath + "/pods/" + name + "/" + name + ".yaml",
+		nsPath + "/core/pods/" + name + ".yaml",
+	} {
+		if _, err := os.Stat(p); err == nil {
+			return true
+		}
+	}
+	_file, err := os.ReadFile(nsPath + "/core/pods.yaml")
+	if err != nil {
+		return false
+	}
+	var list corev1.PodList
+	if err := yaml.Unmarshal(_file, &list); err != nil {
+		return false
+	}
+	for i := range list.Items {
+		if list.Items[i].Name == name {
+			return true
+		}
+	}
+	return false
 }

@@ -18,7 +18,12 @@ package logs
 // Options holds the configuration for a single logs invocation. Fields are
 // populated from the cobra-bound flags before Run is invoked.
 type Options struct {
-	RootPath      string
+	RootPath string
+	// RootPaths holds every must-gather root of the active context, ordered
+	// most-recent-first. logs reads a pod from the most recent must-gather that
+	// contains it (the same capture get shows); it never falls back to an older
+	// capture's logs. Empty means a single-must-gather context (= {RootPath}).
+	RootPaths     []string
 	Namespace     string
 	Container     string
 	Previous      bool
