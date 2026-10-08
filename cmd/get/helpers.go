@@ -10,11 +10,68 @@ import (
 	"sync"
 
 	"github.com/gmeghnag/omc/vars"
+	goyaml "gopkg.in/yaml.v2"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/yaml"
 )
+
+// crdMeta mirrors only the CustomResourceDefinition fields omc needs to resolve
+// aliases and render tables. Decoding into it with a streaming YAML decoder
+// skips the (often very large) openAPIV3Schema entirely, which otherwise
+// dominated CRD parsing time for must-gathers with many or large CRDs.
+type crdMeta struct {
+	Spec struct {
+		Group string `yaml:"group"`
+		Scope string `yaml:"scope"`
+		Names struct {
+			Plural     string   `yaml:"plural"`
+			Singular   string   `yaml:"singular"`
+			Kind       string   `yaml:"kind"`
+			ShortNames []string `yaml:"shortNames"`
+		} `yaml:"names"`
+		Versions []struct {
+			Name                     string `yaml:"name"`
+			AdditionalPrinterColumns []struct {
+				Name     string `yaml:"name"`
+				Type     string `yaml:"type"`
+				JSONPath string `yaml:"jsonPath"`
+			} `yaml:"additionalPrinterColumns"`
+		} `yaml:"versions"`
+	} `yaml:"spec"`
+}
+
+// parseCRDLite decodes a CustomResourceDefinition document into the subset of
+// fields omc uses, skipping the schema, and returns it as the standard
+// apiextensionsv1 type so downstream code (alias cache, table generator) is
+// unchanged.
+func parseCRDLite(data []byte) (apiextensionsv1.CustomResourceDefinition, error) {
+	var m crdMeta
+	if err := goyaml.Unmarshal(data, &m); err != nil {
+		return apiextensionsv1.CustomResourceDefinition{}, err
+	}
+	crd := apiextensionsv1.CustomResourceDefinition{}
+	crd.Spec.Group = m.Spec.Group
+	crd.Spec.Scope = apiextensionsv1.ResourceScope(m.Spec.Scope)
+	crd.Spec.Names = apiextensionsv1.CustomResourceDefinitionNames{
+		Plural:     m.Spec.Names.Plural,
+		Singular:   m.Spec.Names.Singular,
+		Kind:       m.Spec.Names.Kind,
+		ShortNames: m.Spec.Names.ShortNames,
+	}
+	for _, v := range m.Spec.Versions {
+		ver := apiextensionsv1.CustomResourceDefinitionVersion{Name: v.Name}
+		for _, c := range v.AdditionalPrinterColumns {
+			ver.AdditionalPrinterColumns = append(ver.AdditionalPrinterColumns, apiextensionsv1.CustomResourceColumnDefinition{
+				Name:     c.Name,
+				Type:     c.Type,
+				JSONPath: c.JSONPath,
+			})
+		}
+		crd.Spec.Versions = append(crd.Spec.Versions, ver)
+	}
+	return crd, nil
+}
 
 // crdCache holds the CRDs parsed off disk, keyed by must-gather root, shared
 // across concurrent Run calls under the mutex.
@@ -185,11 +242,11 @@ func kindGroupNamespacedFromCrds(alias, rootPath string, aliasCache map[string]a
 						cacheReady = false
 						continue
 					}
-					_crd := &apiextensionsv1.CustomResourceDefinition{}
-					if err := yaml.Unmarshal(crdByte, _crd); err != nil {
+					crd, err := parseCRDLite(crdByte)
+					if err != nil {
 						continue
 					}
-					bundleCRDs = append(bundleCRDs, *_crd)
+					bundleCRDs = append(bundleCRDs, crd)
 				}
 			}
 		} else {
@@ -247,8 +304,8 @@ func kindGroupNamespacedFromCrds(alias, rootPath string, aliasCache map[string]a
 			}
 			crdYamlPath := omcCrdsPath + f.Name()
 			crdByte, _ := ioutil.ReadFile(crdYamlPath)
-			_crd := &apiextensionsv1.CustomResourceDefinition{}
-			if err := yaml.Unmarshal([]byte(crdByte), &_crd); err != nil {
+			_crd, err := parseCRDLite(crdByte)
+			if err != nil {
 				continue
 			}
 			if strings.Contains(alias, ".") {
