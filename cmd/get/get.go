@@ -269,6 +269,56 @@ func init() {
 	templateprinters.AddTemplateOpenShiftHandlers(vars.TableGenerator)
 }
 
+// emitItems optionally sorts items by the --sort-by jsonpath, filters them by
+// the requested name set (empty set means "all"), and funnels each through
+// handleObject. It is the common tail shared by every reader so the sort/filter
+// semantics stay identical across storage layouts.
+func (s *state) emitItems(items []unstructured.Unstructured, resources map[string]struct{}) error {
+	if s.opts.SortBy != "" {
+		items = sortResources(items, s.opts.SortBy)
+	}
+	for _, item := range items {
+		if len(resources) > 0 {
+			if _, ok := resources[item.GetName()]; !ok {
+				continue
+			}
+		}
+		if err := s.handleObject(item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// readPodsFromPodDir reads pods stored one file per pod under
+// namespaces/<ns>/pods/<pod>/<pod>.yaml. This is the layout used when the
+// aggregated namespaces/<ns>/core/pods.yaml is empty or absent.
+func readPodsFromPodDir(rootPath, namespace string) ([]unstructured.Unstructured, error) {
+	podsDir := fmt.Sprintf("%s/namespaces/%s/pods", rootPath, namespace)
+	pods, rErr := ReadDirForResources(podsDir)
+	if rErr != nil {
+		klog.V(3).ErrorS(rErr, "Failed to read pods directory")
+		return nil, nil
+	}
+	var items []unstructured.Unstructured
+	for _, pod := range pods {
+		podName := pod.Name()
+		podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
+		_file, err := os.ReadFile(podPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading %s: %w", podPath, err)
+		}
+		var podItem unstructured.Unstructured
+		if err := yaml.Unmarshal(_file, &podItem); err != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", podPath, err)
+		}
+		if podItem.Object != nil {
+			items = append(items, podItem)
+		}
+	}
+	return items, nil
+}
+
 func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	var namespaces []string
 	if s.opts.AllNamespaces {
@@ -282,117 +332,77 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 		namespaces = append(namespaces, s.opts.Namespace)
 	}
 	for _, namespace := range namespaces {
-		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 		resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
+
+		if resourceNamePlural == "pods" {
+			// Pods are stored either aggregated in core/pods.yaml or one file
+			// per pod under pods/<pod>/<pod>.yaml. Prefer the aggregated list;
+			// fall back to the per-pod layout whenever it is absent, empty, or
+			// yields no items (an empty aggregated file does not raise an
+			// unmarshal error, so a count check is what actually detects it).
+			UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+			if _file, rerr := os.ReadFile(resourcesItemsPath); rerr == nil {
+				if uerr := yaml.Unmarshal(_file, &UnstructuredItems); uerr != nil {
+					// A non-empty but corrupt aggregated file is a real error.
+					if fStat, _ := os.Stat(resourcesItemsPath); fStat == nil || fStat.Size() != 0 {
+						return fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
+					}
+				}
+			}
+			items := UnstructuredItems.Items
+			if len(items) == 0 {
+				podItems, perr := readPodsFromPodDir(s.opts.RootPath, namespace)
+				if perr != nil {
+					return perr
+				}
+				items = podItems
+			}
+			if err := s.emitItems(items, resources); err != nil {
+				return err
+			}
+			continue
+		}
+
+		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 		_file, err := os.ReadFile(resourcesItemsPath)
-		if err == nil { // able to read <resourceplural>.yaml, which contains list of items, i.e. /namespaces/<NAMESPACE>/core/pods.yaml
-			err := yaml.Unmarshal(_file, &UnstructuredItems)
-			if err != nil { // unable to unmarshal the file, it may be empty or corrupted
-				// We handle this situation by looking for the pod in the pods directory
-				fStat, _ := os.Stat(resourcesItemsPath)
-				fSize := fStat.Size()
-				if resourceNamePlural == "pods" && fSize == 0 {
-					// tranverse the pods directory and fill in UnstructuredItems.Items
-					podsDir := fmt.Sprintf("%s/namespaces/%s/pods", s.opts.RootPath, namespace)
-					pods, rErr := ReadDirForResources(podsDir)
-					if rErr != nil {
-						klog.V(3).ErrorS(err, "Failed to read resources:")
-					}
-					for _, pod := range pods {
-						podName := pod.Name()
-						podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
-						_file, err := os.ReadFile(podPath)
-						if err != nil {
-							return fmt.Errorf("error reading %s: %w", podPath, err)
-						}
-						var podItem unstructured.Unstructured
-						if err := yaml.Unmarshal(_file, &podItem); err != nil {
-							return fmt.Errorf("error unmarshaling %s: %w", podPath, err)
-						}
-						if podItem.Object != nil {
-							UnstructuredItems.Items = append(UnstructuredItems.Items, podItem)
-						}
-					}
-				} else {
-					return fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, err)
-				}
+		if err == nil { // aggregated <plural>.yaml list, e.g. /namespaces/<ns>/<group>/<plural>.yaml
+			if uerr := yaml.Unmarshal(_file, &UnstructuredItems); uerr != nil {
+				return fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
 			}
-
-			if s.opts.SortBy != "" {
-				UnstructuredItems.Items = sortResources(UnstructuredItems.Items, s.opts.SortBy)
+			if err := s.emitItems(UnstructuredItems.Items, resources); err != nil {
+				return err
 			}
-			for _, item := range UnstructuredItems.Items {
-				if len(resources) > 0 {
-					if _, ok := resources[item.GetName()]; ok {
-						if err := s.handleObject(item); err != nil {
-							return err
-						}
-					}
-				} else {
-					if err := s.handleObject(item); err != nil {
-						return err
-					}
-				}
-			}
-		} else { // the resources are customresources so, stored in a single file per resource
+		} else { // custom resources stored one file per resource under <group>/<plural>/
 			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
-			_, err = os.Stat(resourceDir)
-			if err == nil {
-				resourcesFiles, rErr := ReadDirForResources(resourceDir)
-				if rErr != nil {
-					klog.V(3).ErrorS(err, "Failed to read resources:")
+			if _, statErr := os.Stat(resourceDir); statErr != nil {
+				continue
+			}
+			resourcesFiles, rErr := ReadDirForResources(resourceDir)
+			if rErr != nil {
+				klog.V(3).ErrorS(rErr, "Failed to read resources:")
+			}
+			var items []unstructured.Unstructured
+			for _, f := range resourcesFiles {
+				if f.IsDir() {
+					klog.V(3).Infof(
+						"skipping directory in path \"/namespaces/%s/%s/%s\": \"%s\"",
+						namespace, resourceGroup, resourceNamePlural, f.Name(),
+					)
+					continue
 				}
-				var sortObjects []unstructured.Unstructured
-				for _, f := range resourcesFiles {
-					if f.IsDir() {
-						klog.V(3).Infof(
-							"skipping directory in path \"/namespaces/%s/%s/%s\": \"%s\"",
-							namespace, resourceGroup, resourceNamePlural, f.Name(),
-						)
-						continue
-					}
-					resourceYamlPath := resourceDir + "/" + f.Name()
-					_file, err := os.ReadFile(resourceYamlPath)
-					if err != nil {
-						return fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
-					}
-					item := unstructured.Unstructured{}
-					if err := yaml.Unmarshal(_file, &item); err != nil {
-						return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
-					}
-					if s.opts.SortBy != "" {
-						sortObjects = append(sortObjects, item)
-					} else {
-						if len(resources) > 0 {
-							if _, ok := resources[item.GetName()]; ok {
-								if err := s.handleObject(item); err != nil {
-									return err
-								}
-							}
-						} else {
-							if err := s.handleObject(item); err != nil {
-								return err
-							}
-						}
-					}
+				resourceYamlPath := resourceDir + "/" + f.Name()
+				_file, err := os.ReadFile(resourceYamlPath)
+				if err != nil {
+					return fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
 				}
-
-				if s.opts.SortBy != "" {
-					sortObjects = sortResources(sortObjects, s.opts.SortBy)
-					for _, item := range sortObjects {
-						if len(resources) > 0 {
-							if _, ok := resources[item.GetName()]; ok {
-								if err := s.handleObject(item); err != nil {
-									return err
-								}
-							}
-						} else {
-							if err := s.handleObject(item); err != nil {
-								return err
-							}
-						}
-					}
+				item := unstructured.Unstructured{}
+				if err := yaml.Unmarshal(_file, &item); err != nil {
+					return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
 				}
+				items = append(items, item)
+			}
+			if err := s.emitItems(items, resources); err != nil {
+				return err
 			}
 		}
 	}
