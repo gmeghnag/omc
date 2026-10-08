@@ -37,11 +37,16 @@ import (
 
 var singleNamespaceInMustGather bool
 
-// findExistingContextByRootDir checks if a root directory is already in the contexts
+// findExistingContextByRootDir checks if a root directory is already in the
+// contexts. It matches on a full path component so an archive root like
+// "must-gather" cannot be satisfied by an unrelated path that merely contains
+// that substring (e.g. "old-must-gather-backup").
 func findExistingContextByRootDir(rootDir string, contexts []types.Context) (string, bool) {
 	for _, ctx := range contexts {
-		if strings.HasSuffix(ctx.Path, rootDir) || strings.Contains(ctx.Path, rootDir+"/") {
-			return ctx.Path, true
+		for _, part := range strings.Split(filepath.ToSlash(ctx.Path), "/") {
+			if part == rootDir {
+				return ctx.Path, true
+			}
 		}
 	}
 	return "", false
@@ -176,9 +181,12 @@ func MustGatherInfo() {
 		if err := yaml.Unmarshal([]byte(_file), &infrastructureList); err != nil {
 			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
 			os.Exit(1)
-		} else {
-			fmt.Printf("ApiServerURL   : %s\n", infrastructureList.Items[0].Status.APIServerURL)
-			fmt.Printf("Platform       : %s\n", infrastructureList.Items[0].Status.PlatformStatus.Type)
+		} else if len(infrastructureList.Items) > 0 {
+			status := infrastructureList.Items[0].Status
+			fmt.Printf("ApiServerURL   : %s\n", status.APIServerURL)
+			if status.PlatformStatus != nil {
+				fmt.Printf("Platform       : %s\n", status.PlatformStatus.Type)
+			}
 		}
 	}
 	clusterversionFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")

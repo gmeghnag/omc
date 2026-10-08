@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -133,22 +134,6 @@ func isTarFile(path string) (bool, error) {
 	return true, nil
 }
 
-func isZip(path string) (bool, error) {
-	header, err := GetHeaderFile(path)
-	if err == nil {
-		return header == "application/zip", nil
-	}
-	return false, err
-}
-
-func isGzip(path string) (bool, error) {
-	header, err := GetHeaderFile(path)
-	if err == nil {
-		return header == "application/x-gzip", nil
-	}
-	return false, err
-}
-
 func isXZ(path string) (bool, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -164,32 +149,28 @@ func isXZ(path string) (bool, error) {
 }
 
 func IsCompressedFile(path string) (bool, string, error) {
-	result, err := isGzip(path)
-	if err != nil {
-		return false, "", err
-	} else if result {
-		return result, fileTypeTarGzip, nil
-	}
-
-	result, err = isZip(path)
-	if err != nil {
-		return false, "", err
-	} else if result {
-		return result, fileTypeZip, nil
-	}
-
-	result, err = isXZ(path)
-	if err != nil {
-		return false, "", err
-	} else if result {
-		return result, fileTypeXZ, nil
-	}
-
-	result, err = isTarFile(path)
+	// gzip and zip are identified by their leading magic bytes, so read the
+	// header once and reuse it for both rather than reopening the file per
+	// detector.
+	header, err := GetHeaderFile(path)
 	if err != nil {
 		return false, "", err
 	}
+	switch header {
+	case "application/x-gzip":
+		return true, fileTypeTarGzip, nil
+	case "application/zip":
+		return true, fileTypeZip, nil
+	}
 
+	if ok, _ := isXZ(path); ok {
+		return true, fileTypeXZ, nil
+	}
+
+	result, err := isTarFile(path)
+	if err != nil {
+		return false, "", err
+	}
 	return result, fileTypeTar, nil
 }
 
@@ -204,11 +185,27 @@ func DownloadFile(path string) (string, error) {
 		return "", err
 	}
 
-	resp, err := http.Get(path)
+	// Bound only the connection-setup phases (dial, TLS handshake, waiting for
+	// response headers) so a hung server fails fast, while deliberately leaving
+	// no overall Client.Timeout: a large must-gather may take a long time to
+	// stream and must not be aborted mid-download as long as it keeps
+	// progressing.
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           (&net.Dialer{Timeout: 30 * time.Second}).DialContext,
+			TLSHandshakeTimeout:   30 * time.Second,
+			ResponseHeaderTimeout: 60 * time.Second,
+		},
+	}
+	resp, err := client.Get(path)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status downloading %s: %s", path, resp.Status)
+	}
 
 	// Use a sensible filename
 	var filename string
