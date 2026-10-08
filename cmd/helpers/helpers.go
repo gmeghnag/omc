@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/fs"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gmeghnag/omc/types"
@@ -202,19 +202,48 @@ func ReadYaml(YamlPath string) []byte {
 	return __file
 }
 
+// modTimeCache memoizes os.Stat mod-time lookups. The Age/Last-Seen columns
+// resolve a must-gather "reference time" from the mod time of a fixed set of
+// paths (timestamp / namespaces / cluster-scoped-resources), and that was being
+// re-stat'd once per rendered row. A must-gather is immutable for the lifetime
+// of this one-shot CLI, so the lookups are cached by path. ResetModTimeCache
+// clears it for tests that mutate the filesystem between assertions.
+var modTimeCache sync.Map // map[string]modTimeResult
+
+type modTimeResult struct {
+	modTime time.Time
+	ok      bool
+}
+
+func cachedModTime(path string) (time.Time, bool) {
+	if v, ok := modTimeCache.Load(path); ok {
+		r := v.(modTimeResult)
+		return r.modTime, r.ok
+	}
+	r := modTimeResult{}
+	if fi, err := os.Stat(path); err == nil {
+		r.modTime, r.ok = fi.ModTime(), true
+	}
+	modTimeCache.Store(path, r)
+	return r.modTime, r.ok
+}
+
+// ResetModTimeCache clears the memoized mod-time lookups. Intended for tests.
+func ResetModTimeCache() {
+	modTimeCache = sync.Map{}
+}
+
 func GetAge(resourcefilePath string, resourceCreationTimeStamp v1.Time) string {
-	var ResourceFile fs.FileInfo
-	ResourceFile, err := os.Stat(resourcefilePath + "/timestamp")
-	if err != nil {
-		ResourceFile, err = os.Stat(resourcefilePath + "/namespaces")
-		if err != nil {
-			ResourceFile, err = os.Stat(resourcefilePath + "/cluster-scoped-resources")
-			if err != nil {
+	t2, ok := cachedModTime(resourcefilePath + "/timestamp")
+	if !ok {
+		t2, ok = cachedModTime(resourcefilePath + "/namespaces")
+		if !ok {
+			t2, ok = cachedModTime(resourcefilePath + "/cluster-scoped-resources")
+			if !ok {
 				return "Unknown"
 			}
 		}
 	}
-	t2 := ResourceFile.ModTime()
 	diffTime := t2.Sub(resourceCreationTimeStamp.Time).String()
 	d, _ := time.ParseDuration(diffTime)
 	return FormatDiffTime(d)
@@ -425,11 +454,10 @@ func TranslateTimestamp(rootPath string, timestamp metav1.Time) string {
 	if timestamp.IsZero() {
 		return "<unknown>"
 	}
-	ResourceFile, err := os.Stat(rootPath + "/namespaces")
-	if err != nil {
+	t2, ok := cachedModTime(rootPath + "/namespaces")
+	if !ok {
 		return "<unknown>"
 	}
-	t2 := ResourceFile.ModTime()
 	return ShortHumanDuration(t2.Sub(timestamp.Time))
 }
 func ShortHumanDuration(d time.Duration) string {
