@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gmeghnag/omc/configpath"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 )
@@ -59,6 +60,9 @@ func TestSetConfig(t *testing.T) {
 				t.Fatalf("Failed to set temporary HOME environment variable: %v", err)
 			}
 			defer os.Setenv("HOME", originalHome) // Restore the original HOME value after the test
+
+			// Initialize the config path resolver for the test
+			vars.ConfigPathResolver = configpath.NewResolver("")
 
 			// Invoke the function under test
 			SetConfig()
