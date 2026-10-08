@@ -98,6 +98,10 @@ type state struct {
 	// crds maps this call's resolved aliases to their CRDs for rendering. Private
 	// to one Run, so the lock-free reads below are safe.
 	crds map[string]apiextensionsv1.CustomResourceDefinition
+	// jsonPathCache memoizes parsed custom-columns / printer-column templates
+	// for the lifetime of this Run. Private to one Run (handleObject runs
+	// sequentially within a Run), so no locking is needed.
+	jsonPathCache map[string]*jsonpath.JSONPath
 }
 
 func newState(opts *Options) *state {
@@ -106,6 +110,7 @@ func newState(opts *Options) *state {
 		unstructuredList: types.UnstructuredList{Kind: "List", ApiVersion: "v1", Items: []unstructured.Unstructured{}},
 		jsonPathList:     types.JsonPathList{Kind: "List", ApiVersion: "v1"},
 		crds:             make(map[string]apiextensionsv1.CustomResourceDefinition),
+		jsonPathCache:    make(map[string]*jsonpath.JSONPath),
 	}
 }
 
@@ -120,6 +125,7 @@ func (s *state) displayConfig() tablegenerator.DisplayConfig {
 		RootPath:       s.opts.RootPath,
 		TableGenerator: vars.TableGenerator,
 		AliasToCrd:     s.crds,
+		JSONPathCache:  s.jsonPathCache,
 	}
 }
 

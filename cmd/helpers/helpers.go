@@ -479,18 +479,29 @@ func ShortHumanDuration(d time.Duration) string {
 	return fmt.Sprintf("%dy", int(d.Hours()/24/365))
 }
 
-func GetFromJsonPath(data interface{}, jsonPathTemplate string) string {
-	buf := new(bytes.Buffer)
-	jPath := jsonpath.New("out")
-	jPath.AllowMissingKeys(false)
-	jPath.EnableJSONOutput(false)
-	err := jPath.Parse(jsonPathTemplate)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: error parsing jsonpath "+jsonPathTemplate+", "+err.Error())
-		os.Exit(1)
+// GetFromJsonPathCached evaluates jsonPathTemplate against data and returns the
+// rendered string. Parsed templates are memoized in cache (keyed by template)
+// so that rendering N rows compiles each distinct template once rather than once
+// per cell; pass a nil cache to opt out. A parse error is returned to the caller
+// instead of terminating the process. Execution errors (e.g. a missing key) are
+// intentionally non-fatal and yield the partial output, matching long-standing
+// behaviour for the Age/printer-column cells that rely on it.
+func GetFromJsonPathCached(data interface{}, jsonPathTemplate string, cache map[string]*jsonpath.JSONPath) (string, error) {
+	jPath, ok := cache[jsonPathTemplate]
+	if !ok {
+		jPath = jsonpath.New("out")
+		jPath.AllowMissingKeys(false)
+		jPath.EnableJSONOutput(false)
+		if err := jPath.Parse(jsonPathTemplate); err != nil {
+			return "", fmt.Errorf("error parsing jsonpath %s, %w", jsonPathTemplate, err)
+		}
+		if cache != nil {
+			cache[jsonPathTemplate] = jPath
+		}
 	}
-	jPath.Execute(buf, data)
-	return buf.String()
+	buf := new(bytes.Buffer)
+	_ = jPath.Execute(buf, data)
+	return buf.String(), nil
 }
 
 func GetNamespaces(path string) []string {

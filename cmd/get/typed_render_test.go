@@ -110,3 +110,40 @@ func TestRun_TypedPodRenderingParity(t *testing.T) {
 		t.Errorf("pod-pending: want READY=0/1 STATUS=Pending, got READY=%s STATUS=%s (%q)", f[1], f[2], pendingLine)
 	}
 }
+
+// TestRun_CustomColumnsRendering exercises the custom-columns path, which now
+// evaluates jsonpath through the per-run compiled-template cache. It asserts the
+// selected fields are rendered correctly for every row.
+func TestRun_CustomColumnsRendering(t *testing.T) {
+	root := writePodsRoot(t)
+
+	var out, errOut bytes.Buffer
+	opts := Options{
+		RootPath:  root,
+		Namespace: "ns",
+		Output:    "custom-columns=NAME:.metadata.name,PHASE:.status.phase",
+	}
+	if err := Run(&out, &errOut, opts, []string{"pods"}); err != nil {
+		t.Fatalf("Run: %v (stderr: %s)", err, errOut.String())
+	}
+	got := out.String()
+
+	var runningLine, pendingLine string
+	for _, line := range strings.Split(got, "\n") {
+		if strings.HasPrefix(line, "pod-running") {
+			runningLine = line
+		}
+		if strings.HasPrefix(line, "pod-pending") {
+			pendingLine = line
+		}
+	}
+	if runningLine == "" || pendingLine == "" {
+		t.Fatalf("expected both custom-column rows, got:\n%s", got)
+	}
+	if f := strings.Fields(runningLine); len(f) != 2 || f[1] != "Running" {
+		t.Errorf("pod-running custom-columns: want PHASE=Running, got %q", runningLine)
+	}
+	if f := strings.Fields(pendingLine); len(f) != 2 || f[1] != "Pending" {
+		t.Errorf("pod-pending custom-columns: want PHASE=Pending, got %q", pendingLine)
+	}
+}

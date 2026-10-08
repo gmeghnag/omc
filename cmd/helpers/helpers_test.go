@@ -7,7 +7,50 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/jsonpath"
 )
+
+// TestGetFromJsonPathCached covers the memoized jsonpath evaluator: correct
+// output, the template compiled once and reused, and a parse error returned to
+// the caller instead of terminating the process (the old GetFromJsonPath called
+// os.Exit on a bad template).
+func TestGetFromJsonPathCached(t *testing.T) {
+	data := map[string]any{"metadata": map[string]any{"name": "foo", "namespace": "bar"}}
+	cache := map[string]*jsonpath.JSONPath{}
+
+	got, err := GetFromJsonPathCached(data, "{.metadata.name}", cache)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "foo" {
+		t.Fatalf("want %q, got %q", "foo", got)
+	}
+	jp := cache["{.metadata.name}"]
+	if jp == nil {
+		t.Fatalf("expected template to be cached")
+	}
+
+	// Second call for the same template must reuse the cached parsed program.
+	if _, err := GetFromJsonPathCached(data, "{.metadata.name}", cache); err != nil {
+		t.Fatalf("unexpected error on cached call: %v", err)
+	}
+	if cache["{.metadata.name}"] != jp {
+		t.Fatalf("expected the cached jsonpath to be reused, not recompiled")
+	}
+
+	// A distinct template adds a second cache entry.
+	if _, err := GetFromJsonPathCached(data, "{.metadata.namespace}", cache); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cache) != 2 {
+		t.Fatalf("expected 2 cached templates, got %d", len(cache))
+	}
+
+	// A malformed template returns an error (and must not os.Exit).
+	if _, err := GetFromJsonPathCached(data, "{.metadata.name", cache); err == nil {
+		t.Fatalf("expected a parse error for an unterminated template")
+	}
+}
 
 // TestCachedModTime_MemoizesStat proves the Age/Last-Seen reference time is
 // read from disk once and then served from cache, instead of being re-stat'd

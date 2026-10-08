@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/jsonpath"
 	"k8s.io/kubernetes/pkg/printers"
 
 	helpers "github.com/gmeghnag/omc/cmd/helpers"
@@ -29,6 +30,11 @@ type DisplayConfig struct {
 	RootPath       string
 	TableGenerator *printers.HumanReadableGenerator
 	AliasToCrd     map[string]apiextensionsv1.CustomResourceDefinition
+	// JSONPathCache memoizes parsed jsonpath templates for the lifetime of a
+	// single get invocation, so custom-columns / printer-column rendering
+	// compiles each template once instead of once per cell. It is owned by one
+	// invocation and must not be shared across goroutines.
+	JSONPathCache map[string]*jsonpath.JSONPath
 }
 
 func CustomColumnsTable(unstruct *unstructured.Unstructured, cfg DisplayConfig) (*metav1.Table, error) {
@@ -58,7 +64,11 @@ func CustomColumnsTable(unstruct *unstructured.Unstructured, cfg DisplayConfig) 
 		if matches == nil {
 			return nil, fmt.Errorf("invalid custom-columns selector %q for column %q (expected form: %s:.metadata.name)", selector, column.Name, column.Name)
 		}
-		cells = append(cells, helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{.", matches[1], "}")))
+		cell, err := helpers.GetFromJsonPathCached(unstruct.Object, "{."+matches[1]+"}", cfg.JSONPathCache)
+		if err != nil {
+			return nil, err
+		}
+		cells = append(cells, cell)
 	}
 	table.Rows = []metav1.TableRow{{Cells: cells}}
 	return table, nil
@@ -203,13 +213,19 @@ func GenerateCustomResourceTable(unstruct unstructured.Unstructured, cfg Display
 							continue
 						}
 						if column.Name == "Since" {
-							v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
+							v, err := helpers.GetFromJsonPathCached(unstruct.Object, "{"+column.JSONPath+"}", cfg.JSONPathCache)
+							if err != nil {
+								return nil, err
+							}
 							parsedTime, _ := time.Parse(time.RFC3339, v)
 							metav1Time := metav1.Time{Time: parsedTime}
 							v = helpers.TranslateTimestamp(cfg.RootPath, metav1Time)
 							cells = append(cells, v)
 						} else {
-							v := helpers.GetFromJsonPath(unstruct.Object, fmt.Sprintf("%s%s%s", "{", column.JSONPath, "}"))
+							v, err := helpers.GetFromJsonPathCached(unstruct.Object, "{"+column.JSONPath+"}", cfg.JSONPathCache)
+							if err != nil {
+								return nil, err
+							}
 							cells = append(cells, v)
 						}
 					}
