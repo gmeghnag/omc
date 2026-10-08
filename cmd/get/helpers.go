@@ -26,6 +26,14 @@ var crdCache = struct {
 func validateArgs(opts *Options, args []string) error {
 	// Local map: validateArgs only resolves aliases to populate GetArgs.
 	aliasCache := make(map[string]apiextensionsv1.CustomResourceDefinition)
+	// ensureKey creates the GetArgs entry for key once and records the request
+	// order, so the output is deterministic regardless of map iteration order.
+	ensureKey := func(key string) {
+		if _, ok := opts.GetArgs[key]; !ok {
+			opts.GetArgs[key] = make(map[string]struct{})
+			opts.GetArgsOrder = append(opts.GetArgsOrder, key)
+		}
+	}
 	if len(args) == 1 && args[0] == "all" {
 		args = []string{"pods.core,services.core,daemonsets.apps,deployments.apps,replicasets.apps,statefulsets.apps,replicationcontrollers.core,deploymentconfigs.apps.openshift.io,builds.build.openshift.io,buildconfigs.build.openshift.io,jobs.batch,cronjobs.batch,routes.route.openshift.io,ingresses.networking.k8s.io,"}
 	}
@@ -42,9 +50,9 @@ func validateArgs(opts *Options, args []string) error {
 				resourceNamePlural, resourceGroup, _, _, err := kindGroupNamespaced(resourceType, opts.RootPath, aliasCache)
 				if err == nil {
 					if !strings.Contains(resourceType, ".") {
-						opts.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
+						ensureKey(resourceNamePlural + "." + resourceGroup)
 					} else {
-						opts.GetArgs[resourceType] = make(map[string]struct{})
+						ensureKey(resourceType)
 					}
 				} else {
 					return fmt.Errorf("resource type \"%s\" not known.", resourceType)
@@ -56,9 +64,9 @@ func validateArgs(opts *Options, args []string) error {
 			resourceNamePlural, resourceGroup, _, _, err := kindGroupNamespaced(resourceType, opts.RootPath, aliasCache)
 			if err == nil {
 				if !strings.Contains(resourceType, ".") {
-					opts.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
+					ensureKey(resourceNamePlural + "." + resourceGroup)
 				} else {
-					opts.GetArgs[resourceType] = make(map[string]struct{})
+					ensureKey(resourceType)
 				}
 			} else {
 				return fmt.Errorf("resource type \"%s\" not known.", resourceType)
@@ -74,13 +82,8 @@ func validateArgs(opts *Options, args []string) error {
 				resourceType, resourceName := resource[0], resource[1]
 				resourceNamePlural, resourceGroup, _, _, err := kindGroupNamespaced(resourceType, opts.RootPath, aliasCache)
 				if err == nil {
-					_, ok := opts.GetArgs[resourceNamePlural+"."+resourceGroup]
-					if !ok {
-						opts.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
-						opts.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
-					} else {
-						opts.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
-					}
+					ensureKey(resourceNamePlural + "." + resourceGroup)
+					opts.GetArgs[resourceNamePlural+"."+resourceGroup][resourceName] = struct{}{}
 				} else {
 					return fmt.Errorf("resource type \"%s\" not known.", resourceType)
 				}
@@ -95,7 +98,7 @@ func validateArgs(opts *Options, args []string) error {
 		resourceType := args[0]
 		resourceNamePlural, resourceGroup, _, _, err := kindGroupNamespaced(resourceType, opts.RootPath, aliasCache)
 		if err == nil {
-			opts.GetArgs[resourceNamePlural+"."+resourceGroup] = make(map[string]struct{})
+			ensureKey(resourceNamePlural + "." + resourceGroup)
 		} else {
 			return fmt.Errorf("resource type \"%s\" not known.", resourceType)
 		}

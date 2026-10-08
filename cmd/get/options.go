@@ -33,6 +33,10 @@ type Options struct {
 	SingleResource    bool
 	ShowManagedFields bool
 	GetArgs           map[string]map[string]struct{}
+	// GetArgsOrder lists the resolved "<plural>.<group>" keys in the order the
+	// user requested them, so multi-resource output is deterministic (map
+	// iteration order is not). Populated by validateArgs alongside GetArgs.
+	GetArgsOrder []string
 }
 
 func newOptions() Options {

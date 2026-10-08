@@ -159,7 +159,7 @@ func Run(stdout, stderr io.Writer, opts Options, args []string) error {
 		return err
 	}
 	s := newState(&opts)
-	for resource := range opts.GetArgs {
+	for _, resource := range opts.GetArgsOrder {
 		resourceNamePlural, resourceGroup, _, namespaced, err := kindGroupNamespaced(resource, s.opts.RootPath, s.crds)
 		if err != nil {
 			klog.V(1).ErrorS(err, "ERROR")
