@@ -409,3 +409,161 @@ items:
 		}
 	}
 }
+
+// writeClusterScopedList writes an aggregated cluster-scoped list fixture.
+func writeClusterScopedList(t *testing.T, root, plural, group, body string) {
+	t.Helper()
+	dir := filepath.Join(root, "cluster-scoped-resources", group)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, plural+".yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestGetMultiMustGather_UnionAndUIDDedup verifies that get across two
+// must-gathers unions distinct resources and, on a uid collision, keeps the copy
+// from the most recent must-gather (listed first in RootPaths).
+func TestGetMultiMustGather_UnionAndUIDDedup(t *testing.T) {
+	newRoot := t.TempDir()
+	oldRoot := t.TempDir()
+
+	// Same uid U1 in both roots with different names; U2 only in new; U3 only in old.
+	writeClusterScopedList(t, newRoot, "clusterversions", "config.openshift.io", `apiVersion: v1
+kind: List
+items:
+- apiVersion: config.openshift.io/v1
+  kind: ClusterVersion
+  metadata:
+    name: version-new
+    uid: U1
+- apiVersion: config.openshift.io/v1
+  kind: ClusterVersion
+  metadata:
+    name: only-new
+    uid: U2
+`)
+	writeClusterScopedList(t, oldRoot, "clusterversions", "config.openshift.io", `apiVersion: v1
+kind: List
+items:
+- apiVersion: config.openshift.io/v1
+  kind: ClusterVersion
+  metadata:
+    name: version-old
+    uid: U1
+- apiVersion: config.openshift.io/v1
+  kind: ClusterVersion
+  metadata:
+    name: only-old
+    uid: U3
+`)
+
+	opts := newOptions()
+	opts.RootPath = newRoot
+	opts.RootPaths = []string{newRoot, oldRoot} // most-recent-first
+	opts.GetArgs = map[string]map[string]struct{}{"clusterversions.config.openshift.io": {}}
+
+	s := newState(&opts)
+	if err := getClusterScopedResources(s, "clusterversions", "config.openshift.io", nil); err != nil {
+		t.Fatalf("getClusterScopedResources: %v", err)
+	}
+	var out, errOut bytes.Buffer
+	if err := s.handleOutput(&out, &errOut); err != nil {
+		t.Fatalf("handleOutput: %v", err)
+	}
+	got := out.String()
+
+	for _, want := range []string{"version-new", "only-new", "only-old"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %q in merged output, got:\n%s", want, got)
+		}
+	}
+	// The older copy of the colliding uid must be hidden by the most recent one.
+	if strings.Contains(got, "version-old") {
+		t.Errorf("expected older copy version-old to be deduped out, got:\n%s", got)
+	}
+}
+
+// writePodsList writes an aggregated namespaced pods list fixture.
+func writePodsList(t *testing.T, root, namespace, body string) {
+	t.Helper()
+	dir := filepath.Join(root, "namespaces", namespace, "core")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "pods.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestGetNamespacedMultiMustGather_AllNamespaces verifies -A across two
+// must-gathers: namespaces present in only one capture are included (union) and
+// a uid collision keeps the most recent capture's copy.
+func TestGetNamespacedMultiMustGather_AllNamespaces(t *testing.T) {
+	newRoot := t.TempDir()
+	oldRoot := t.TempDir()
+
+	writePodsList(t, newRoot, "ns1", `apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pod-a
+    namespace: ns1
+    uid: U1
+`)
+	writePodsList(t, oldRoot, "ns1", `apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pod-a-old
+    namespace: ns1
+    uid: U1
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: only-old
+    namespace: ns1
+    uid: U3
+`)
+	// ns2 exists only in the older capture.
+	writePodsList(t, oldRoot, "ns2", `apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: pod-in-ns2
+    namespace: ns2
+    uid: U4
+`)
+
+	opts := newOptions()
+	opts.RootPath = newRoot
+	opts.RootPaths = []string{newRoot, oldRoot}
+	opts.AllNamespaces = true
+	opts.GetArgs = map[string]map[string]struct{}{"pods.core": {}}
+
+	s := newState(&opts)
+	if err := getNamespacedResources(s, "pods", "core", nil); err != nil {
+		t.Fatalf("getNamespacedResources: %v", err)
+	}
+	var out, errOut bytes.Buffer
+	if err := s.handleOutput(&out, &errOut); err != nil {
+		t.Fatalf("handleOutput: %v", err)
+	}
+	got := out.String()
+
+	for _, want := range []string{"pod-a", "only-old", "pod-in-ns2"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %q in merged -A output, got:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "pod-a-old") {
+		t.Errorf("expected older copy pod-a-old to be deduped out, got:\n%s", got)
+	}
+}

@@ -18,7 +18,12 @@ package get
 // Options holds the configuration for a single get invocation. Fields are
 // populated from the cobra-bound flags before Run is invoked.
 type Options struct {
-	RootPath          string
+	RootPath string
+	// RootPaths holds every must-gather root of the active context, ordered
+	// most-recent-first. get reads from all of them and deduplicates by
+	// metadata.uid (most recent wins). When empty it defaults to {RootPath},
+	// so a single-must-gather context behaves exactly as before.
+	RootPaths         []string
 	Namespace         string
 	NamespaceExplicit bool
 	Output            string
@@ -43,4 +48,13 @@ func newOptions() Options {
 	return Options{
 		GetArgs: make(map[string]map[string]struct{}),
 	}
+}
+
+// roots returns the must-gather roots to read from, most-recent-first. It
+// always returns at least one entry so callers can iterate unconditionally.
+func (o *Options) roots() []string {
+	if len(o.RootPaths) > 0 {
+		return o.RootPaths
+	}
+	return []string{o.RootPath}
 }

@@ -48,6 +48,7 @@ import (
 
 	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/pkg/deserializer"
+	"github.com/gmeghnag/omc/pkg/mustgather"
 	"github.com/gmeghnag/omc/pkg/tablegenerator"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
@@ -140,6 +141,7 @@ var GetCmd = &cobra.Command{
 		}
 		opts := Options{
 			RootPath:          vars.MustGatherRootPath,
+			RootPaths:         vars.MustGatherRootPaths,
 			Namespace:         vars.Namespace,
 			NamespaceExplicit: cmd.Root().PersistentFlags().Changed("namespace"),
 			Output:            vars.OutputStringVar,
@@ -327,11 +329,12 @@ func readPodsFromPodDir(rootPath, namespace string) ([]unstructured.Unstructured
 const namespaceReadConcurrency = 8
 
 // readNamespacedItems reads every object of the given resource in one namespace
-// and returns them unfiltered and unsorted. It only reads files and parses
-// YAML - it touches no shared state and calls no handleObject - so it is safe to
-// run concurrently for different namespaces.
-func (s *state) readNamespacedItems(namespace, resourceNamePlural, resourceGroup string) ([]unstructured.Unstructured, error) {
-	resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
+// of one must-gather root and returns them unfiltered and unsorted. It only
+// reads files and parses YAML - it touches no shared state and calls no
+// handleObject - so it is safe to run concurrently for different namespaces and
+// roots.
+func (s *state) readNamespacedItems(rootPath, namespace, resourceNamePlural, resourceGroup string) ([]unstructured.Unstructured, error) {
+	resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", rootPath, namespace, resourceGroup, resourceNamePlural)
 
 	if resourceNamePlural == "pods" {
 		// Pods are stored either aggregated in core/pods.yaml or one file per
@@ -350,7 +353,7 @@ func (s *state) readNamespacedItems(namespace, resourceNamePlural, resourceGroup
 		if len(list.Items) > 0 {
 			return list.Items, nil
 		}
-		return readPodsFromPodDir(s.opts.RootPath, namespace)
+		return readPodsFromPodDir(rootPath, namespace)
 	}
 
 	list := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
@@ -362,7 +365,7 @@ func (s *state) readNamespacedItems(namespace, resourceNamePlural, resourceGroup
 	}
 
 	// Custom resources stored one file per resource under <group>/<plural>/.
-	resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
+	resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", rootPath, namespace, resourceGroup, resourceNamePlural)
 	if _, statErr := os.Stat(resourceDir); statErr != nil {
 		return nil, nil
 	}
@@ -393,27 +396,16 @@ func (s *state) readNamespacedItems(namespace, resourceNamePlural, resourceGroup
 	return items, nil
 }
 
-func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
-	var namespaces []string
-	if s.opts.AllNamespaces {
-		s.opts.Namespace = ""
-		s.opts.ShowNamespace = true
-		_namespaces, _ := ReadDirForResources(s.opts.RootPath + "/namespaces/")
-		for _, f := range _namespaces {
-			namespaces = append(namespaces, f.Name())
-		}
-	} else {
-		namespaces = append(namespaces, s.opts.Namespace)
-	}
-
-	// Read every namespace (concurrently for -A) into a slice indexed by
-	// namespace position, so the combined order is deterministic regardless of
-	// goroutine scheduling. Reads are pure; emission stays single-threaded.
+// readNamespacesForRoot reads the given resource from every requested namespace
+// of one must-gather root, concurrently for -A. Reads are pure; the result is
+// ordered by namespace position so it is deterministic regardless of goroutine
+// scheduling.
+func (s *state) readNamespacesForRoot(rootPath string, namespaces []string, resourceNamePlural, resourceGroup string) ([]unstructured.Unstructured, error) {
 	perNamespace := make([][]unstructured.Unstructured, len(namespaces))
 	if len(namespaces) == 1 {
-		items, err := s.readNamespacedItems(namespaces[0], resourceNamePlural, resourceGroup)
+		items, err := s.readNamespacedItems(rootPath, namespaces[0], resourceNamePlural, resourceGroup)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		perNamespace[0] = items
 	} else {
@@ -426,175 +418,166 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 			go func(i int, namespace string) {
 				defer wg.Done()
 				defer func() { <-sem }()
-				perNamespace[i], errsByNs[i] = s.readNamespacedItems(namespace, resourceNamePlural, resourceGroup)
+				perNamespace[i], errsByNs[i] = s.readNamespacedItems(rootPath, namespace, resourceNamePlural, resourceGroup)
 			}(i, namespace)
 		}
 		wg.Wait()
 		for _, err := range errsByNs {
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
+	var items []unstructured.Unstructured
+	for _, nsItems := range perNamespace {
+		items = append(items, nsItems...)
+	}
+	return items, nil
+}
 
+func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
+	roots := s.opts.roots()
+	if s.opts.AllNamespaces {
+		s.opts.Namespace = ""
+		s.opts.ShowNamespace = true
+	}
+
+	// Fan out across every must-gather root in recency order, then union. For
+	// -A the namespace set is taken per root, since different captures may hold
+	// different namespaces. Concatenating in recency order lets the uid-dedup
+	// below keep the copy from the most recent must-gather.
 	var allItems []unstructured.Unstructured
-	for _, items := range perNamespace {
+	for _, rootPath := range roots {
+		var namespaces []string
+		if s.opts.AllNamespaces {
+			_namespaces, _ := ReadDirForResources(rootPath + "/namespaces/")
+			for _, f := range _namespaces {
+				namespaces = append(namespaces, f.Name())
+			}
+		} else {
+			namespaces = []string{s.opts.Namespace}
+		}
+		items, err := s.readNamespacesForRoot(rootPath, namespaces, resourceNamePlural, resourceGroup)
+		if err != nil {
+			return err
+		}
 		allItems = append(allItems, items...)
 	}
-	// Single emission: --sort-by now orders across all namespaces (previously
-	// each namespace was sorted independently), matching kubectl/oc.
+	if len(roots) > 1 {
+		allItems = mustgather.DedupByUID(allItems)
+	}
+	// Single emission: --sort-by orders across all namespaces (and all
+	// must-gathers), matching kubectl/oc.
 	return s.emitItems(allItems, resources)
 }
 
-func getNamespacesResources(s *state, resources map[string]struct{}) error {
-	var sortObjects []unstructured.Unstructured
+// readNamespacesItems reads the namespace objects of one must-gather root. When
+// a name set is given only those namespace files are read; otherwise every
+// namespace under namespaces/ is read. It is pure, so it can be called per root
+// before merging.
+func readNamespacesItems(rootPath string, resources map[string]struct{}) ([]unstructured.Unstructured, error) {
+	var names []string
 	if len(resources) > 0 {
 		for namespace := range resources {
-			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", s.opts.RootPath, namespace, namespace)
-			_file, err := os.ReadFile(resourceYamlPath)
-			if err == nil {
-				item := unstructured.Unstructured{}
-				if err := yaml.Unmarshal(_file, &item); err != nil {
-					return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
-				}
-				if s.opts.SortBy != "" {
-					sortObjects = append(sortObjects, item)
-				} else {
-					if err := s.handleObject(item); err != nil {
-						return err
-					}
-				}
-			}
+			names = append(names, namespace)
 		}
 	} else {
-		_namespaces, _ := os.ReadDir(s.opts.RootPath + "/namespaces/")
+		_namespaces, _ := os.ReadDir(rootPath + "/namespaces/")
 		for _, namespace := range _namespaces {
-			resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", s.opts.RootPath, namespace.Name(), namespace.Name())
-			_file, err := os.ReadFile(resourceYamlPath)
-			if err == nil {
-				item := unstructured.Unstructured{}
-				if err := yaml.Unmarshal(_file, &item); err != nil {
-					return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
-				}
-				if s.opts.SortBy != "" {
-					sortObjects = append(sortObjects, item)
-				} else {
-					if err := s.handleObject(item); err != nil {
-						return err
-					}
-				}
-			}
+			names = append(names, namespace.Name())
 		}
 	}
-	if s.opts.SortBy != "" {
-		sortObjects = sortResources(sortObjects, s.opts.SortBy)
-		for _, item := range sortObjects {
-			if err := s.handleObject(item); err != nil {
-				return err
-			}
+	var items []unstructured.Unstructured
+	for _, namespace := range names {
+		resourceYamlPath := fmt.Sprintf("%s/namespaces/%s/%s.yaml", rootPath, namespace, namespace)
+		_file, err := os.ReadFile(resourceYamlPath)
+		if err != nil {
+			continue
 		}
+		item := unstructured.Unstructured{}
+		if err := yaml.Unmarshal(_file, &item); err != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
+		}
+		items = append(items, item)
 	}
-	return nil
+	return items, nil
+}
+
+func getNamespacesResources(s *state, resources map[string]struct{}) error {
+	roots := s.opts.roots()
+	var allItems []unstructured.Unstructured
+	for _, rootPath := range roots {
+		items, err := readNamespacesItems(rootPath, resources)
+		if err != nil {
+			return err
+		}
+		allItems = append(allItems, items...)
+	}
+	if len(roots) > 1 {
+		allItems = mustgather.DedupByUID(allItems)
+	}
+	return s.emitItems(allItems, resources)
+}
+
+// readClusterScopedItems reads every object of a cluster-scoped resource from
+// one must-gather root, returning them unfiltered and unsorted. Objects live
+// either in an aggregated <plural>.yaml list or one file per object under
+// <group>/<plural>/ (where a file may itself hold a List). It is pure, so it is
+// safe to call per root before merging.
+func readClusterScopedItems(rootPath, resourceNamePlural, resourceGroup string) ([]unstructured.Unstructured, error) {
+	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", rootPath, resourceGroup, resourceNamePlural)
+	if _file, err := os.ReadFile(resourcePath); err == nil {
+		list := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+		if uerr := yaml.Unmarshal(_file, &list); uerr != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", resourcePath, uerr)
+		}
+		return list.Items, nil
+	}
+
+	resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", rootPath, resourceGroup, resourceNamePlural)
+	resourcesFiles, rErr := ReadDirForResources(resourceDir)
+	if rErr != nil {
+		klog.V(3).ErrorS(rErr, "Failed to read resources:")
+		return nil, nil
+	}
+	var items []unstructured.Unstructured
+	for _, f := range resourcesFiles {
+		resourceYamlPath := resourceDir + "/" + f.Name()
+		_file, err := os.ReadFile(resourceYamlPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
+		}
+		item := unstructured.Unstructured{}
+		if err := yaml.Unmarshal(_file, &item); err != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
+		}
+		if item.IsList() {
+			var listItems types.UnstructuredList
+			if err := yaml.Unmarshal(_file, &listItems); err != nil {
+				return nil, fmt.Errorf("error unmarshaling list in %s: %w", resourceYamlPath, err)
+			}
+			items = append(items, listItems.Items...)
+			continue
+		}
+		items = append(items, item)
+	}
+	return items, nil
 }
 
 func getClusterScopedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
-	UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-	resourcePath := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s.yaml", s.opts.RootPath, resourceGroup, resourceNamePlural)
-	_file, err := os.ReadFile(resourcePath)
-	if err != nil {
-		resourceDir := fmt.Sprintf("%s/cluster-scoped-resources/%s/%s", s.opts.RootPath, resourceGroup, resourceNamePlural)
-		resourcesFiles, rErr := ReadDirForResources(resourceDir)
-		if rErr != nil {
-			klog.V(3).ErrorS(err, "Failed to read resources:")
+	roots := s.opts.roots()
+	var allItems []unstructured.Unstructured
+	for _, rootPath := range roots {
+		items, err := readClusterScopedItems(rootPath, resourceNamePlural, resourceGroup)
+		if err != nil {
+			return err
 		}
-		for _, f := range resourcesFiles {
-			resourceYamlPath := resourceDir + "/" + f.Name()
-			_file, err := os.ReadFile(resourceYamlPath)
-			if err != nil {
-				return fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
-			}
-			item := unstructured.Unstructured{}
-			if err := yaml.Unmarshal(_file, &item); err != nil {
-				return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
-			}
-			if item.IsList() {
-				var listItems types.UnstructuredList
-				if err := yaml.Unmarshal(_file, &listItems); err != nil {
-					return fmt.Errorf("error unmarshaling list in %s: %w", resourceYamlPath, err)
-				}
-				for _, listItem := range listItems.Items {
-					if s.opts.SortBy != "" {
-						UnstructuredItems.Items = append(UnstructuredItems.Items, listItem)
-					} else {
-						if len(resources) > 0 {
-							if _, ok := resources[listItem.GetName()]; ok {
-								if err := s.handleObject(listItem); err != nil {
-									return err
-								}
-							}
-						} else {
-							if err := s.handleObject(listItem); err != nil {
-								return err
-							}
-						}
-					}
-				}
-				continue
-			}
-			if s.opts.SortBy != "" {
-				UnstructuredItems.Items = append(UnstructuredItems.Items, item)
-			} else {
-				if len(resources) > 0 {
-					if _, ok := resources[item.GetName()]; ok {
-						if err := s.handleObject(item); err != nil {
-							return err
-						}
-					}
-				} else {
-					if err := s.handleObject(item); err != nil {
-						return err
-					}
-				}
-			}
-		}
-		if s.opts.SortBy != "" {
-			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, s.opts.SortBy)
-			for _, item := range UnstructuredItems.Items {
-				if len(resources) > 0 {
-					if _, ok := resources[item.GetName()]; ok {
-						if err := s.handleObject(item); err != nil {
-							return err
-						}
-					}
-				} else {
-					if err := s.handleObject(item); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	} else {
-		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
-			return fmt.Errorf("error unmarshaling %s: %w", resourcePath, err)
-		}
-		if s.opts.SortBy != "" {
-			UnstructuredItems.Items = sortResources(UnstructuredItems.Items, s.opts.SortBy)
-		}
-		for _, item := range UnstructuredItems.Items {
-			if len(resources) > 0 {
-				if _, ok := resources[item.GetName()]; ok {
-					if err := s.handleObject(item); err != nil {
-						return err
-					}
-				}
-			} else {
-				if err := s.handleObject(item); err != nil {
-					return err
-				}
-			}
-		}
+		allItems = append(allItems, items...)
 	}
-	return nil
+	if len(roots) > 1 {
+		allItems = mustgather.DedupByUID(allItems)
+	}
+	return s.emitItems(allItems, resources)
 }
 
 func (s *state) handleObject(obj unstructured.Unstructured) error {
@@ -786,23 +769,24 @@ func getPodNetworkConnectivityChecksResources(s *state, resources map[string]str
 	} else if !s.opts.NamespaceExplicit {
 		s.opts.Namespace = podNetworkConnectivityChecksDefaultNamespace
 	}
-	resourcesYamlPath := s.opts.RootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
-	_file, err := os.ReadFile(resourcesYamlPath)
-	if err == nil {
+	var allItems []unstructured.Unstructured
+	roots := s.opts.roots()
+	for _, rootPath := range roots {
+		resourcesYamlPath := rootPath + "/pod_network_connectivity_check/podnetworkconnectivitychecks.yaml"
+		_file, err := os.ReadFile(resourcesYamlPath)
+		if err != nil {
+			continue
+		}
 		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
 		if err := yaml.Unmarshal(_file, &UnstructuredItems); err != nil {
 			return fmt.Errorf("error unmarshaling %s: %w", resourcesYamlPath, err)
 		}
-		for _, item := range UnstructuredItems.Items {
-			_, ok := resources[item.GetName()]
-			if ok || len(resources) == 0 {
-				if err := s.handleObject(item); err != nil {
-					return err
-				}
-			}
-		}
+		allItems = append(allItems, UnstructuredItems.Items...)
 	}
-	return nil
+	if len(roots) > 1 {
+		allItems = mustgather.DedupByUID(allItems)
+	}
+	return s.emitItems(allItems, resources)
 }
 
 func sortResources(list []unstructured.Unstructured, sortBy string) []unstructured.Unstructured {
