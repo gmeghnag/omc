@@ -24,6 +24,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	goyaml "gopkg.in/yaml.v2"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -319,6 +320,79 @@ func readPodsFromPodDir(rootPath, namespace string) ([]unstructured.Unstructured
 	return items, nil
 }
 
+// namespaceReadConcurrency bounds how many namespaces are read in parallel for
+// -A. Reading is I/O-bound (one or more file reads + YAML parse per namespace),
+// so a small fixed pool overlaps latency - which dominates on networked
+// must-gathers - without exhausting file descriptors.
+const namespaceReadConcurrency = 8
+
+// readNamespacedItems reads every object of the given resource in one namespace
+// and returns them unfiltered and unsorted. It only reads files and parses
+// YAML - it touches no shared state and calls no handleObject - so it is safe to
+// run concurrently for different namespaces.
+func (s *state) readNamespacedItems(namespace, resourceNamePlural, resourceGroup string) ([]unstructured.Unstructured, error) {
+	resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
+
+	if resourceNamePlural == "pods" {
+		// Pods are stored either aggregated in core/pods.yaml or one file per
+		// pod under pods/<pod>/<pod>.yaml. Prefer the aggregated list; fall back
+		// to the per-pod layout whenever it is absent, empty, or yields no items
+		// (an empty aggregated file does not raise an unmarshal error, so a
+		// count check is what actually detects it).
+		list := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+		if _file, rerr := os.ReadFile(resourcesItemsPath); rerr == nil {
+			if uerr := yaml.Unmarshal(_file, &list); uerr != nil {
+				if fStat, _ := os.Stat(resourcesItemsPath); fStat == nil || fStat.Size() != 0 {
+					return nil, fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
+				}
+			}
+		}
+		if len(list.Items) > 0 {
+			return list.Items, nil
+		}
+		return readPodsFromPodDir(s.opts.RootPath, namespace)
+	}
+
+	list := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
+	if _file, err := os.ReadFile(resourcesItemsPath); err == nil { // aggregated <plural>.yaml list
+		if uerr := yaml.Unmarshal(_file, &list); uerr != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
+		}
+		return list.Items, nil
+	}
+
+	// Custom resources stored one file per resource under <group>/<plural>/.
+	resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
+	if _, statErr := os.Stat(resourceDir); statErr != nil {
+		return nil, nil
+	}
+	resourcesFiles, rErr := ReadDirForResources(resourceDir)
+	if rErr != nil {
+		klog.V(3).ErrorS(rErr, "Failed to read resources:")
+	}
+	var items []unstructured.Unstructured
+	for _, f := range resourcesFiles {
+		if f.IsDir() {
+			klog.V(3).Infof(
+				"skipping directory in path \"/namespaces/%s/%s/%s\": \"%s\"",
+				namespace, resourceGroup, resourceNamePlural, f.Name(),
+			)
+			continue
+		}
+		resourceYamlPath := resourceDir + "/" + f.Name()
+		_file, err := os.ReadFile(resourceYamlPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
+		}
+		item := unstructured.Unstructured{}
+		if err := yaml.Unmarshal(_file, &item); err != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup string, resources map[string]struct{}) error {
 	var namespaces []string
 	if s.opts.AllNamespaces {
@@ -331,82 +405,45 @@ func getNamespacedResources(s *state, resourceNamePlural string, resourceGroup s
 	} else {
 		namespaces = append(namespaces, s.opts.Namespace)
 	}
-	for _, namespace := range namespaces {
-		resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
 
-		if resourceNamePlural == "pods" {
-			// Pods are stored either aggregated in core/pods.yaml or one file
-			// per pod under pods/<pod>/<pod>.yaml. Prefer the aggregated list;
-			// fall back to the per-pod layout whenever it is absent, empty, or
-			// yields no items (an empty aggregated file does not raise an
-			// unmarshal error, so a count check is what actually detects it).
-			UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-			if _file, rerr := os.ReadFile(resourcesItemsPath); rerr == nil {
-				if uerr := yaml.Unmarshal(_file, &UnstructuredItems); uerr != nil {
-					// A non-empty but corrupt aggregated file is a real error.
-					if fStat, _ := os.Stat(resourcesItemsPath); fStat == nil || fStat.Size() != 0 {
-						return fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
-					}
-				}
-			}
-			items := UnstructuredItems.Items
-			if len(items) == 0 {
-				podItems, perr := readPodsFromPodDir(s.opts.RootPath, namespace)
-				if perr != nil {
-					return perr
-				}
-				items = podItems
-			}
-			if err := s.emitItems(items, resources); err != nil {
-				return err
-			}
-			continue
+	// Read every namespace (concurrently for -A) into a slice indexed by
+	// namespace position, so the combined order is deterministic regardless of
+	// goroutine scheduling. Reads are pure; emission stays single-threaded.
+	perNamespace := make([][]unstructured.Unstructured, len(namespaces))
+	if len(namespaces) == 1 {
+		items, err := s.readNamespacedItems(namespaces[0], resourceNamePlural, resourceGroup)
+		if err != nil {
+			return err
 		}
-
-		UnstructuredItems := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-		_file, err := os.ReadFile(resourcesItemsPath)
-		if err == nil { // aggregated <plural>.yaml list, e.g. /namespaces/<ns>/<group>/<plural>.yaml
-			if uerr := yaml.Unmarshal(_file, &UnstructuredItems); uerr != nil {
-				return fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
-			}
-			if err := s.emitItems(UnstructuredItems.Items, resources); err != nil {
-				return err
-			}
-		} else { // custom resources stored one file per resource under <group>/<plural>/
-			resourceDir := fmt.Sprintf("%s/namespaces/%s/%s/%s", s.opts.RootPath, namespace, resourceGroup, resourceNamePlural)
-			if _, statErr := os.Stat(resourceDir); statErr != nil {
-				continue
-			}
-			resourcesFiles, rErr := ReadDirForResources(resourceDir)
-			if rErr != nil {
-				klog.V(3).ErrorS(rErr, "Failed to read resources:")
-			}
-			var items []unstructured.Unstructured
-			for _, f := range resourcesFiles {
-				if f.IsDir() {
-					klog.V(3).Infof(
-						"skipping directory in path \"/namespaces/%s/%s/%s\": \"%s\"",
-						namespace, resourceGroup, resourceNamePlural, f.Name(),
-					)
-					continue
-				}
-				resourceYamlPath := resourceDir + "/" + f.Name()
-				_file, err := os.ReadFile(resourceYamlPath)
-				if err != nil {
-					return fmt.Errorf("error reading %s: %w", resourceYamlPath, err)
-				}
-				item := unstructured.Unstructured{}
-				if err := yaml.Unmarshal(_file, &item); err != nil {
-					return fmt.Errorf("error unmarshaling %s: %w", resourceYamlPath, err)
-				}
-				items = append(items, item)
-			}
-			if err := s.emitItems(items, resources); err != nil {
+		perNamespace[0] = items
+	} else {
+		var wg sync.WaitGroup
+		sem := make(chan struct{}, namespaceReadConcurrency)
+		errsByNs := make([]error, len(namespaces))
+		for i, namespace := range namespaces {
+			wg.Add(1)
+			sem <- struct{}{}
+			go func(i int, namespace string) {
+				defer wg.Done()
+				defer func() { <-sem }()
+				perNamespace[i], errsByNs[i] = s.readNamespacedItems(namespace, resourceNamePlural, resourceGroup)
+			}(i, namespace)
+		}
+		wg.Wait()
+		for _, err := range errsByNs {
+			if err != nil {
 				return err
 			}
 		}
 	}
-	return nil
+
+	var allItems []unstructured.Unstructured
+	for _, items := range perNamespace {
+		allItems = append(allItems, items...)
+	}
+	// Single emission: --sort-by now orders across all namespaces (previously
+	// each namespace was sorted independently), matching kubectl/oc.
+	return s.emitItems(allItems, resources)
 }
 
 func getNamespacesResources(s *state, resources map[string]struct{}) error {
