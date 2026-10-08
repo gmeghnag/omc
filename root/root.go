@@ -171,16 +171,26 @@ func initConfig() {
 		file, _ := os.ReadFile(viper.ConfigFileUsed())
 		_ = json.Unmarshal([]byte(file), &omcConfigJson)
 		contexts := omcConfigJson.Contexts
-		for _, context := range contexts {
-			if context.Current == "*" {
-				vars.MustGatherRootPath = context.Path
+		var activeContext *types.Context
+		for i := range contexts {
+			if contexts[i].Current == "*" {
+				activeContext = &contexts[i]
+				vars.MustGatherRootPath = contexts[i].Path
 				if vars.Namespace == "" {
-					vars.Namespace = context.Project
+					vars.Namespace = contexts[i].Project
 				}
 				break
 			}
 		}
-		if vars.MustGatherRootPath != "" {
+		// A context that groups several must-gathers stores them already
+		// resolved and ordered most-recent-first in Paths. Use them verbatim;
+		// Path (= the most recent root) keeps the single-root resolution below
+		// for everything that does not merge across must-gathers.
+		if activeContext != nil && len(activeContext.Paths) > 0 {
+			vars.MustGatherRootPaths = activeContext.Paths
+			vars.MustGatherRootPath = activeContext.Paths[0]
+		}
+		if vars.MustGatherRootPath != "" && len(vars.MustGatherRootPaths) == 0 {
 			exist, _ := helpers.Exists(vars.MustGatherRootPath)
 			if !exist {
 				files, err := os.ReadDir(vars.MustGatherRootPath)
@@ -203,6 +213,11 @@ func initConfig() {
 					}
 				}
 			}
+		}
+		// Single-must-gather contexts expose exactly one root so the merge-aware
+		// commands have a uniform list to iterate.
+		if len(vars.MustGatherRootPaths) == 0 && vars.MustGatherRootPath != "" {
+			vars.MustGatherRootPaths = []string{vars.MustGatherRootPath}
 		}
 	}
 

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/gmeghnag/omc/cmd/helpers"
+	"github.com/gmeghnag/omc/pkg/mustgather"
 	"github.com/gmeghnag/omc/types"
 	"github.com/gmeghnag/omc/vars"
 
@@ -52,16 +53,34 @@ func findExistingContextByRootDir(rootDir string, contexts []types.Context) (str
 	return "", false
 }
 
-func useContext(path string, omcConfigFile string, idFlag string) error {
+func useContext(path string, omcConfigFile string, idFlag string, rootPaths []string) error {
+	// When more than one must-gather was discovered under the used directory the
+	// context groups them: rootPaths are already resolved roots ordered
+	// most-recent-first, so the normalization below (which unwraps a single
+	// must-gather) must be skipped.
+	multi := len(rootPaths) > 1
 	if path != "" {
-		_path, err := findMustGatherIn(path)
-		if err != nil {
-			return err
+		if multi {
+			path = strings.TrimSuffix(rootPaths[0], "/")
+			vars.MustGatherRootPath = path
+			vars.MustGatherRootPaths = rootPaths
+		} else {
+			_path, err := findMustGatherIn(path)
+			if err != nil {
+				return err
+			}
+			l := strings.Split(_path, "/")
+			path = strings.Join(l[0:(len(l)-1)], "/")
+			path = strings.TrimSuffix(path, "/")
+			vars.MustGatherRootPath = path
+			vars.MustGatherRootPaths = []string{path}
 		}
-		l := strings.Split(_path, "/")
-		path = strings.Join(l[0:(len(l)-1)], "/")
-		path = strings.TrimSuffix(path, "/")
-		vars.MustGatherRootPath = path
+	}
+	// persistPaths is only stored for a grouped context; a single must-gather
+	// context keeps its original JSON shape (no "paths" key).
+	var persistPaths []string
+	if multi {
+		persistPaths = rootPaths
 	}
 
 	// read json omcConfigFile
@@ -80,17 +99,18 @@ func useContext(path string, omcConfigFile string, idFlag string) error {
 	}
 	for _, c := range contexts {
 		if c.Id == idFlag || c.Path == path {
-			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project})
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project, Paths: c.Paths})
 			configId = c.Id
 			found = true
 			vars.Namespace = c.Project
 		} else {
-			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project})
+			// Preserve any other context's grouped roots untouched.
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "", Project: c.Project, Paths: c.Paths})
 		}
 	}
 	if !found {
 		if idFlag != "" {
-			NewContexts = append(NewContexts, types.Context{Id: idFlag, Path: path, Current: "*", Project: defaultProject})
+			NewContexts = append(NewContexts, types.Context{Id: idFlag, Path: path, Current: "*", Project: defaultProject, Paths: persistPaths})
 		} else {
 			ctxId = helpers.RandString(8)
 			var namespaces []string
@@ -99,11 +119,11 @@ func useContext(path string, omcConfigFile string, idFlag string) error {
 				namespaces = append(namespaces, f.Name())
 			}
 			if len(namespaces) == 1 {
-				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: namespaces[0]})
+				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: namespaces[0], Paths: persistPaths})
 				vars.Namespace = namespaces[0]
 				singleNamespaceInMustGather = true
 			} else {
-				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: defaultProject})
+				NewContexts = append(NewContexts, types.Context{Id: ctxId, Path: path, Current: "*", Project: defaultProject, Paths: persistPaths})
 				vars.Namespace = defaultProject
 			}
 		}
@@ -168,7 +188,18 @@ func findMustGatherIn(path string) (string, error) {
 }
 
 func MustGatherInfo() {
-	fmt.Printf("Must-Gather    : %s\n", vars.MustGatherRootPath)
+	if len(vars.MustGatherRootPaths) > 1 {
+		fmt.Printf("Must-Gathers   : %d (merged, most-recent-first)\n", len(vars.MustGatherRootPaths))
+		for i, p := range vars.MustGatherRootPaths {
+			marker := "  "
+			if i == 0 {
+				marker = "* " // the most recent root backs describe/logs/info
+			}
+			fmt.Printf("  %s%s\n", marker, p)
+		}
+	} else {
+		fmt.Printf("Must-Gather    : %s\n", vars.MustGatherRootPath)
+	}
 	if singleNamespaceInMustGather {
 		fmt.Printf("Project        : %s (single project)\n", vars.Namespace)
 	} else {
@@ -369,7 +400,14 @@ var UseCmd = &cobra.Command{
 			}
 		}
 
-		err = useContext(path, viper.ConfigFileUsed(), idFlag)
+		// Auto-discover every must-gather under the used directory. More than
+		// one turns this into a grouped context that get/describe/logs/events
+		// read across; a single one keeps the original single-must-gather flow.
+		var rootPaths []string
+		if roots, derr := mustgather.DiscoverRoots(path); derr == nil && len(roots) > 1 {
+			rootPaths = mustgather.Paths(roots)
+		}
+		err = useContext(path, viper.ConfigFileUsed(), idFlag, rootPaths)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

@@ -134,7 +134,7 @@ func TestUseContext(t *testing.T) {
 				t.Fatalf("Unable to write initial file: %v", err)
 			}
 
-			useContext(tc.path, configFilePath, tc.idFlag)
+			useContext(tc.path, configFilePath, tc.idFlag, nil)
 
 			// Validate the file after function call
 			writtenFileContent, err := ioutil.ReadFile(configFilePath)

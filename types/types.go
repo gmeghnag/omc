@@ -23,6 +23,12 @@ type Context struct {
 	Path    string `json:"path"`
 	Current string `json:"current"`
 	Project string `json:"project"`
+	// Paths lists every must-gather root bound to this context, ordered
+	// most-recent-first, when the context groups more than one must-gather.
+	// It is empty for an ordinary single-must-gather context, in which case
+	// Path is the only root. Path always mirrors the most recent root so older
+	// omc builds keep working against a multi-must-gather context.
+	Paths []string `json:"paths,omitempty"`
 }
 
 type Config struct {
