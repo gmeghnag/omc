@@ -25,8 +25,13 @@ func TestMustGatherInfo_EmptyInfrastructureItems(t *testing.T) {
 	}
 
 	oldRoot := vars.MustGatherRootPath
+	oldRoots := vars.MustGatherRootPaths
 	vars.MustGatherRootPath = root
-	t.Cleanup(func() { vars.MustGatherRootPath = oldRoot })
+	vars.MustGatherRootPaths = nil
+	t.Cleanup(func() {
+		vars.MustGatherRootPath = oldRoot
+		vars.MustGatherRootPaths = oldRoots
+	})
 
 	// Silence stdout from the function.
 	oldStdout := os.Stdout
@@ -41,4 +46,33 @@ func TestMustGatherInfo_EmptyInfrastructureItems(t *testing.T) {
 	w.Close()
 	os.Stdout = oldStdout
 	<-done
+}
+
+// TestTimestampFromFile covers the multi-must-gather timestamp fix: the file is
+// read whether it sits inside the root or next to it, a two-line file yields a
+// range, a shorter one is INCOMPLETE, and an absent file is reported missing.
+func TestTimestampFromFile(t *testing.T) {
+	dir := t.TempDir()
+
+	full := filepath.Join(dir, "full")
+	if err := os.WriteFile(full, []byte(
+		"2026-09-25 15:36:33.598482 +0200 CEST m=+0.217853001\n"+
+			"2026-09-25 15:37:00.502472 +0200 CEST m=+27.121769126\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if ts, ok := timestampFromFile(full); !ok || ts != "2026-09-25 15:36:33 - 2026-09-25 15:37:00" {
+		t.Fatalf("full timestamp: ok=%v ts=%q", ok, ts)
+	}
+
+	one := filepath.Join(dir, "one")
+	if err := os.WriteFile(one, []byte("2026-09-25 15:36:33.598482 +0200 CEST m=+0.2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if ts, ok := timestampFromFile(one); !ok || ts != "INCOMPLETE" {
+		t.Fatalf("single-line timestamp: ok=%v ts=%q (want INCOMPLETE)", ok, ts)
+	}
+
+	if ts, ok := timestampFromFile(filepath.Join(dir, "nope")); ok || ts != "" {
+		t.Fatalf("missing timestamp: ok=%v ts=%q (want false/empty)", ok, ts)
+	}
 }

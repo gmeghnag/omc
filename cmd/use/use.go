@@ -99,7 +99,16 @@ func useContext(path string, omcConfigFile string, idFlag string, rootPaths []st
 	}
 	for _, c := range contexts {
 		if c.Id == idFlag || c.Path == path {
-			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project, Paths: c.Paths})
+			// When this invocation resolved a path, the grouping reflects the
+			// current discovery (persistPaths: the roots for a multi
+			// must-gather, nil to clear a previous grouping for a single one).
+			// Selecting an existing context by id alone (no path) keeps its
+			// stored grouping.
+			ctxPaths := c.Paths
+			if path != "" {
+				ctxPaths = persistPaths
+			}
+			NewContexts = append(NewContexts, types.Context{Id: c.Id, Path: c.Path, Current: "*", Project: c.Project, Paths: ctxPaths})
 			configId = c.Id
 			found = true
 			vars.Namespace = c.Project
@@ -188,9 +197,14 @@ func findMustGatherIn(path string) (string, error) {
 }
 
 func MustGatherInfo() {
-	if len(vars.MustGatherRootPaths) > 1 {
-		fmt.Printf("Must-Gathers   : %d (merged, most-recent-first)\n", len(vars.MustGatherRootPaths))
-		for i, p := range vars.MustGatherRootPaths {
+	roots := vars.MustGatherRootPaths
+	if len(roots) == 0 {
+		roots = []string{vars.MustGatherRootPath}
+	}
+
+	if len(roots) > 1 {
+		fmt.Printf("Must-Gathers   : %d (merged, most-recent-first)\n", len(roots))
+		for i, p := range roots {
 			marker := "  "
 			if i == 0 {
 				marker = "* " // the most recent root backs describe/logs/info
@@ -205,12 +219,17 @@ func MustGatherInfo() {
 	} else {
 		fmt.Printf("Project        : %s\n", vars.Namespace)
 	}
-	InfrastrctureFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
-	if InfrastrctureFilePathExists {
-		_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+
+	// Each field is resolved from the most recent root that actually has it, so
+	// a grouped context shows a complete summary even when the most recent
+	// capture (e.g. an `oc adm inspect`) is missing some files.
+
+	const infraRel = "cluster-scoped-resources/config.openshift.io/infrastructures.yaml"
+	if root, ok := mustgather.ResolveRoot(roots, infraRel); ok {
+		_file, _ := os.ReadFile(root + "/" + infraRel)
 		infrastructureList := configv1.InfrastructureList{}
 		if err := yaml.Unmarshal([]byte(_file), &infrastructureList); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/infrastructures.yaml")
+			fmt.Println("Error when trying to unmarshal file: " + root + "/" + infraRel)
 			os.Exit(1)
 		} else if len(infrastructureList.Items) > 0 {
 			status := infrastructureList.Items[0].Status
@@ -220,70 +239,85 @@ func MustGatherInfo() {
 			}
 		}
 	}
-	clusterversionFilePathExists, _ := helpers.Exists(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
-	if clusterversionFilePathExists {
-		_file, _ := os.ReadFile(vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
+
+	const cvRel = "cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml"
+	if root, ok := mustgather.ResolveRoot(roots, cvRel); ok {
+		_file, _ := os.ReadFile(root + "/" + cvRel)
 		ClusterVersion := configv1.ClusterVersion{}
 		if err := yaml.Unmarshal([]byte(_file), &ClusterVersion); err != nil {
-			fmt.Println("Error when trying to unmarshal file: " + vars.MustGatherRootPath + "/cluster-scoped-resources/config.openshift.io/clusterversions/version.yaml")
+			fmt.Println("Error when trying to unmarshal file: " + root + "/" + cvRel)
 			os.Exit(1)
 		} else {
 			clusterversion := ""
-			versionHistory := ClusterVersion.Status.History
-			for _, version := range versionHistory {
+			for _, version := range ClusterVersion.Status.History {
 				if version.State == "Completed" {
 					clusterversion = version.Version
 					break
 				}
 			}
-
 			fmt.Printf("ClusterID      : %s\n", ClusterVersion.Spec.ClusterID)
 			fmt.Printf("ClusterVersion : %s\n", clusterversion)
 		}
 	}
-	mustGatherSplitPath := strings.Split(vars.MustGatherRootPath, "/")
-	mustGatherParentPath := strings.Join(mustGatherSplitPath[0:(len(mustGatherSplitPath)-1)], "/")
-	clientVersion := extractClientVersion(mustGatherParentPath + "/must-gather.logs")
-	if clientVersion != "" {
-		fmt.Printf("ClientVersion  : %s\n", clientVersion)
-	}
-	parts := strings.Split(vars.MustGatherRootPath, "/")
-	if len(parts) > 0 {
-		lastPart := parts[len(parts)-1]
-		if strings.Contains(lastPart, "-sha256") {
-			mustGatherImage := strings.Split(lastPart, "-sha256")[0]
-			fmt.Printf("Image          : %s\n", mustGatherImage)
+
+	// must-gather.logs sits next to a root; use the first capture that has it.
+	for _, root := range roots {
+		if clientVersion := extractClientVersion(filepath.Dir(root) + "/must-gather.logs"); clientVersion != "" {
+			fmt.Printf("ClientVersion  : %s\n", clientVersion)
+			break
 		}
 	}
 
-	timestampFilePath := vars.MustGatherRootPath + "/../timestamp"
+	// The image digest is embedded in a must-gather's directory name (an
+	// inspect root has none), so use the first capture whose name carries it.
+	for _, root := range roots {
+		last := filepath.Base(root)
+		if strings.Contains(last, "-sha256") {
+			fmt.Printf("Image          : %s\n", strings.Split(last, "-sha256")[0])
+			break
+		}
+	}
+
+	// The timestamp file lives either next to the root or inside it (inspect
+	// writes it inside). Use the first capture that has one.
 	timestamp := "MISSING"
-	if ok, _ := helpers.Exists(timestampFilePath); ok {
-		file, err := os.Open(timestampFilePath)
-		if err == nil {
-			defer file.Close()
-
-			scanner := bufio.NewScanner(file)
-
-			var times []string
-
-			for scanner.Scan() {
-				rLine := scanner.Text()
-				var tLine string
-				if i := strings.Index(rLine, " m="); i >= 0 {
-					tLine = rLine[:i]
-				}
-				t, _ := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", tLine)
-				times = append(times, t.Format("2006-01-02 15:04:05"))
-			}
-			if len(times) > 1 {
-				timestamp = times[0] + " - " + times[1]
-			} else {
-				timestamp = "INCOMPLETE"
-			}
+	for _, root := range roots {
+		if ts, ok := timestampFromFile(filepath.Join(root, "..", "timestamp")); ok {
+			timestamp = ts
+			break
+		}
+		if ts, ok := timestampFromFile(filepath.Join(root, "timestamp")); ok {
+			timestamp = ts
+			break
 		}
 	}
 	fmt.Println("Timestamp      : " + timestamp)
+}
+
+// timestampFromFile parses a must-gather timestamp file, returning the
+// "start - end" range (or "INCOMPLETE" when it holds fewer than two lines) and
+// whether the file existed.
+func timestampFromFile(path string) (string, bool) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", false
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	var times []string
+	for scanner.Scan() {
+		rLine := scanner.Text()
+		var tLine string
+		if i := strings.Index(rLine, " m="); i >= 0 {
+			tLine = rLine[:i]
+		}
+		t, _ := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", tLine)
+		times = append(times, t.Format("2006-01-02 15:04:05"))
+	}
+	if len(times) > 1 {
+		return times[0] + " - " + times[1], true
+	}
+	return "INCOMPLETE", true
 }
 
 // useCmd represents the use command
