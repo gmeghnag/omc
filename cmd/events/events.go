@@ -26,6 +26,7 @@ import (
 	"github.com/gmeghnag/omc/vars"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	cliprint "k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/klog/v2"
 	api "k8s.io/kubernetes/pkg/apis/core"
@@ -44,10 +45,15 @@ var EventsCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		eventList := GetEventList(vars.MustGatherRootPath, vars.Namespace, vars.AllNamespaceBoolVar)
+		// Events carry a metadata.uid and are rendered on a time-sorted
+		// timeline, so they merge across must-gathers just like get: union all
+		// captures, deduplicate by uid keeping the most recent capture's copy
+		// (freshest count / lastTimestamp), then sort by time. Ages are shown
+		// relative to the most recent capture.
+		eventList, ageRoot := mergeEventList(vars.MustGatherRootPaths, vars.MustGatherRootPath, vars.Namespace, vars.AllNamespaceBoolVar)
 		FilterEventList(&eventList, vars.EventTypes, vars.ForResource)
 		SortEventList(&eventList)
-		PrintEventList(&eventList, vars.MustGatherRootPath, vars.OutputStringVar, vars.Namespace, vars.AllNamespaceBoolVar)
+		PrintEventList(&eventList, ageRoot, vars.OutputStringVar, vars.Namespace, vars.AllNamespaceBoolVar)
 	},
 }
 
@@ -63,6 +69,35 @@ func Validate() error {
 		return fmt.Errorf("error when parsing --for: resource must be in resource/name form")
 	}
 	return nil
+}
+
+// mergeEventList unions the events of every must-gather root (roots are
+// most-recent-first) and deduplicates them by metadata.uid, keeping the copy
+// from the most recent capture. Events without a uid are all kept. It also
+// returns the most recent root, which callers use as the reference "now" for
+// age columns. The returned list is unsorted; callers sort it by time.
+func mergeEventList(roots []string, primaryRoot, selectedNs string, allNamespaces bool) (corev1.EventList, string) {
+	if len(roots) == 0 {
+		roots = []string{primaryRoot}
+	}
+	var merged corev1.EventList
+	seen := make(map[k8stypes.UID]struct{})
+	for _, root := range roots {
+		candidate := GetEventList(root, selectedNs, allNamespaces)
+		if merged.Kind == "" && candidate.Kind != "" {
+			merged.SetGroupVersionKind(candidate.GroupVersionKind())
+		}
+		for _, event := range candidate.Items {
+			if uid := event.UID; uid != "" {
+				if _, ok := seen[uid]; ok {
+					continue
+				}
+				seen[uid] = struct{}{}
+			}
+			merged.Items = append(merged.Items, event)
+		}
+	}
+	return merged, roots[0]
 }
 
 func GetEventList(context string, selectedNs string, allNamespaces bool) (eventList corev1.EventList) {
