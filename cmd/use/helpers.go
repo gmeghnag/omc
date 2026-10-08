@@ -27,6 +27,18 @@ const (
 	fileTypeZip     string = "zip"
 )
 
+// sanitizeExtractPath joins an archive entry name onto destDir and verifies the
+// result stays within destDir, guarding against path-traversal entries
+// ("../../x" or absolute paths) in a malicious archive (Zip Slip / Tar Slip).
+func sanitizeExtractPath(destDir, entryName string) (string, error) {
+	target := filepath.Join(destDir, entryName)
+	cleanDest := filepath.Clean(destDir)
+	if target != cleanDest && !strings.HasPrefix(target, cleanDest+string(os.PathSeparator)) {
+		return "", fmt.Errorf("illegal archive entry %q: path escapes extraction directory", entryName)
+	}
+	return target, nil
+}
+
 func humanizeBytes(bytes int64) string {
 	var human string
 	if float64(bytes) < math.Pow(2, 10) {
@@ -291,13 +303,19 @@ func ExtractTarStream(st io.Reader, destinationdir string) (string, error) {
 			return "", err
 		}
 
+		target, err := sanitizeExtractPath(destinationdir, header.Name)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "cannot extract tar: "+err.Error())
+			return "", err
+		}
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if !firstDirectory {
 				firstDirectory = true
-				mgRootDir = destinationdir + "/" + header.Name
+				mgRootDir = target
 			}
-			directory := filepath.Join(destinationdir, header.Name)
+			directory := target
 			if _, err := os.Stat(directory); os.IsNotExist(err) {
 				if err := os.Mkdir(directory, 0755); err != nil {
 					fmt.Fprintln(os.Stderr, "mkdir failed extracting tar: "+err.Error())
@@ -307,14 +325,14 @@ func ExtractTarStream(st io.Reader, destinationdir string) (string, error) {
 		case tar.TypeReg:
 			// Root dir is not part of the archive
 			if mgRootDir == "" {
-				mgRootDir = filepath.Join(destinationdir, filepath.Dir(header.Name))
+				mgRootDir = filepath.Dir(target)
 				firstDirectory = true
 				err := os.MkdirAll(mgRootDir, os.ModePerm)
 				if err != nil && !os.IsExist(err) {
 					return "", err
 				}
 			}
-			outpath := filepath.Join(destinationdir, header.Name)
+			outpath := target
 			if _, err := os.Stat(outpath); !os.IsNotExist(err) {
 				fmt.Fprintln(os.Stderr, "create file failed extracting tar: file already exists")
 			}
@@ -364,7 +382,11 @@ func ExtractZip(zipfile string, destinationdir string) (string, error) {
 	defer archive.Close()
 
 	for _, f := range archive.File {
-		filePath := filepath.Join(destinationdir, f.Name)
+		filePath, err := sanitizeExtractPath(destinationdir, f.Name)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "error: cannot uncompress zip "+zipfile+": "+err.Error())
+			return "", err
+		}
 
 		// Root dir is not part of the archive
 		if !f.FileInfo().IsDir() && mgRootDir == "" {
@@ -381,34 +403,47 @@ func ExtractZip(zipfile string, destinationdir string) (string, error) {
 				firstDirectory = true
 				mgRootDir = filePath
 			}
-			err = os.MkdirAll(filePath, os.ModePerm)
-			if err != nil {
+			if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
 				fmt.Fprintln(os.Stderr, "error: cannot create directory "+filePath+": "+err.Error())
 				return "", err
 			}
-		} else {
-			dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "error: cannot create file "+filePath+": "+err.Error())
-				return "", err
-			}
-			defer dstFile.Close()
+			continue
+		}
 
-			fileInArchive, err := f.Open()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "error: cannot open file "+f.Name+": "+err.Error())
-				return "", err
-			}
-			defer fileInArchive.Close()
-
-			if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-				fmt.Fprintln(os.Stderr, "error: cannot copy file to "+dstFile.Name()+": "+err.Error())
-				return "", err
-			}
+		// Extract one file, releasing both handles before the next iteration
+		// (closing inside a closure rather than deferring to function return,
+		// which would leak a descriptor per entry across a large archive).
+		if err := extractZipFile(f, filePath); err != nil {
+			return "", err
 		}
 	}
 
 	return mgRootDir, err
+}
+
+// extractZipFile writes a single zip entry to filePath, closing the source and
+// destination handles before returning so a large archive does not accumulate
+// open descriptors.
+func extractZipFile(f *zip.File, filePath string) error {
+	dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error: cannot create file "+filePath+": "+err.Error())
+		return err
+	}
+	defer dstFile.Close()
+
+	fileInArchive, err := f.Open()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error: cannot open file "+f.Name+": "+err.Error())
+		return err
+	}
+	defer fileInArchive.Close()
+
+	if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+		fmt.Fprintln(os.Stderr, "error: cannot copy file to "+dstFile.Name()+": "+err.Error())
+		return err
+	}
+	return nil
 }
 
 func ExtractTarGz(gzipfile string, destinationdir string) (string, error) {
