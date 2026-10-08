@@ -36,7 +36,11 @@ import (
 
 	//runtime "k8s.io/apimachinery/pkg/runtime"
 	//utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"reflect"
+	"sync"
+
 	"github.com/openshift/openshift-apiserver/pkg/build/apis/build"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	//core "k8s.io/kubernetes/pkg/apis/core"
@@ -65,6 +69,41 @@ import (
 	resource "k8s.io/kubernetes/pkg/apis/resource"
 	scheduling "k8s.io/kubernetes/pkg/apis/scheduling"
 )
+
+// gvkTypeCache memoizes, per GroupVersionKind, the concrete internal type that
+// RawObjectToRuntimeObject resolves an object of that GVK to. The resolution
+// runs the universal deserializer (a full parse of the object) purely to pick a
+// type via a type switch; for a homogeneous list (e.g. thousands of Pods) that
+// parse was repeated for every item. Caching the resolved type lets all but the
+// first object of each GVK skip it.
+var gvkTypeCache sync.Map // map[schema.GroupVersionKind]reflect.Type
+
+var unknownType = reflect.TypeOf(runtime.Unknown{})
+
+// ResetRuntimeObjectTypeCache clears the memoized GVK→type mapping. Intended for tests.
+func ResetRuntimeObjectTypeCache() {
+	gvkTypeCache = sync.Map{}
+}
+
+// RuntimeObjectForGVK returns an empty internal runtime.Object of the type that
+// an object with the given GVK decodes to, caching the resolution by GVK. It is
+// equivalent to RawObjectToRuntimeObject(rawObject, scheme) but avoids the
+// per-object decode once a GVK has been seen. The caller still unmarshals
+// rawObject into the returned object, exactly as before.
+func RuntimeObjectForGVK(gvk schema.GroupVersionKind, rawObject []byte, scheme *runtime.Scheme) runtime.Object {
+	if v, ok := gvkTypeCache.Load(gvk); ok {
+		return reflect.New(v.(reflect.Type)).Interface().(runtime.Object)
+	}
+	obj := RawObjectToRuntimeObject(rawObject, scheme)
+	// Only cache a concrete, known type. runtime.Unknown means the decode did
+	// not recognise this object; caching it would wrongly force every later
+	// object of the same GVK down the unknown path (e.g. if the first item in a
+	// list happened to be malformed), so leave those to resolve per-object.
+	if t := reflect.TypeOf(obj); t != nil && t.Kind() == reflect.Ptr && t.Elem() != unknownType {
+		gvkTypeCache.Store(gvk, t.Elem())
+	}
+	return obj
+}
 
 func RawObjectToRuntimeObject(rawObject []byte, schema *runtime.Scheme) runtime.Object {
 	codec := serializer.NewCodecFactory(schema)

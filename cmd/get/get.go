@@ -596,7 +596,7 @@ func (s *state) handleObject(obj unstructured.Unstructured) error {
 	} else {
 		_, ok := vars.KnownResources[strings.ToLower(obj.GetKind())]
 		if ok {
-			runtimeObjectType := deserializer.RawObjectToRuntimeObject(rawObject, vars.Schema)
+			runtimeObjectType := deserializer.RuntimeObjectForGVK(obj.GroupVersionKind(), rawObject, vars.Schema)
 			if err := yaml.Unmarshal(rawObject, runtimeObjectType); err != nil {
 				klog.V(3).Info(err, err.Error())
 			}
