@@ -17,9 +17,11 @@ package upgrade
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/gmeghnag/omc/vars"
@@ -30,7 +32,25 @@ var DesiredVersion string
 
 const omcDarwinFile = "omc_Darwin"
 
+// checkManagedInstall reports whether the binary is owned by a package
+// manager, which has to handle the upgrade itself, writing the relative
+// warning to w when it is.
+func checkManagedInstall(w io.Writer, installMethod string) bool {
+	switch strings.ToLower(strings.TrimSpace(installMethod)) {
+	case "":
+		return false
+	case "homebrew", "brew":
+		fmt.Fprintln(w, "warning: omc was installed via homebrew, upgrades are handled by homebrew.\nRun \"brew upgrade omc\" instead.")
+	default:
+		fmt.Fprintln(w, "warning: omc was installed via "+installMethod+", upgrades are handled by "+installMethod+".")
+	}
+	return true
+}
+
 func upgradeBinary(repoName string) {
+	if checkManagedInstall(os.Stderr, vars.InstallMethod) {
+		os.Exit(1)
+	}
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)

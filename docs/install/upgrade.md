@@ -28,4 +28,15 @@ omc upgrade --to=2.4.0
 $ omc upgrade --to=latest 
 ```
 
+## Installations managed by a package manager
+!!! note ""
+
+    When `omc` is installed through a package manager the upgrade is owned by that package manager, so `omc upgrade` prints a warning and exits without touching the binary:
+    ```
+    $ omc upgrade --to=latest
+    warning: omc was installed via homebrew, upgrades are handled by homebrew.
+    Run "brew upgrade omc" instead.
+    ```
+    Packagers enable this by building with `-ldflags "-X github.com/gmeghnag/omc/vars.InstallMethod=homebrew"`.
+
   
