@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gmeghnag/omc/cmd/helpers"
 	"github.com/gmeghnag/omc/vars"
 
 	corev1 "k8s.io/api/core/v1"
@@ -35,42 +36,19 @@ func normalizeMustGatherRoot() error {
 }
 
 // listPods returns all pods found under a namespace directory within a
-// must-gather. It prefers the namespace's core/pods.yaml, falling back to
-// reading each pod's individual manifest under
-// <namespacePath>/pods/<name>/<name>.yaml when that file is missing or empty.
+// must-gather. helpers.PodObjects resolves the aggregated core/pods.yaml and
+// both per-pod layouts (pods/<name>/<name>.yaml and core/pods/<name>.yaml),
+// which must-gather images use interchangeably.
 func listPods(namespacePath string) ([]corev1.Pod, error) {
-	podsYamlPath := namespacePath + "/core/pods.yaml"
-	if data, err := os.ReadFile(podsYamlPath); err == nil {
-		var podList corev1.PodList
-		if err := yaml.Unmarshal(data, &podList); err != nil {
-			return nil, fmt.Errorf("error unmarshaling %s: %w", podsYamlPath, err)
-		}
-		if len(podList.Items) > 0 {
-			return podList.Items, nil
-		}
-	}
-
-	podsDir := namespacePath + "/pods"
-	entries, err := os.ReadDir(podsDir)
+	objects, err := helpers.PodObjects(namespacePath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("read %s: %w", podsDir, err)
+		return nil, err
 	}
 	var pods []corev1.Pod
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		podYamlPath := podsDir + "/" + entry.Name() + "/" + entry.Name() + ".yaml"
-		data, err := os.ReadFile(podYamlPath)
-		if err != nil {
-			continue
-		}
+	for _, object := range objects {
 		var pod corev1.Pod
-		if err := yaml.Unmarshal(data, &pod); err != nil {
-			continue
+		if err := yaml.Unmarshal(object.Data, &pod); err != nil {
+			return nil, fmt.Errorf("error unmarshaling %s: %w", object.Path, err)
 		}
 		pods = append(pods, pod)
 	}

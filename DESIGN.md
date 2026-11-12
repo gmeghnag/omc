@@ -146,6 +146,8 @@ automatically.
 ├── namespaces/
 │   └── <namespace>/
 │       ├── core/pods.yaml                     # aggregated List of pods (may be empty)
+│       ├── core/pods/<pod>.yaml               # pods, flat per-file layout
+│       ├── core/pods/<pod>/<container>/logs/   # that pod's container logs
 │       ├── <group>/<plural>.yaml              # aggregated List for built-in kinds
 │       ├── <group>/<plural>/<name>.yaml       # one file per object (custom resources)
 │       └── pods/<pod>/<container>/<container>/logs/{current,previous,rotated/…}.log
@@ -155,6 +157,23 @@ automatically.
 Two storage shapes matter: **aggregated** (`<plural>.yaml` = a `kind: List`) vs
 **per-object** (one YAML per resource in a directory). The readers try aggregated
 first and fall back to per-object (and pods have a special empty-file fallback).
+
+**Pods are the exception: they have three layouts, and must-gather images disagree
+on which one they produce.** `cmd/helpers/pods.go` (`PodObjects`, `PodExists`) is the
+single place that knows them; `get`, `describe pod` and `stern` all go through it
+rather than open-coding paths — a divergence there is what made `get pods` report
+"No resources pods found" for a namespace full of pods (fixed in the commit
+following 4b38ba32, which restructured the fallback and dropped one layout):
+
+| Layout | Path |
+|---|---|
+| aggregated | `core/pods.yaml` (a `List`, may be empty) |
+| nested | `pods/<pod>/<pod>.yaml` |
+| flat | `core/pods/<pod>.yaml` (pod logs live in `core/pods/<pod>/<container>/logs`) |
+
+Precedence is aggregated → nested → flat, first non-empty layout wins (layouts are
+never merged). Anything that is not a pod manifest — notably the log directories
+sitting next to the flat manifests — is skipped, never parsed.
 
 ---
 
@@ -207,8 +226,9 @@ Step by step:
 5. **Readers** (`getNamespacedResources`, `getClusterScopedResources`,
    `getNamespacesResources`, `getPodNetworkConnectivityChecksResources`) — build the
    file path from `s.opts.RootPath` + layout, read the aggregated `<plural>.yaml` list
-   (falling back to a per-object directory, and a per-pod fallback when `core/pods.yaml`
-   is empty), unmarshal to `unstructured.Unstructured`, optionally `sortResources`,
+   (falling back to a per-object directory; pods defer to `helpers.PodObjects`, which
+   resolves all three pod layouts and their empty-file fallback), unmarshal to
+   `unstructured.Unstructured`, optionally `sortResources`,
    filter by the requested name set, and call `state.handleObject` per item.
    For `-A`, `getNamespacedResources` iterates every directory under `namespaces/`.
 6. **`cmd/get/get.go:state.handleObject`** — the per-object funnel:
@@ -236,7 +256,8 @@ flowchart TD
     O --> RUN["Run(stdout, stderr, opts, args)"]
     RUN --> V["validate RootPath;\nadjust for 'quay…' wrapper dir;\nparse POD / TYPE/NAME [+CONTAINER]"]
     V --> LP["logsPods(...)"]
-    LP --> POD["read namespaces/<ns>/core/pods.yaml\n(fallback pods/<pod>/<pod>.yaml)"]
+    LP --> POD["helpers.PodObjects:
+core/pods.yaml → pods/<pod>/<pod>.yaml → core/pods/<pod>.yaml"]
     POD --> C["resolve container:\nsingle | -c | --all-containers | initContainers"]
     C --> LR["NewLogReader(namespaces/<ns>/pods/<pod>/<container>/<container>/logs/)"]
     LR --> READ["LogReader.Read(stdout):\ncurrent.log | previous.log | rotated/*\n(gzip-aware) + level filter + tail"]
@@ -249,8 +270,8 @@ Step by step:
 2. **`cmd/logs/logs.go:Run`** — validates `opts.RootPath`, handles a `quay…` wrapper
    directory, and parses the positional args: `POD` or `pod/NAME`, with an optional
    second `CONTAINER` arg (mutually exclusive with `-c`). Delegates to `logsPods`.
-3. **`cmd/logs/pods.go:logsPods`** — reads `namespaces/<ns>/core/pods.yaml` (fallback:
-   `namespaces/<ns>/pods/<pod>/<pod>.yaml` when the aggregated file is empty),
+3. **`cmd/logs/pods.go:logsPods`** — resolves the pod's manifest via the same
+   `core/pods.yaml` → `pods/<pod>/<pod>.yaml` → `core/pods/<pod>.yaml` chain,
    finds the pod, and resolves the container:
    - exactly one container and no `-c` → that container;
    - `--all-containers` → loop all;
@@ -279,7 +300,9 @@ Step by step:
   `use_local_crds`). Adding a built-in alias means editing `known-resources.yaml`; CRs
   need no code.
 - **Two storage shapes** per kind (aggregated `List` file vs per-object directory) —
-  new readers should handle both, plus the empty-`core/pods.yaml` fallback.
+  new readers should handle both, plus the empty-`core/pods.yaml` fallback. For pods,
+  do not open-code paths: call `cmd/helpers/pods.go` so `get`, `describe` and `stern`
+  cannot drift apart across the three pod layouts.
 - **`get` and `logs` follow the `Options`/`Run` pattern.** Read flags only in `RunE`,
   keep `Run` pure, take writers as parameters. Older subcommands still read `vars.*`
   and call `os.Exit` directly; new code should return errors (`SilenceUsage: true` is

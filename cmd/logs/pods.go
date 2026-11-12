@@ -20,6 +20,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/gmeghnag/omc/cmd/helpers"
+
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -40,28 +42,20 @@ func logsPods(stdout io.Writer, currentContextPath string, defaultConfigNamespac
 	var logFilter logLineFilter = NewCRILogFilter(logLevels, nil)
 	var _Items v1.PodList
 	CurrentNamespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
-	podsPath := CurrentNamespacePath + "/core/pods.yaml"
-	_file, err := os.ReadFile(podsPath)
-	if err != nil {
-		// Sometimes the core/pods.yaml might be empty due to unknown reasons when MG is collected
-		// In such cases, we need to look for the pod in the pods directory
-		podPath := CurrentNamespacePath + "/pods/" + podName + "/" + podName + ".yaml"
-		_file, err = os.ReadFile(podPath)
-		if err != nil {
-			podPath = CurrentNamespacePath + "/core/pods/" + podName + ".yaml"
-			_file, err = os.ReadFile(podPath)
-			if err != nil {
-				return fmt.Errorf("pod %s not found: %w", podName, err)
-			}
-		}
-		// We create a Pod object and append it to the _Items PodList
+	// helpers.PodObjects resolves every pod storage layout a must-gather may use
+	// (aggregated core/pods.yaml, nested pods/<pod>/<pod>.yaml, flat
+	// core/pods/<pod>.yaml) and, unlike reading core/pods.yaml directly, treats
+	// an empty aggregated placeholder as absent instead of as "no such pod".
+	objects, oErr := helpers.PodObjects(CurrentNamespacePath)
+	if oErr != nil {
+		return oErr
+	}
+	for _, object := range objects {
 		var pod v1.Pod
-		if err := yaml.Unmarshal([]byte(_file), &pod); err != nil {
-			return fmt.Errorf("error unmarshaling %s: %w", podPath, err)
+		if err := yaml.Unmarshal(object.Data, &pod); err != nil {
+			return fmt.Errorf("error unmarshaling %s: %w", object.Path, err)
 		}
 		_Items.Items = append(_Items.Items, pod)
-	} else if err := yaml.Unmarshal([]byte(_file), &_Items); err != nil {
-		return fmt.Errorf("error unmarshaling %s: %w", podsPath, err)
 	}
 	podMatch := ""
 	for _, Pod := range _Items.Items {

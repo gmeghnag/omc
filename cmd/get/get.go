@@ -293,35 +293,6 @@ func (s *state) emitItems(items []unstructured.Unstructured, resources map[strin
 	return nil
 }
 
-// readPodsFromPodDir reads pods stored one file per pod under
-// namespaces/<ns>/pods/<pod>/<pod>.yaml. This is the layout used when the
-// aggregated namespaces/<ns>/core/pods.yaml is empty or absent.
-func readPodsFromPodDir(rootPath, namespace string) ([]unstructured.Unstructured, error) {
-	podsDir := fmt.Sprintf("%s/namespaces/%s/pods", rootPath, namespace)
-	pods, rErr := ReadDirForResources(podsDir)
-	if rErr != nil {
-		klog.V(3).ErrorS(rErr, "Failed to read pods directory")
-		return nil, nil
-	}
-	var items []unstructured.Unstructured
-	for _, pod := range pods {
-		podName := pod.Name()
-		podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
-		_file, err := os.ReadFile(podPath)
-		if err != nil {
-			return nil, fmt.Errorf("error reading %s: %w", podPath, err)
-		}
-		var podItem unstructured.Unstructured
-		if err := yaml.Unmarshal(_file, &podItem); err != nil {
-			return nil, fmt.Errorf("error unmarshaling %s: %w", podPath, err)
-		}
-		if podItem.Object != nil {
-			items = append(items, podItem)
-		}
-	}
-	return items, nil
-}
-
 // namespaceReadConcurrency bounds how many namespaces are read in parallel for
 // -A. Reading is I/O-bound (one or more file reads + YAML parse per namespace),
 // so a small fixed pool overlaps latency - which dominates on networked
@@ -337,23 +308,24 @@ func (s *state) readNamespacedItems(rootPath, namespace, resourceNamePlural, res
 	resourcesItemsPath := fmt.Sprintf("%s/namespaces/%s/%s/%s.yaml", rootPath, namespace, resourceGroup, resourceNamePlural)
 
 	if resourceNamePlural == "pods" {
-		// Pods are stored either aggregated in core/pods.yaml or one file per
-		// pod under pods/<pod>/<pod>.yaml. Prefer the aggregated list; fall back
-		// to the per-pod layout whenever it is absent, empty, or yields no items
-		// (an empty aggregated file does not raise an unmarshal error, so a
-		// count check is what actually detects it).
-		list := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}
-		if _file, rerr := os.ReadFile(resourcesItemsPath); rerr == nil {
-			if uerr := yaml.Unmarshal(_file, &list); uerr != nil {
-				if fStat, _ := os.Stat(resourcesItemsPath); fStat == nil || fStat.Size() != 0 {
-					return nil, fmt.Errorf("error unmarshaling %s: %w", resourcesItemsPath, uerr)
-				}
+		// Pods have their own storage layouts (aggregated core/pods.yaml,
+		// nested pods/<pod>/<pod>.yaml, flat core/pods/<pod>.yaml), and
+		// helpers.PodObjects is the single place that knows all of them.
+		objects, perr := helpers.PodObjects(fmt.Sprintf("%s/namespaces/%s", rootPath, namespace))
+		if perr != nil {
+			return nil, perr
+		}
+		items := make([]unstructured.Unstructured, 0, len(objects))
+		for _, object := range objects {
+			var podItem unstructured.Unstructured
+			if err := yaml.Unmarshal(object.Data, &podItem); err != nil {
+				return nil, fmt.Errorf("error unmarshaling %s: %w", object.Path, err)
+			}
+			if podItem.Object != nil {
+				items = append(items, podItem)
 			}
 		}
-		if len(list.Items) > 0 {
-			return list.Items, nil
-		}
-		return readPodsFromPodDir(rootPath, namespace)
+		return items, nil
 	}
 
 	list := types.UnstructuredList{ApiVersion: "v1", Kind: "List"}

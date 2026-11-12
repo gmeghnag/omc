@@ -33,50 +33,32 @@ import (
 )
 
 func describePod(currentContextPath string, defaultConfigNamespace string, args []string) {
-	podResources := currentContextPath + "/namespaces/" + defaultConfigNamespace + "/core/pods.yaml"
-	_file, err := os.ReadFile(podResources)
-	if err == nil {
-		PodList := corev1.PodList{}
-		if err := yaml.Unmarshal(_file, &PodList); err != nil {
-			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podResources)
+	namespacePath := currentContextPath + "/namespaces/" + defaultConfigNamespace
+	// helpers.PodObjects resolves every pod storage layout a must-gather may
+	// use (aggregated core/pods.yaml, nested pods/<pod>/<pod>.yaml, flat
+	// core/pods/<pod>.yaml), so describe shows the same pods get does.
+	objects, err := helpers.PodObjects(namespacePath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+	if len(objects) == 0 {
+		klog.V(3).Infof("no pods found under %s", namespacePath)
+	}
+	for _, object := range objects {
+		var pod corev1.Pod
+		if err := yaml.Unmarshal(object.Data, &pod); err != nil {
+			fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+object.Path)
 			os.Exit(1)
 		}
-		for _, pod := range PodList.Items {
-			if len(args) == 0 || (len(args) > 0 && helpers.StringInSlice(pod.GetName(), args)) {
-				fake := fake.NewSimpleClientset(&pod)
-				c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
-				d := describe.PodDescriber{c}
-				out, _ := d.Describe(defaultConfigNamespace, pod.GetName(), describe.DescriberSettings{ShowEvents: false})
-				fmt.Printf("%s", out)
-			}
+		if len(args) > 0 && !helpers.StringInSlice(pod.GetName(), args) {
+			continue
 		}
-	} else {
-		podsDir := fmt.Sprintf("%s/namespaces/%s/pods", currentContextPath, defaultConfigNamespace)
-		pods, rErr := os.ReadDir(podsDir)
-		if rErr != nil {
-			klog.V(3).ErrorS(err, "Failed to read resources:")
-		}
-		for _, pod := range pods {
-			podName := pod.Name()
-			podPath := fmt.Sprintf("%s/%s/%s.yaml", podsDir, podName, podName)
-			_file, err := os.ReadFile(podPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "error reading %s: %s\n", podPath, err)
-				os.Exit(1)
-			}
-			var podItem corev1.Pod
-			if err := yaml.Unmarshal(_file, &podItem); err != nil {
-				fmt.Fprintln(os.Stderr, "Error when trying to unmarshal file "+podPath)
-				os.Exit(1)
-			}
-			if len(args) == 0 || (len(args) > 0 && helpers.StringInSlice(podItem.GetName(), args)) {
-				fake := fake.NewSimpleClientset(&podItem)
-				c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
-				d := describe.PodDescriber{c}
-				out, _ := d.Describe(defaultConfigNamespace, podItem.GetName(), describe.DescriberSettings{ShowEvents: false})
-				fmt.Printf("%s", out)
-			}
-		}
+		fake := fake.NewSimpleClientset(&pod)
+		c := &types.DescribeClient{Namespace: defaultConfigNamespace, Interface: fake}
+		d := describe.PodDescriber{c}
+		out, _ := d.Describe(defaultConfigNamespace, pod.GetName(), describe.DescriberSettings{ShowEvents: false})
+		fmt.Printf("%s", out)
 	}
 }
 
@@ -111,31 +93,9 @@ func describePodMulti(namespace string, args []string) {
 	}
 }
 
-// podExistsInRoot reports whether a must-gather root contains the named pod,
-// in either the per-pod layout or the aggregated core/pods.yaml list, so
+// podExistsInRoot reports whether a must-gather root contains the named pod, in
+// any of the per-pod or aggregated layouts helpers.PodExists knows about, so
 // describe resolves to the same capture get would show regardless of layout.
 func podExistsInRoot(root, namespace, name string) bool {
-	nsPath := root + "/namespaces/" + namespace
-	for _, p := range []string{
-		nsPath + "/pods/" + name + "/" + name + ".yaml",
-		nsPath + "/core/pods/" + name + ".yaml",
-	} {
-		if _, err := os.Stat(p); err == nil {
-			return true
-		}
-	}
-	_file, err := os.ReadFile(nsPath + "/core/pods.yaml")
-	if err != nil {
-		return false
-	}
-	var list corev1.PodList
-	if err := yaml.Unmarshal(_file, &list); err != nil {
-		return false
-	}
-	for i := range list.Items {
-		if list.Items[i].Name == name {
-			return true
-		}
-	}
-	return false
+	return helpers.PodExists(root+"/namespaces/"+namespace, name)
 }
