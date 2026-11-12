@@ -70,6 +70,28 @@ func TestCheckManagedInstall(t *testing.T) {
 	}
 }
 
+// runUpgradeSubprocess re-runs the current test binary with the given
+// DesiredVersion and a managed install, so upgradeBinary's os.Exit can be
+// observed from the outside.
+func runUpgradeSubprocess(t *testing.T, testName, desiredVersion, versionTag string) (string, int) {
+	t.Helper()
+	cmd := exec.Command(os.Args[0], "-test.run="+testName)
+	cmd.Env = append(os.Environ(),
+		"OMC_TEST_UPGRADE_SUBPROCESS=1",
+		"OMC_TEST_DESIRED_VERSION="+desiredVersion,
+		"OMC_TEST_VERSION_TAG="+versionTag,
+	)
+	output, err := cmd.CombinedOutput()
+	if err == nil {
+		return string(output), 0
+	}
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		t.Fatalf("upgradeBinary exited with %v, want an exit status\nOutput: %s", err, string(output))
+	}
+	return string(output), exitErr.ExitCode()
+}
+
 // TestUpgradeBinaryHomebrewExits runs upgradeBinary in a subprocess (it calls
 // os.Exit) to check that a homebrew install is warned about and no upgrade is
 // attempted.
@@ -94,4 +116,55 @@ func TestUpgradeBinaryHomebrewExits(t *testing.T) {
 	if !strings.Contains(string(output), "brew upgrade omc") {
 		t.Errorf("upgradeBinary output = %q, want it to contain %q", string(output), "brew upgrade omc")
 	}
+}
+
+// TestUpgradeBinaryManagedInstallStillValidates checks that a managed install
+// still runs the read-only validation of --to: only replacing the binary
+// belongs to the package manager, and turning these away made the
+// "check them by running \"omc upgrade\"" hint point at a command that refused
+// to run.
+func TestUpgradeBinaryManagedInstallStillValidates(t *testing.T) {
+	if os.Getenv("OMC_TEST_UPGRADE_SUBPROCESS") == "1" {
+		vars.InstallMethod = "homebrew"
+		DesiredVersion = os.Getenv("OMC_TEST_DESIRED_VERSION")
+		vars.OMCVersionTag = os.Getenv("OMC_TEST_VERSION_TAG")
+		upgradeBinary("gmeghnag/omc")
+		return
+	}
+
+	t.Run("invalid --to", func(t *testing.T) {
+		output, code := runUpgradeSubprocess(t, "TestUpgradeBinaryManagedInstallStillValidates", "not-a-version", "v2.0.0")
+		if code != 1 {
+			t.Errorf("exit status = %d, want 1\nOutput: %s", code, output)
+		}
+		if !strings.Contains(output, "must be a semantic version") {
+			t.Errorf("output = %q, want the --to validation to run", output)
+		}
+		if strings.Contains(output, "brew upgrade omc") {
+			t.Errorf("output = %q, the managed-install warning must not preempt the validation", output)
+		}
+	})
+
+	t.Run("downgrade refused", func(t *testing.T) {
+		output, code := runUpgradeSubprocess(t, "TestUpgradeBinaryManagedInstallStillValidates", "v1.0.0", "v2.0.0")
+		if code != 1 {
+			t.Errorf("exit status = %d, want 1\nOutput: %s", code, output)
+		}
+		if !strings.Contains(output, "not one of the available updates") {
+			t.Errorf("output = %q, want the downgrade to be refused", output)
+		}
+		if strings.Contains(output, "brew upgrade omc") {
+			t.Errorf("output = %q, the managed-install warning must not preempt the validation", output)
+		}
+	})
+
+	t.Run("a real upgrade still defers", func(t *testing.T) {
+		output, code := runUpgradeSubprocess(t, "TestUpgradeBinaryManagedInstallStillValidates", "latest", "v2.0.0")
+		if code != 1 {
+			t.Errorf("exit status = %d, want 1\nOutput: %s", code, output)
+		}
+		if !strings.Contains(output, "brew upgrade omc") {
+			t.Errorf("output = %q, want it to defer to homebrew", output)
+		}
+	})
 }

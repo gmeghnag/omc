@@ -48,9 +48,6 @@ func checkManagedInstall(w io.Writer, installMethod string) bool {
 }
 
 func upgradeBinary(repoName string) {
-	if checkManagedInstall(os.Stderr, vars.InstallMethod) {
-		os.Exit(1)
-	}
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -75,6 +72,13 @@ func upgradeBinary(repoName string) {
 			fmt.Fprintln(os.Stderr, "error: The update "+DesiredVersion+" is not one of the available updates (check them by running \"omc upgrade\")")
 			os.Exit(1)
 		}
+	}
+	// Only replacing the binary belongs to the package manager. The checks above
+	// are read-only - listing the releases, validating --to - so a managed
+	// install still runs them instead of being turned away from a command it can
+	// safely execute.
+	if checkManagedInstall(os.Stderr, vars.InstallMethod) {
+		os.Exit(1)
 	}
 	switch operatingSystem {
 	case "windows":
