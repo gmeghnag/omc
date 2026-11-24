@@ -17,6 +17,7 @@ package get
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +29,7 @@ import (
 
 	goyaml "gopkg.in/yaml.v2"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	cliprint "k8s.io/cli-runtime/pkg/printers"
@@ -789,26 +791,75 @@ func sortResources(list []unstructured.Unstructured, sortBy string) []unstructur
 	jpath.EnableJSONOutput(true)
 	jpath.Parse(sortBy)
 
-	var newlist []unstructured.Unstructured
-	newlist = append(newlist, list...)
+	// Look up each item's field once rather than on every comparison.
+	type sortItem struct {
+		obj   unstructured.Unstructured
+		text  string      // the field rendered as JSON
+		value interface{} // the first value found, for comparing numbers and quantities
+		ok    bool
+	}
+	items := make([]sortItem, len(list))
+	for i, obj := range list {
+		items[i].obj = obj
+		buf := new(bytes.Buffer)
+		if err := jpath.Execute(buf, obj.UnstructuredContent()); err != nil {
+			klog.V(3).ErrorS(fmt.Errorf("field %s not found in object %s/%s", sortBy, obj.GetKind(), obj.GetName()), "jsonpath error")
+			continue
+		}
+		items[i].text = buf.String()
+		results, err := jpath.FindResults(obj.UnstructuredContent())
+		if err == nil && len(results) > 0 && len(results[0]) > 0 && results[0][0].IsValid() {
+			items[i].value = results[0][0].Interface()
+		}
+		items[i].ok = true
+	}
 
-	slices.SortFunc(newlist, func(a, b unstructured.Unstructured) int {
-		abuf := new(bytes.Buffer)
-		bbuf := new(bytes.Buffer)
-
-		err := jpath.Execute(abuf, a.UnstructuredContent())
-		if err != nil {
-			klog.V(3).ErrorS(fmt.Errorf("field %s not found in object %s/%s", sortBy, b.GetKind(), b.GetName()), "jsonpath error")
+	slices.SortFunc(items, func(a, b sortItem) int {
+		if !a.ok || !b.ok {
 			return 0
 		}
-		err = jpath.Execute(bbuf, b.UnstructuredContent())
-		if err != nil {
-			klog.V(3).ErrorS(fmt.Errorf("field %s not found in object %s/%s", sortBy, b.GetKind(), b.GetName()), "jsonpath error")
-			return 0
+		if c, ok := compareValues(a.value, b.value); ok {
+			return c
 		}
-
-		return strings.Compare(abuf.String(), bbuf.String())
+		return strings.Compare(a.text, b.text)
 	})
 
+	newlist := make([]unstructured.Unstructured, len(items))
+	for i, item := range items {
+		newlist[i] = item.obj
+	}
 	return newlist
+}
+
+// compareValues compares two sort values the way kubectl does: numbers by
+// value, and strings that both parse as resource quantities (e.g. "10Gi") by
+// amount. It returns false for anything else, which is compared as text.
+func compareValues(a, b interface{}) (int, bool) {
+	if af, ok := toFloat(a); ok {
+		if bf, ok := toFloat(b); ok {
+			return cmp.Compare(af, bf), true
+		}
+	}
+	as, aIsString := a.(string)
+	bs, bIsString := b.(string)
+	if aIsString && bIsString {
+		aq, aErr := resource.ParseQuantity(as)
+		bq, bErr := resource.ParseQuantity(bs)
+		if aErr == nil && bErr == nil {
+			return aq.Cmp(bq), true
+		}
+	}
+	return 0, false
+}
+
+// toFloat returns v as a float64 if it is a JSON number. Decoded must-gather
+// objects hold integers as int64 and other numbers as float64.
+func toFloat(v interface{}) (float64, bool) {
+	switch n := v.(type) {
+	case int64:
+		return float64(n), true
+	case float64:
+		return n, true
+	}
+	return 0, false
 }
